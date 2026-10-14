@@ -3,9 +3,9 @@
  * Extrait des specs (skill specs-ui) la matière fonctionnelle et UI du cahier des charges, en Markdown,
  * sans que le modèle ait à lire le HTML des specs.
  *
- * Usage : node extract.mjs cdc            (lit cdc/cdc.json → specs, artifacts.specs)
+ * Usage : node extract.mjs specs/requirements            (lit specs/requirements/requirements.json → specs, artifacts.specs)
  *
- * Écrit dans cdc/sources/generated/ (régénéré à chaque fois, ne pas modifier à la main) :
+ * Écrit dans specs/requirements/sources/generated/ (régénéré à chaque fois, ne pas modifier à la main) :
  *   inventaire.md        tous les écrans et états, par lot, avec le lien vers les specs
  *   lot-<nom>.md         par lot : règles fonctionnelles, puis chaque écran (états, contexte, parcours,
  *                        règles annotées, portée mobile)
@@ -15,17 +15,18 @@
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { configPath, loadConfig, specsDirOf } from './config.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
-if (!root || !existsSync(join(root, 'cdc.json'))) {
-  console.error('Usage: node extract.mjs cdc   (the folder must contain cdc.json)');
+if (!root || !configPath(root)) {
+  console.error('Usage: node extract.mjs specs/requirements   (the folder must contain requirements.json)');
   process.exit(2);
 }
-const config = JSON.parse(readFileSync(join(root, 'cdc.json'), 'utf8'));
-const specsDir = resolve(root, config.specs ?? '../specs-ui');
+const config = loadConfig(root);
+const specsDir = specsDirOf(root, config);
 const sourcesDir = join(specsDir, 'sources');
 if (!existsSync(join(sourcesDir, 'site.json'))) {
-  console.error(`specs-ui sources not found: ${join(sourcesDir, 'site.json')} (set "specs" in cdc.json)`);
+  console.error(`specs sources not found: ${join(sourcesDir, 'site.json')} (set "specs" in requirements.json)`);
   process.exit(1);
 }
 const site = JSON.parse(readFileSync(join(sourcesDir, 'site.json'), 'utf8'));
@@ -92,7 +93,7 @@ for (const name of site.lots ?? []) {
     const mobile = html.match(/<p\b[^>]*>\s*<b[^>]*>Mobile<\/b>([\s\S]*?)<\/p>/i)?.[1];
     states.push({ id: id.toLowerCase(), screen: id.match(/^e\d+/i)[0].toLowerCase(), title, intro: intro && md(intro), from: from && md(from), next: next && md(next), notes, mobile: mobile && md(mobile).replace(/^[\s:]+/, '').replace(/^\(([^)]*)\)\s*:\s*/, '$1. ') });
   }
-  lots.push({ name, label: lot.label ?? name, screens: lot.screens ?? {}, rules, states });
+  lots.push({ name, label: lot.label ?? name, screens: lot.screens ?? {}, status: lot.status ?? {}, rules, states });
 }
 
 // ---------- Écriture ----------
@@ -105,8 +106,17 @@ const header = (what) => `<!-- Généré par extract.mjs depuis les specs (${wha
 const specsLink = (lot, screen) => (specsUrl ? `[specs](${specsUrl}) · \`${lot}/${screen}.html\`` : `\`${lot}/${screen}.html\``);
 
 // Inventaire
+// Statut d'implémentation des écrans (specs : site.json → implementation, lot.json → status)
+const STATUS_LABELS = { todo: 'À développer', doing: 'En cours', done: 'Livré', gap: 'Écart' };
+const tracking = site.implementation === true;
+const statusOf = (lot, screen) => {
+  const raw = lot.status[screen] ?? 'todo';
+  const code = typeof raw === 'string' ? raw : raw.status;
+  const note = typeof raw === 'object' && raw.note ? ` (${raw.note})` : '';
+  return `${STATUS_LABELS[code] ?? code}${note}`;
+};
 let inv = header('inventaire');
-inv += `| Lot | Écran | Titre | États | Specs |\n|---|---|---|---|---|\n`;
+inv += tracking ? `| Lot | Écran | Titre | États | Implémentation | Specs |\n|---|---|---|---|---|---|\n` : `| Lot | Écran | Titre | États | Specs |\n|---|---|---|---|---|\n`;
 for (const lot of lots) {
   const byScreen = new Map();
   for (const s of lot.states) {
@@ -114,12 +124,14 @@ for (const lot of lots) {
     byScreen.get(s.screen).push(s);
   }
   for (const [screen, list] of byScreen) {
-    inv += `| ${lot.label} | ${label(screen)} | ${lot.screens[screen] ?? list[0].title} | ${list.map((s) => `[${label(s.id)}](#${s.id})`).join(', ')} | ${specsLink(lot.name, screen)} |\n`;
+    inv += `| ${lot.label} | ${label(screen)} | ${lot.screens[screen] ?? list[0].title} | ${list.map((s) => `[${label(s.id)}](#${s.id})`).join(', ')} |${tracking ? ` ${statusOf(lot, screen)} |` : ''} ${specsLink(lot.name, screen)} |\n`;
   }
 }
 write('inventaire.md', inv);
 
-// Un fichier par lot
+// Un fichier par lot. Les RF portent le numéro de la règle dans les specs : une règle ne change jamais
+// de numéro (une nouvelle règle va à la fin, une règle supprimée reste « retirée »), car le code et les
+// tests citent ces identifiants (trace.mjs)
 for (const lot of lots) {
   let out = header(lot.name);
   if (lot.rules.length) {
@@ -131,7 +143,7 @@ for (const lot of lots) {
       currentScreen = s.screen;
       // Ancre de l'écran entier (renvois « E9 ») quand aucun état ne porte déjà cet identifiant
       const screenAnchor = lot.states.some((x) => x.id === s.screen) ? '' : `<a id="${s.screen}"></a>`;
-      out += `#### ${screenAnchor}${label(s.screen)} · ${lot.screens[s.screen] ?? s.title}\n\n${specsLink(lot.name, s.screen)}\n\n`;
+      out += `#### ${screenAnchor}${label(s.screen)} · ${lot.screens[s.screen] ?? s.title}\n\n${specsLink(lot.name, s.screen)}${tracking ? ` · implémentation : **${statusOf(lot, s.screen)}**` : ''}\n\n`;
     }
     out += `##### <a id="${s.id}"></a>${label(s.id)} · ${s.title}\n\n`;
     if (s.intro) out += `${s.intro}\n\n`;

@@ -3,12 +3,12 @@
  * Découpe un document de specs existant (un seul gros fichier HTML) en sources par écran,
  * pour ne plus avoir à lire ni réécrire le document entier (voir SKILL.md, « Sources par écran »).
  *
- * Usage : node split.mjs specs-ui/<lot>.html [--name <lot>] [--force]
- *         node split.mjs --new <lot> --root specs-ui     nouveau lot à partir du template du skill
+ * Usage : node split.mjs specs/ui/<lot>.html [--name <lot>] [--force]
+ *         node split.mjs --new <lot> --root specs/ui     nouveau lot à partir du template du skill
  *
- * Écrit specs-ui/sources/<lot>/ (lot.json, style.css si besoin, 000-header.html, un NNN-<id>.html par
+ * Écrit specs/ui/sources/<lot>/ (lot.json, style.css si besoin, 000-header.html, un NNN-<id>.html par
  * section, templates.html) et place les coquilles (<template id="tpl-shell-…">) dans
- * specs-ui/sources/shared/shells.html si elles n'y sont pas encore. Les anciennes conventions
+ * specs/ui/sources/shared/shells.html si elles n'y sont pas encore. Les anciennes conventions
  * (attributs en français) sont renommées au passage. Ne modifie pas le document : le reconstruire
  * ensuite avec build.mjs et le vérifier avec capture.mjs avant de travailler sur les sources.
  */
@@ -20,10 +20,10 @@ import { applyLegacyRenames } from './upgrade.mjs';
 const args = process.argv.slice(2);
 const valueOf = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : null);
 const newLot = valueOf('--new');
-// Nouveau lot : on découpe le template du skill dans le dossier specs-ui indiqué par --root
+// Nouveau lot : on découpe le template du skill dans le dossier des specs indiqué par --root
 const file = newLot ? join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'specs.html') : args.find((a, i) => !a.startsWith('--') && !['--name', '--root', '--new'].includes(args[i - 1]));
 if (!file || (newLot && !valueOf('--root'))) {
-  console.error('Usage: node split.mjs specs-ui/<lot>.html [--name <lot>] [--force] | node split.mjs --new <lot> --root specs-ui');
+  console.error('Usage: node split.mjs specs/ui/<lot>.html [--name <lot>] [--force] | node split.mjs --new <lot> --root specs/ui');
   process.exit(2);
 }
 const name = newLot ?? valueOf('--name') ?? basename(file, '.html');

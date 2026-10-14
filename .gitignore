@@ -14,3 +14,4 @@ skills-lock.json
 # Espaces de travail produits par les skills (specs, prototype, CDC…) ou par leurs évaluations :
 # ils vivent dans le dossier du projet concerné, jamais dans ce dépôt
 *-workspace/
+/specs/

@@ -34,7 +34,7 @@ Pour les règles et les cas limites, demander ce qui manque vraiment (volumes, d
 
 **Brief en plusieurs lots.** Quand le brief couvre plusieurs fonctionnalités (connexion, projets, sessions…), regrouper les écrans en lots cohérents :
 
-- un document par lot (`specs-ui/connexion.html`, `specs-ui/sessions.html`…), tous avec le même `tokens.css` et les mêmes coquilles ;
+- un document par lot (`specs/ui/connexion.html`, `specs/ui/sessions.html`…), tous avec le même `tokens.css` et les mêmes coquilles ;
 - une numérotation **unique pour tout le projet** (E1 à E16 répartis entre les lots), pour qu'un « E12 » cité dans un ticket ou une conversation ne soit jamais ambigu ;
 - dans l'en-tête de chaque document, une ligne « Autres lots » avec les liens vers les autres documents ; les liens « Depuis / Ensuite » vers un autre lot pointent vers `autre-lot.html#e12` ;
 - l'inventaire présente les lots comme des intertitres du tableau, et propose un ordre de réalisation.

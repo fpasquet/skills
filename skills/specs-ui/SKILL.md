@@ -10,10 +10,11 @@ description: >
   nouvelles fonctionnalités. Utiliser dès que la personne parle de maquettes, wireframes, specs UI,
   spécifications fonctionnelles avec écrans, prototype d'interface, parcours à maquetter, charte ou
   direction graphique pour une app, ou nouvelle fonctionnalité à maquetter sur un site existant,
-  même sans prononcer le mot « specs ».
+  même sans prononcer le mot « specs ». Aussi pendant les développements, pour tenir les specs à jour
+  avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "2.6.0"
+  version: "3.0.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -30,8 +31,8 @@ Les specs sont **fonctionnelles et UI** : aucun nom de bibliothèque, de fonctio
 
 Un projet de specs grossit vite : un lot d'une dizaine d'écrans en une seule page dépasse 300 Ko. C'est pourquoi les specs sont découpées en **pages par écran**, et pourquoi il ne faut jamais relire ce qui n'est pas utile. Règles :
 
-1. **`specs-ui/CONTEXTE.md` est la mémoire du projet.** En reprise, le lire en premier et s'en contenter tant que possible. Il contient les décisions, l'identité, la disposition, les personas, les **faits du fil rouge en chaînes exactes** (identifiants, libellés, heures : à y ajouter dès qu'un écran en crée), l'inventaire avec les ancres, l'état des lots et leurs URL, les conventions propres au projet, les points ouverts et la prochaine étape. Le créer depuis `templates/contexte.md` dès l'étape 1, et le **mettre à jour à la fin de chaque étape**. Il doit rester sous 200 lignes.
-2. **Ne jamais lire les pages construites (`specs-ui/site/`).** Les specs vivent dans `specs-ui/sources/` : un fichier par état d'écran. On lit et modifie seulement les fichiers utiles (`sources/<lot>/070-e15d.html`, `sources/shared/shells.html`), puis on reconstruit (étape 3).
+1. **`specs/ui/CONTEXTE.md` est la mémoire du projet.** En reprise, le lire en premier et s'en contenter tant que possible. Il contient les décisions, l'identité, la disposition, les personas, les **faits du fil rouge en chaînes exactes** (identifiants, libellés, heures : à y ajouter dès qu'un écran en crée), l'inventaire avec les ancres, l'état des lots et leurs URL, les conventions propres au projet, les points ouverts et la prochaine étape. Le créer depuis `templates/contexte.md` dès l'étape 1, et le **mettre à jour à la fin de chaque étape**. Il doit rester sous 200 lignes.
+2. **Ne jamais lire les pages construites (`specs/ui/site/`).** Les specs vivent dans `specs/ui/sources/` : un fichier par état d'écran. On lit et modifie seulement les fichiers utiles (`sources/<lot>/070-e15d.html`, `sources/shared/shells.html`), puis on reconstruit (étape 3).
 3. **Relire ses captures en commençant par le moins cher.** Lire d'abord les alertes de `capture.mjs`, puis la planche réduite (`--sheet`, environ 1 000 tokens pour plusieurs écrans), et ouvrir un cadre seul seulement en cas de doute. Les captures de section (`--sections`) coûtent cher : à réserver aux mises en page de document.
 4. **Limiter au travail en cours** : `--ids` pour ne capturer que les écrans modifiés, références du skill lues selon la table ci-dessous.
 5. **Déléguer sobrement, au bon modèle** (voir « Répartir le travail entre modèles »). Un sous-agent reçoit le chemin de `CONTEXTE.md` et sa tâche, pas un résumé de tout le projet. Deux sous-agents en parallèle ne travaillent jamais sur les mêmes fichiers, et l'inventaire révisé (ID, titres, ancres) est écrit dans `CONTEXTE.md` avant de les lancer.
@@ -63,8 +64,17 @@ Le rédacteur ne décide pas : une ambiguïté ou un manque dans la fiche lui fa
 
 ## Fichiers produits
 
+Les trois skills de la chaîne rangent leurs livrables dans un seul dossier `specs/` à la racine du projet. C'est aussi le dossier qui vit dans le dépôt de code de l'application pendant les développements :
+
 ```
-specs-ui/
+specs/
+├── ui/              ce skill : specs maquettées
+├── prototype/       skill prototype-ui (facultatif)
+└── requirements/    skill requirements-doc : cahier des charges (facultatif)
+```
+
+```
+specs/ui/
 ├── CONTEXTE.md                 mémoire du projet (à jour à chaque étape)
 ├── tokens.css                  identité : bloc @theme Tailwind, injecté dans chaque document
 ├── propositions.html           propositions d'interface et décision (jamais supprimé ; copié dans le site)
@@ -80,6 +90,8 @@ specs-ui/
 
 Les captures de vérification vont dans un dossier temporaire (le scratchpad de la session s'il existe), jamais dans le projet.
 
+**Dans un dépôt git**, on commite les sources **et** le site construit (le build est déterministe : une page ne change que si son contenu change), ainsi que `site/.published.json` : toute l'équipe lit les specs en HTML sans rien construire, et sait ce qui est publié. Les captures et les dossiers de publication restent hors du dépôt.
+
 ## Ressources du skill
 
 | Fichier | Rôle |
@@ -93,10 +105,11 @@ Les captures de vérification vont dans un dossier temporaire (le scratchpad de 
 | `templates/propositions.html` | Page de comparaison : trois dispositions, trois thèmes, combinables en direct |
 | `templates/tokens.css`, `templates/contexte.md` | Fichier d'identité, mémoire du projet |
 | `scripts/build.mjs` | Construit le site depuis les sources : pages, liens entre pages, tokens, coquilles, habillage, typographie ; liste les pages modifiées |
-| `scripts/split.mjs` | Crée un lot (`--new <lot> --root specs-ui`) ou découpe un document existant en sources |
+| `scripts/split.mjs` | Crée un lot (`--new <lot> --root specs/ui`) ou découpe un document existant en sources |
 | `scripts/capture.mjs` | Contrôles d'un fichier ou de tout le site ; images : `--sheet`, `--frames`, `--thumbnails`, `--sections`, `--themes`, `--ids` |
 | `scripts/check-contrast.mjs` | Contrôle WCAG AA des tokens |
-| `scripts/prepare-publish.mjs` | Prépare la publication du site (page principale + pages modifiées) ou d'un document isolé |
+| `scripts/prepare-publish.mjs` | Prépare la publication du site (page principale + pages modifiées) ou d'un document isolé ; `--check` dit si l'artifact est en retard sur le site local |
+| `scripts/migrate-layout.mjs` | Range un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) dans `specs/` |
 | `scripts/extract-identity.mjs` | Identité d'un site (URL) ou d'un code (dossier), captures |
 | `scripts/upgrade.mjs` | Met un document ancien (sans sources) au niveau des templates, sans toucher aux maquettes |
 | `scripts/typography.mjs` | Typographie française (appliquée automatiquement par `build.mjs`) |
@@ -111,10 +124,10 @@ Les templates contiennent un produit fictif (« Orbe », demandes clients) qui n
 
 ## Étape 0 · Cadrer
 
-1. **Reprise ?** Si `specs-ui/` existe, lire `CONTEXTE.md` et reprendre à l'étape utile. Un projet sans `CONTEXTE.md` ni `sources/` (créé par une version 1.x, un document par lot) se migre d'abord :
+1. **Reprise ?** Si `specs/ui/` existe, lire `CONTEXTE.md` et reprendre à l'étape utile. Un projet à l'ancienne disposition (`specs-ui/` à la racine, versions 2.x) se range d'abord avec `node <skill>/scripts/migrate-layout.mjs <projet>` (`--dry-run` pour voir), puis se reconstruit ; les artifacts gardent leur URL. Un projet sans `CONTEXTE.md` ni `sources/` (créé par une version 1.x, un document par lot) se migre d'abord :
    - `split.mjs` sur chaque document de specs, dans l'ordre des lots ;
-   - ranger les anciens documents dans `specs-ui/archives/` ;
-   - `build.mjs specs-ui`, puis contrôle avec `capture.mjs specs-ui/site <tmp>` ;
+   - ranger les anciens documents dans `specs/ui/archives/` ;
+   - `build.mjs specs/ui`, puis contrôle avec `capture.mjs specs/ui/site <tmp>` ;
    - rédiger `CONTEXTE.md` en extrayant le texte des points ouverts et des journaux, plutôt qu'en lisant les pages ;
    - publier le site comme un nouvel artifact, et noter les anciens artifacts comme remplacés.
 2. **Origine de l'identité**, déduite de la conversation : **à définir** → étape 1A ; **site ou code existant** → étape 1B ; **fournie** (charte, design system, tokens) → `tokens.css` directement, puis étape 2. Si la personne dispose d'un **Design System Claude Design** et souhaite partir de celui-ci (c'est facultatif, le proposer seulement s'il existe), le lire (outil Artifact : `list` avec le type « Design System », puis `read` du README et des tokens) et le traduire en `tokens.css` et en coquilles : l'étape 1A devient inutile.
@@ -137,7 +150,7 @@ Un choix composite se reformule précisément avant d'être appliqué. S'il rest
 
 ## Étape 1B · Reprendre un site existant
 
-Suivre `references/site-existant.md` : `extract-identity.mjs <url> --screenshots specs-ui/captures` (ou un dossier de code), croiser le rapport avec les captures, écrire `tokens.css` avec les valeurs exactes et leur origine, puis reproduire une page en **E0 · Existant** à côté de sa capture et faire valider la fidélité. Si l'emplacement de la fonctionnalité est incertain, proposer deux ou trois dispositions d'intégration.
+Suivre `references/site-existant.md` : `extract-identity.mjs <url> --screenshots specs/ui/captures` (ou un dossier de code), croiser le rapport avec les captures, écrire `tokens.css` avec les valeurs exactes et leur origine, puis reproduire une page en **E0 · Existant** à côté de sa capture et faire valider la fidélité. Si l'emplacement de la fonctionnalité est incertain, proposer deux ou trois dispositions d'intégration.
 
 ## Étape 2 · Inventaire des écrans
 
@@ -148,7 +161,7 @@ Suivre `references/redaction-specs.md` §1. Avant toute maquette, présenter le 
 **Créer un lot** :
 
 ```bash
-node <skill>/scripts/split.mjs --new <lot> --root specs-ui     # → sources/<lot>/, inscrit dans sources/site.json
+node <skill>/scripts/split.mjs --new <lot> --root specs/ui     # → sources/<lot>/, inscrit dans sources/site.json
 ```
 
 Dans un projet qui a déjà ses coquilles, le lot démarre d'un squelette vide (en-tête, règles, points ouverts, journal à remplir, annexe d'identité reprise d'un lot existant) : partir des écrans modèles cités dans `CONTEXTE.md`.
@@ -163,18 +176,18 @@ Les coquilles se modifient une seule fois dans `shells.html`, pour tous les lots
 **Construire** après chaque série de modifications :
 
 ```bash
-node <skill>/scripts/build.mjs specs-ui
+node <skill>/scripts/build.mjs specs/ui
 ```
 
-`build.mjs` produit `specs-ui/site/` : il injecte `tokens.css`, les coquilles utiles à chaque page, l'habillage et le script du template à jour, ajoute la navigation entre écrans, réécrit les liens et applique la typographie française. Les pages construites n'ont jamais besoin de mise à niveau. Il signale les liens non résolus et liste les pages modifiées.
+`build.mjs` produit `specs/ui/site/` : il injecte `tokens.css`, les coquilles utiles à chaque page, l'habillage et le script du template à jour, ajoute la navigation entre écrans, réécrit les liens et applique la typographie française. Les pages construites n'ont jamais besoin de mise à niveau. Il signale les liens non résolus et liste les pages modifiées.
 
 Contenu : suivre `tailwind.md` (tokens uniquement, catalogue de composants, annotations) et `qualite-ui.md` (usage dominant, point focal, hiérarchie). Chaque écran comporte un ID, un titre, un badge, une note, « Depuis / Ensuite », une maquette desktop, une maquette mobile repensée et 3 à 6 annotations. Écrire l'en-tête et le premier écran, construire, vérifier, puis la suite.
 
 ## Étape 4 · Vérifier, puis publier
 
 ```bash
-node <skill>/scripts/capture.mjs specs-ui/site <tmp>/captures                       # contrôles seuls, aucune image
-node <skill>/scripts/capture.mjs specs-ui/site <tmp>/captures --sheet --ids e4,e5   # planches des écrans touchés
+node <skill>/scripts/capture.mjs specs/ui/site <tmp>/captures                       # contrôles seuls, aucune image
+node <skill>/scripts/capture.mjs specs/ui/site <tmp>/captures --sheet --ids e4,e5   # planches des écrans touchés
 ```
 
 Le script signale la version du template, les icônes inconnues, les blocs non assemblés, le contenu coupé et les **pastilles posées sur du texte ou coupées par un bord** (avec le cadre, le numéro et le texte recouvert). Corriger ces alertes, relire les planches avec la grille de `qualite-ui.md` §9, ouvrir un cadre seul (`--frames --ids …`) seulement en cas de doute, puis corriger les trois défauts les plus visibles et recapturer les écrans touchés. Cette boucle prime sur toute consigne générale de vérification unique. Sans navigateur, le dire.
@@ -182,12 +195,12 @@ Le script signale la version du template, les icônes inconnues, les blocs non a
 **Publier** (outil Artifact s'il existe ; les fichiers locaux font foi). Tout le projet est **un seul artifact multi-pages** :
 
 ```bash
-node <skill>/scripts/prepare-publish.mjs specs-ui/site <tmp>/publish    # page principale + pages à envoyer
+node <skill>/scripts/prepare-publish.mjs specs/ui/site <tmp>/publish    # page principale + pages à envoyer
 ```
 
-- Passer à l'outil Artifact la page principale préparée (`file_path`) et la table `files` affichée par le script : chemin publié → fichier de `specs-ui/site/`. Les pages secondaires sont des documents complets ; les liens relatifs entre pages fonctionnent tels quels.
+- Passer à l'outil Artifact la page principale préparée (`file_path`) et la table `files` affichée par le script : chemin publié → fichier de `specs/ui/site/`. Les pages secondaires sont des documents complets ; les liens relatifs entre pages fonctionnent tels quels.
 - Première publication : toutes les pages. Ensuite, seules les pages modifiées depuis la dernière publication ; les autres restent en ligne. Avec `url`, l'outil peut exiger d'avoir vu la liste des fichiers : demander la liste (`scope: "files"`) plutôt que de relire les pages.
-- Après une publication réussie : `prepare-publish.mjs specs-ui/site --confirm`. Noter l'URL dans `sources/site.json` (`artifact`) et dans `CONTEXTE.md`.
+- Après une publication réussie : `prepare-publish.mjs specs/ui/site --confirm`. Noter l'URL dans `sources/site.json` (`artifact`) et dans `CONTEXTE.md`.
 - Respecter les règles de l'outil Artifact pour la publication ; titre de deux à quatre mots.
 
 Terminer par le chemin, le lien, un résumé court et les décisions attendues. Mettre `CONTEXTE.md` à jour.
@@ -213,18 +226,18 @@ Fonctionnalité **facultative** : chaque personne décide de l'utiliser ou non. 
 
 Si la réponse est oui, deux temps.
 
-**1. Le catalogue** (`specs-ui/design-system/`) :
+**1. Le catalogue** (`specs/ui/design-system/`) :
 
 ```bash
-node <skill>/scripts/export-design-system.mjs specs-ui
+node <skill>/scripts/export-design-system.mjs specs/ui
 ```
 
 Il contient le README (thème, vocabulaire des tokens, règles d'usage), `tokens.css`, les fondations (couleurs, typographie, formes), les composants du catalogue et ceux du projet (`sources/shared/`). Chaque fiche porte le marqueur de carte de Claude Design.
 
-**2. Le paquet « tokens seuls »** (`design-system-package/`, à côté de `specs-ui/`). Claude Design construit en React à partir d'un paquet : comme les specs n'ont pas de composants React, on lui envoie l'identité sous forme de tokens et de classes utilitaires. Les fiches du catalogue deviennent les cartes visibles du projet.
+**2. Le paquet « tokens seuls »** (`specs/design-system-package/`, à côté de `specs/ui/`). Claude Design construit en React à partir d'un paquet : comme les specs n'ont pas de composants React, on lui envoie l'identité sous forme de tokens et de classes utilitaires. Les fiches du catalogue deviennent les cartes visibles du projet.
 
 ```bash
-node <skill>/scripts/design-sync-package.mjs specs-ui
+node <skill>/scripts/design-sync-package.mjs specs/ui
 cd design-system-package && npm install && npm run build
 ```
 
@@ -236,9 +249,38 @@ Après une évolution de l'identité ou des composants partagés : relancer l'ex
 
 ## Étape 6 · Passer aux développements
 
-Vérifier qu'aucun point ouvert ne bloque, proposer l'export Design System si la personne ne s'est pas encore prononcée (voir l'option ci-dessus), proposer l'inventaire des composants récurrents, et rappeler que `tokens.css` se colle tel quel après `@import "tailwindcss";`. Sur demande, découper en stories avec les annotations comme critères d'acceptation.
+Vérifier qu'aucun point ouvert ne bloque, activer le statut d'implémentation (étape 7), proposer l'export Design System si la personne ne s'est pas encore prononcée (voir l'option ci-dessus), proposer l'inventaire des composants récurrents, et rappeler que `tokens.css` se colle tel quel après `@import "tailwindcss";`. Sur demande, découper en stories avec les annotations comme critères d'acceptation.
 
 Pour faire tester les parcours ou les montrer avant de développer, le skill `prototype-ui` transforme ces specs en prototype cliquable (mêmes écrans, données simulées, scénarios de test). Pour lancer les développements, le skill `requirements-doc` en tire le cahier des charges de l'équipe (specs par lot avec critères d'acceptation, architecture, stack, infrastructure, lots et estimations).
+
+## Étape 7 · Maintenir pendant les développements
+
+Une fois les développements lancés, les specs restent **la référence** : elles décrivent ce que l'application fait, écran par écran, et suivent l'implémentation. Le dossier `specs/` vit dans le dépôt de l'application.
+
+**Statut d'implémentation.** L'activer dans `sources/site.json` (`"implementation": true`), puis le tenir à jour dans le `lot.json` de chaque lot :
+
+```json
+"status": { "e1": "done", "e2": "doing", "e3": { "status": "gap", "note": "Codex pas encore pris en charge" } }
+```
+
+- Valeurs : `todo` (À développer, par défaut), `doing` (En cours), `done` (Livré), `gap` (Écart : l'application diffère des specs ; la note dit en quoi).
+- Le build remplace le badge « Nouveau » de chaque état par le statut, met une pastille dans la navigation et affiche l'avancement sur l'index des lots et l'accueil. Le cahier des charges reprend les statuts à l'extraction.
+
+**Un écart constaté pendant le développement** se tranche, puis se reporte dans le même changement que le code (même branche, même PR) :
+
+1. **Le code a raison** (contrainte technique, meilleure idée validée) : modifier les sources de l'écran, incrémenter l'itération et noter au journal du lot « aligné sur l'implémentation », avec la raison. Garder les identifiants (écrans, états, numéros de règles) : le code et les tests les citent.
+2. **Les specs ont raison** : le code se corrige ; en attendant, statut `gap` avec une note.
+3. **Question ouverte** : point ouvert du lot et de `CONTEXTE.md`, statut `gap`.
+
+Puis, dans l'ordre :
+
+- reconstruire les specs ;
+- reporter l'écart dans le prototype s'il câble l'écran (skill `prototype-ui`, « Suivre les specs ») ;
+- réextraire le cahier des charges et ajuster les critères touchés (skill `requirements-doc`, « Maintenir ») ;
+- publier les artifacts concernés (`prepare-publish.mjs … --check` dit lesquels sont en retard) ;
+- commiter sources, sites et `.published.json` ensemble.
+
+**Numérotation stable.** Une règle fonctionnelle garde son numéro : une nouvelle règle va à la fin de la liste, une règle abandonnée reste avec la mention « Retirée ». Un écran ou un état retiré garde son identifiant réservé. Les identifiants RF du cahier des charges viennent de ces numéros.
 
 ## Ce que ce skill ne fait pas
 

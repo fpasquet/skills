@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Contrôle le cahier des charges construit (cdc.json → output), sans avoir à le lire.
+ * Contrôle le cahier des charges construit (requirements.json → output), sans avoir à le lire.
  *
- * Usage : node check.mjs cdc
+ * Usage : node check.mjs specs/requirements
  *
  * Signale :
  *   - les parties attendues absentes (architecture, stack, infrastructure, lots, estimations…) ;
@@ -16,12 +16,13 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { loadConfig, specsDirOf } from './config.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
-const cfg = root && existsSync(join(root, 'cdc.json')) ? JSON.parse(readFileSync(join(root, 'cdc.json'), 'utf8')) : {};
-const file = root && join(root, cfg.output ?? 'cahier-des-charges.md');
+const config = root ? loadConfig(root) : {};
+const file = root && join(root, config.output ?? 'requirements.md');
 if (!root || !existsSync(file)) {
-  console.error('Usage: node check.mjs cdc   (run build.mjs first)');
+  console.error('Usage: node check.mjs specs/requirements   (run build.mjs first)');
   process.exit(2);
 }
 const doc = readFileSync(file, 'utf8');
@@ -71,8 +72,7 @@ const undefinedIds = cited.filter((id) => !defined.has(id));
 if (undefinedIds.length) problems.push(`identifiers cited but never defined (${undefinedIds.length}): ${undefinedIds.slice(0, 12).join(', ')}`);
 
 // Lots et estimations, couverture de l'inventaire
-const config = existsSync(join(root, 'cdc.json')) ? JSON.parse(readFileSync(join(root, 'cdc.json'), 'utf8')) : {};
-const specsDir = resolve(root, config.specs ?? '../specs-ui');
+const specsDir = specsDirOf(root, config);
 const site = existsSync(join(specsDir, 'sources', 'site.json')) ? JSON.parse(readFileSync(join(specsDir, 'sources', 'site.json'), 'utf8')) : { lots: [] };
 const lotSection = prose.split(/^## /m).find((part) => /^[^\n]*(découpage|lots)/i.test(part)) ?? '';
 for (const name of site.lots ?? []) {

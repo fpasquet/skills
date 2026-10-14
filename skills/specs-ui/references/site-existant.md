@@ -17,7 +17,7 @@ Ne reproduire que le produit de la personne ou de son organisation. Un site tier
 
 ```bash
 # Site en ligne : rapport + captures desktop, desktop page longue, mobile
-node <skill>/scripts/extract-identity.mjs https://exemple.fr/espace-client --screenshots specs-ui/captures
+node <skill>/scripts/extract-identity.mjs https://exemple.fr/espace-client --screenshots specs/ui/captures
 
 # Code source : rapport + liste des fichiers de configuration à lire
 node <skill>/scripts/extract-identity.mjs ./chemin/du/front

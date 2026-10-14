@@ -84,7 +84,7 @@ Chaque écran est livré deux fois : desktop puis mobile. Les cadres ont une tai
 
 ## 4. Blocs réutilisables (`data-use`)
 
-Les templates incluent un petit script d'assemblage. Il évite de recopier la coquille de l'application (navigation, barre du haut) dans chaque écran et la garde cohérente. Les coquilles vivent dans `specs-ui/sources/shared/shells.html`, communes à tous les lots ; un `<template>` propre à un lot (fond de calque, contenu réutilisé) va dans `sources/<lot>/templates.html`.
+Les templates incluent un petit script d'assemblage. Il évite de recopier la coquille de l'application (navigation, barre du haut) dans chaque écran et la garde cohérente. Les coquilles vivent dans `specs/ui/sources/shared/shells.html`, communes à tous les lots ; un `<template>` propre à un lot (fond de calque, contenu réutilisé) va dans `sources/<lot>/templates.html`.
 
 ```html
 <template id="tpl-shell-desktop">

@@ -2,16 +2,16 @@
 /**
  * Prépare le dossier du cahier des charges à partir d'un projet de specs (skill specs-ui).
  *
- * Usage : node init.mjs --specs specs-ui --out cdc [--prototype prototype-ui]
+ * Usage : node init.mjs --specs specs/ui --out specs/requirements [--prototype specs/prototype]
  *
  * Crée, sans écraser un fichier existant :
- *   cdc/cdc.json                 titre, chemins, liens des artifacts (specs, prototype, cahier des charges)
- *   cdc/CDC.md                   mémoire du cahier des charges
- *   cdc/sources/NN-*.md          une source par partie, avec les valeurs connues déjà remplies et des
+ *   specs/requirements/requirements.json                 titre, chemins, liens des artifacts (specs, prototype, cahier des charges)
+ *   specs/requirements/REQUIREMENTS.md                   mémoire du cahier des charges
+ *   specs/requirements/sources/NN-*.md          une source par partie, avec les valeurs connues déjà remplies et des
  *                                gabarits {{…}} à rédiger (check.mjs les signale tant qu'il en reste)
- *   cdc/sources/30-specs.md      partie fonctionnelle et UI : un chapitre par lot, qui inclut l'extraction
- *   cdc/sources/lots/<lot>-criteres.md   critères d'acceptation du lot, à rédiger
- * Puis lance extract.mjs (matière des specs en Markdown, dans cdc/sources/generated/).
+ *   specs/requirements/sources/30-specs.md      partie fonctionnelle et UI : un chapitre par lot, qui inclut l'extraction
+ *   specs/requirements/sources/lots/<lot>-criteres.md   critères d'acceptation du lot, à rédiger
+ * Puis lance extract.mjs (matière des specs en Markdown, dans specs/requirements/sources/generated/).
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { join, resolve, relative, dirname } from 'node:path';
@@ -24,7 +24,7 @@ const specsDir = valueOf('--specs') && resolve(valueOf('--specs'));
 const outDir = valueOf('--out') && resolve(valueOf('--out'));
 const prototypeDir = valueOf('--prototype') && resolve(valueOf('--prototype'));
 if (!specsDir || !outDir || !existsSync(join(specsDir, 'sources', 'site.json'))) {
-  console.error('Usage: node init.mjs --specs specs-ui --out cdc [--prototype prototype-ui]   (specs-ui must contain sources/site.json)');
+  console.error('Usage: node init.mjs --specs specs/ui --out specs/requirements [--prototype specs/prototype]   (the specs folder must contain sources/site.json)');
   process.exit(2);
 }
 const skillDir = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -57,11 +57,11 @@ for (const name of site.lots ?? []) {
 const links = {
   specs: site.artifact ?? '',
   prototype: prototypeConfig?.artifact ?? '',
-  cdc: '',
+  requirements: '',
 };
 writeIfMissing(
-  'cdc.json',
-  JSON.stringify({ title: `${product} · Cahier des charges`, output: `${product.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-cahier-des-charges.md`, specs: relative(outDir, specsDir), prototype: prototypeDir ? relative(outDir, prototypeDir) : null, artifacts: links }, null, 2) + '\n',
+  'requirements.json',
+  JSON.stringify({ title: `${product} · Cahier des charges`, output: 'requirements.md', specs: relative(outDir, specsDir), prototype: prototypeDir ? relative(outDir, prototypeDir) : null, artifacts: links }, null, 2) + '\n',
 );
 
 // Sources : gabarits du skill, valeurs connues remplies
@@ -69,14 +69,14 @@ const fill = (text) =>
   text
     .replaceAll('{{PRODUCT}}', product)
     .replaceAll('{{DATE}}', date)
-    .replaceAll('{{SPECS_LINK}}', links.specs ? `[artifact des specs](${links.specs})` : 'dossier `specs-ui/`')
+    .replaceAll('{{SPECS_LINK}}', links.specs ? `[artifact des specs](${links.specs})` : 'dossier `specs/ui/`')
     .replaceAll('{{PROTOTYPE_LINK}}', links.prototype ? `[artifact du prototype](${links.prototype})` : 'aucun')
     .replaceAll('{{LOTS}}', String(lots.length))
     .replaceAll('{{SCREENS}}', String(screens))
     .replaceAll('{{STATES}}', String(states));
 const templates = join(skillDir, 'templates', 'sources');
 for (const f of readdirSync(templates)) writeIfMissing(join('sources', f), fill(readFileSync(join(templates, f), 'utf8')));
-writeIfMissing('CDC.md', fill(readFileSync(join(skillDir, 'templates', 'cdc.md'), 'utf8')));
+writeIfMissing('REQUIREMENTS.md', fill(readFileSync(join(skillDir, 'templates', 'memory.md'), 'utf8')));
 
 // Partie fonctionnelle et UI : un chapitre par lot
 let specsPart = `## 3. Spécifications fonctionnelles et UI\n\nCette partie reprend les specs UI, lot par lot. Chaque écran renvoie à sa page dans les specs, où se trouvent les maquettes desktop et mobile. Les règles fonctionnelles du lot (**RF-…**) et les règles de chaque écran sont celles des specs. Les critères d'acceptation (**CA-…**) les traduisent en vérifications pour la recette.\n`;
@@ -91,4 +91,4 @@ writeIfMissing(join('sources', '30-specs.md'), specsPart);
 
 console.log(`Initialized ${outDir}${written.length ? `: ${written.join(', ')}` : ' (nothing new, all files exist)'}`);
 execFileSync(process.execPath, [join(skillDir, 'scripts', 'extract.mjs'), outDir], { stdio: 'inherit' });
-console.log('Next: read CDC.md, then follow SKILL.md (cadrage, architecture questions, writing the sources).');
+console.log('Next: read REQUIREMENTS.md, then follow SKILL.md (cadrage, architecture questions, writing the sources).');

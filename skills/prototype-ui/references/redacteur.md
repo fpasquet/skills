@@ -4,14 +4,14 @@ Tu câbles une ou plusieurs pages d'un prototype HTML + Tailwind + Alpine.js tir
 
 ## Ce que tu reçois
 
-- ta fiche : `prototype-ui/fiches/<page>.md`, qui dit les états, les conditions, les données, les gestes et la navigation ;
-- `prototype-ui/PROTOTYPE.md` : modèle de données, actions, écarts. Lis seulement « Modèle de données » et « Actions ».
+- ta fiche : `specs/prototype/fiches/<page>.md`, qui dit les états, les conditions, les données, les gestes et la navigation ;
+- `specs/prototype/PROTOTYPE.md` : modèle de données, actions, écarts. Lis seulement « Modèle de données » et « Actions ».
 
-Ne lis ni `specs-ui/CONTEXTE.md`, ni `src/shells.html`, ni `site/`. `src/data.js` et `src/actions.js` se lisent seulement si la fiche ne suffit pas.
+Ne lis ni `specs/ui/CONTEXTE.md`, ni `src/shells.html`, ni `site/`. `src/data.js` et `src/actions.js` se lisent seulement si la fiche ne suffit pas.
 
 ## Lire peu
 
-1. `node <skill>/scripts/outline.mjs prototype-ui <page>` : les états avec leurs lignes, leurs textes, leurs actions et leurs champs.
+1. `node <skill>/scripts/outline.mjs specs/prototype <page>` : les états avec leurs lignes, leurs textes, leurs actions et leurs champs.
 2. Lis la page **par morceaux** (offset / limit sur les lignes données par l'outline), jamais d'un bloc au-delà de 400 lignes. Une fois un morceau lu, tu ne le relis pas : modifie-le directement.
 3. Fais des modifications ciblées (Edit), groupées par zone. Ne relis pas un fichier pour vérifier une modification : l'outil d'édition signale déjà un échec.
 
@@ -39,11 +39,11 @@ Ne lis ni `specs-ui/CONTEXTE.md`, ni `src/shells.html`, ni `site/`. `src/data.js
 
 ## Contrôler, une fois
 
-Depuis le dossier qui contient `prototype-ui/` :
+Depuis le dossier qui contient `specs/prototype/` :
 
 ```sh
-node <skill>/scripts/build.mjs prototype-ui
-node <skill>/scripts/check.mjs prototype-ui --pages <tes pages>
+node <skill>/scripts/build.mjs specs/prototype
+node <skill>/scripts/check.mjs specs/prototype --pages <tes pages>
 ```
 
 Une seule passe à la fin, puis une autre seulement si tu as corrigé. N'écris aucun script de test et ne pilote pas Chrome toi-même. Ne capture pas d'écran et n'en lis pas : la relecture visuelle revient au modèle principal (planches de `check.mjs`). Pour voir un état : `?state=<id>`.

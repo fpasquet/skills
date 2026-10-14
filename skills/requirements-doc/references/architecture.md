@@ -42,9 +42,9 @@ Chaque décision structurante devient une entrée **DT-xx**. Liste de contrôle,
 ## 3. Proposer et décider
 
 1. Demander d'abord les **contraintes** (AskUserQuestion, une seule série) : hébergement imposé ou souhaité, langages et frameworks maîtrisés par l'équipe, contraintes de sécurité et de conformité, volumes attendus, budget d'infrastructure. Toujours proposer une option « pas de contrainte ».
-2. Pour chaque décision structurante, préparer **2 ou 3 options réalistes** compatibles avec ces contraintes, avec une recommandation. Les présenter par AskUserQuestion, **4 questions au plus par série** et 2 séries au plus. Les décisions secondaires (outillage, bibliothèques) se tranchent par défaut, avec une recommandation notée « à valider » dans `CDC.md`.
+2. Pour chaque décision structurante, préparer **2 ou 3 options réalistes** compatibles avec ces contraintes, avec une recommandation. Les présenter par AskUserQuestion, **4 questions au plus par série** et 2 séries au plus. Les décisions secondaires (outillage, bibliothèques) se tranchent par défaut, avec une recommandation notée « à valider » dans `REQUIREMENTS.md`.
 3. Chaque option tient en une ligne : ce que c'est, pour quoi elle est bonne, son coût principal. Recommander la plus simple qui couvre les besoins de la partie 1 : pas de microservices ni de Kubernetes sans besoin démontré.
-4. Noter chaque décision dans `CDC.md` (« Décisions techniques ») avant de rédiger : `DT-03 · Asynchrone · file X + workers (14/10) · écartés : Y (raison), Z (raison)`.
+4. Noter chaque décision dans `REQUIREMENTS.md` (« Décisions techniques ») avant de rédiger : `DT-03 · Asynchrone · file X + workers (14/10) · écartés : Y (raison), Z (raison)`.
 
 ## 4. Rédiger l'architecture (partie 6)
 

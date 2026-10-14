@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="specs-ui-template" content="2.4.0">
+<meta name="specs-ui-template" content="3.0.0">
 <!-- artifact : (URL claude.ai à reporter ici après la première publication) -->
 <title>Orbe · Specs UI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,15 +60,16 @@
     --color-doc-accent: var(--doc-accent);
     --color-doc-new: var(--doc-new);
     --color-doc-changed: var(--doc-changed);
+    --color-doc-gap: var(--doc-gap);
     --color-anno: #fcd34d;
     --color-anno-ink: #3b2a00;
     --font-doc: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  :root { --doc-bg: #f4f4f1; --doc-fg: #1c1c1a; --doc-muted: #62625b; --doc-line: #dcdcd5; --doc-card: #ffffff; --doc-accent: #4f46e5; --doc-new: #047857; --doc-changed: #a14c00; color-scheme: light; }
+  :root { --doc-bg: #f4f4f1; --doc-fg: #1c1c1a; --doc-muted: #62625b; --doc-line: #dcdcd5; --doc-card: #ffffff; --doc-accent: #4f46e5; --doc-new: #047857; --doc-changed: #a14c00; --doc-gap: #b42318; color-scheme: light; }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; color-scheme: dark; }
+    :root:not([data-theme="light"]) { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; --doc-gap: #fda29b; color-scheme: dark; }
   }
-  :root[data-theme="dark"] { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; color-scheme: dark; }
+  :root[data-theme="dark"] { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; --doc-gap: #fda29b; color-scheme: dark; }
   /* Corps du document : règle hors couche, pour l'emporter sur le style de base qu'ajoute l'outil Artifact
      autour de la page principale (police système 14 px, fond et couleur fixes). */
   html body { margin: 0; background: var(--doc-bg); color: var(--doc-fg); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }

@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 2.0.0 · 14/10/2026
+
+- **Disposition `specs/`** (rupture) : le prototype vit dans `specs/prototype`, les specs dans `specs/ui` (chemin par défaut `../ui`, repli sur `../specs-ui`). Migration avec `migrate-layout.mjs` du skill `specs-ui`.
+- **`drift.mjs`** : écrans modifiés dans les specs depuis leur reprise dans le prototype, ainsi que l'identité et les coquilles partagées. Les empreintes sont dans `src/specs-sync.json` ; `--mark` les met à jour après la reprise, `--strict` sert à la CI.
+- `prepare-publish.mjs --check` dit si l'artifact est en retard sur le site local.
+- Section « Maintenir pendant les développements » : le prototype suit les specs, pas le code ; un parcours livré dans l'application est noté « figé ». Fichiers à commiter et à ignorer dans un dépôt git.
+
 ## 1.4.0 · 14/10/2026
 
 Économie de tokens, dans l'esprit de specs-ui 2.1 (retours du câblage d'Agentic Studio : 115 000 et 145 000 tokens pour deux rédacteurs sur 5 pages).

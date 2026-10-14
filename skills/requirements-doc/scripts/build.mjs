@@ -2,12 +2,12 @@
 /**
  * Assemble le cahier des charges à partir de ses sources.
  *
- * Usage : node build.mjs cdc
+ * Usage : node build.mjs specs/requirements
  *
- * Lit cdc/sources/*.md dans l'ordre de leur préfixe numérique (00-, 10-, 20-…), remplace chaque
- * <!-- include: generated/lot-sessions.md --> par le fichier indiqué (chemin relatif à cdc/sources/),
+ * Lit specs/requirements/sources/*.md dans l'ordre de leur préfixe numérique (00-, 10-, 20-…), remplace chaque
+ * <!-- include: generated/lot-sessions.md --> par le fichier indiqué (chemin relatif à specs/requirements/sources/),
  * génère la table des matières à l'emplacement <!-- toc --> (titres de niveau 2 et 3) et écrit
- * cdc/<output> (cdc.json → output, par défaut cahier-des-charges.md). Les titres inclus sont décalés pour rester sous le titre qui les inclut :
+ * specs/requirements/<output> (requirements.json → output, par défaut cahier-des-charges.md). Les titres inclus sont décalés pour rester sous le titre qui les inclut :
  * <!-- include: generated/lot-sessions.md shift=0 --> pour ne pas décaler.
  * Ne pas lire le fichier produit : travailler dans les sources, puis lancer check.mjs.
  */
@@ -16,14 +16,15 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync } from 'node:fs';
 import { render, inline } from './render.mjs';
+import { loadConfig } from './config.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !existsSync(join(root, 'sources'))) {
-  console.error('Usage: node build.mjs cdc   (the folder must contain sources/)');
+  console.error('Usage: node build.mjs specs/requirements   (the folder must contain sources/)');
   process.exit(2);
 }
 const sourcesDir = join(root, 'sources');
-const config = existsSync(join(root, 'cdc.json')) ? JSON.parse(readFileSync(join(root, 'cdc.json'), 'utf8')) : {};
+const config = loadConfig(root);
 const files = readdirSync(sourcesDir).filter((f) => /^\d+-.*\.md$/.test(f)).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 const missing = [];
 
@@ -74,8 +75,8 @@ const toc = headings.map((h) => `${h.level === 3 ? '  ' : ''}- [${h.text.replace
 const docWithoutToc = doc.replace(/<!--\s*toc\s*-->/, '');
 doc = doc.replace(/<!--\s*toc\s*-->/, `**Sommaire**\n\n${toc}`);
 
-// Nom du fichier produit : il devient le titre de l'artifact Markdown (cdc.json → output)
-const target = join(root, config.output ?? 'cahier-des-charges.md');
+// Nom du fichier produit : il devient le titre de l'artifact Markdown (requirements.json → output)
+const target = join(root, config.output ?? 'requirements.md');
 const before = existsSync(target) ? readFileSync(target, 'utf8') : '';
 const output = `${doc.trim()}\n`;
 writeFileSync(target, output);
@@ -117,10 +118,10 @@ const page = template
   .replaceAll('{{NAV}}', () => navHtml)
   .replace('{{CONTENT}}', () => content)
   .replace('{{DATA}}', () => data);
-const htmlName = (config.output ?? 'cahier-des-charges.md').replace(/\.md$/, '.html');
+const htmlName = (config.output ?? 'requirements.md').replace(/\.md$/, '.html');
 mkdirSync(join(root, 'publish'), { recursive: true });
 writeFileSync(join(root, 'publish', htmlName), page);
 const local = `<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n${page.replace(/<script type="application\/json"/, '<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>\n<script>mermaid.initialize({ startOnLoad: true, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral" });</script>\n<script type="application/json"')}\n</html>\n`;
 writeFileSync(join(root, htmlName), local);
 console.log(`Built ${join(root, htmlName)} (local) and publish/${htmlName} (artifact): ${Math.round(page.length / 1024)} Ko.`);
-if (config.artifacts?.cdc) console.log(`Publish: same file, same artifact (${config.artifacts.cdc}).`);
+if (config.artifacts.requirements) console.log(`Publish: same file, same artifact (${config.artifacts.requirements}), with prepare-publish.mjs.`);

@@ -18,7 +18,7 @@ Sommaire : 1. Ce que contient une page · 2. Principe · 3. Store et données ·
 
 Chaque `<section data-state>` est un état de la maquette, affiché selon `?state=` (le premier par défaut). `data-use` insère une coquille ou un bloc de `src/shells.html` au chargement, avant Alpine : les directives Alpine placées dans un bloc fonctionnent donc. Un `data-backdrop` est l'écran d'arrière-plan d'un panneau : c'est la page d'où l'on vient.
 
-Pour un aperçu rapide des états avant d'ouvrir le HTML : `node <skill>/scripts/outline.mjs prototype-ui e13`.
+Pour un aperçu rapide des états avant d'ouvrir le HTML : `node <skill>/scripts/outline.mjs specs/prototype e13`.
 
 ## 2. Principe
 
@@ -146,7 +146,7 @@ window.PROTO_ACTIONS = {
 Les coquilles (`shell-desktop`, `shell-mobile`) et les blocs (`contenu-e2b`) viennent de `src/shells.html` et servent à plusieurs pages.
 
 - **La navigation des coquilles vient de `prototype.json` → `nav`**, que le scaffold propose (chaque entrée `data-nav` mène au premier écran où elle est active dans les maquettes) et que le build applique aux liens sans destination. Pour viser un seul template : `"tpl-entete-projet:sessions"`. `{project}` reprend ce paramètre de la page en cours, avec sa valeur par défaut dans `params` : `"e14.html?project={project}"`. Le modèle principal relit la table avant de lancer les rédacteurs.
-- Le reste du câblage partagé (barre latérale tirée des données, en-têtes communs) se fait dans `shells.html`, par le modèle principal. `outline.mjs prototype-ui --shells` donne les templates avec leurs lignes, leurs slots et leurs zones : lire seulement les lignes du template à câbler, jamais le fichier entier.
+- Le reste du câblage partagé (barre latérale tirée des données, en-têtes communs) se fait dans `shells.html`, par le modèle principal. `outline.mjs specs/prototype --shells` donne les templates avec leurs lignes, leurs slots et leurs zones : lire seulement les lignes du template à câbler, jamais le fichier entier.
 - Un bloc partagé qui doit changer pour une seule page : copier son contenu dans la page plutôt que modifier le bloc.
 - Les compteurs de la coquille (`data-slot-boite="3"`) peuvent rester en dur, sauf si un parcours les fait changer : remplacer alors le `data-slot-…` par un `x-text` dans la coquille.
 - Une coquille vivante peut contenir des `<template x-for>` imbriqués dans son `<template id="tpl-…">` : le build les gère.

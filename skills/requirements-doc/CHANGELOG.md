@@ -1,5 +1,19 @@
 # Journal des versions
 
+## 2.0.0 · 14/10/2026
+
+- **Disposition `specs/` et noms anglais** (rupture) :
+  - le cahier des charges vit dans `specs/requirements` ;
+  - `cdc.json` devient `requirements.json` (`artifacts.cdc` → `artifacts.requirements`) et `CDC.md` devient `REQUIREMENTS.md` ;
+  - le document est produit dans `requirements.md` et `requirements.html`.
+
+  Les scripts lisent encore un ancien `cdc.json` ; `migrate-layout.mjs` du skill `specs-ui` renomme tout.
+- **`trace.mjs`** : traçabilité entre critères d'acceptation (et RF, NF) et code. Il donne, par lot, les critères testés, seulement référencés ou non couverts, les identifiants cités dans le code mais définis nulle part, et les écrans livrés dont des critères ne sont pas testés. `--write` produit `generated/couverture.md`.
+- **`prepare-publish.mjs`** : suivi de la publication (`.published.json`, `--confirm`, `--check`).
+- **Statut d'implémentation** des écrans repris dans l'inventaire et les lots extraits.
+- **Identifiants stables** : jamais renumérotés, un critère abandonné reste barré et « Retiré ». Consigne ajoutée pour les rédacteurs, et texte barré (`~~…~~`) rendu dans la page HTML.
+- Section « Maintenir pendant les développements ».
+
 ## 1.1.0 · 14/10/2026
 
 - **Page HTML pour l'artifact**, à la place du Markdown brut, peu lisible dans l'artifact. Le Markdown reste produit (fichier local et boutons de copie).

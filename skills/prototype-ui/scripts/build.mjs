@@ -2,13 +2,13 @@
 /**
  * Construit le site du prototype à partir de ses sources.
  *
- * Usage : node build.mjs prototype-ui
+ * Usage : node build.mjs specs/prototype
  *
- * Sources (prototype-ui/src/) : prototype.json (titre, specs, scénarios, pages), data.js, actions.js,
+ * Sources (specs/prototype/src/) : prototype.json (titre, specs, scénarios, pages), data.js, actions.js,
  * shells.html (coquilles et templates), pages/eN.html (une page par écran).
  * L'identité vient du projet de specs indiqué par prototype.json → specs : tokens.css et polices du premier lot.
  *
- * Sortie (prototype-ui/site/) : index.html (accueil : scénarios, exploration libre, liste des écrans) et une
+ * Sortie (specs/prototype/site/) : index.html (accueil : scénarios, exploration libre, liste des écrans) et une
  * page par écran. Chaque page embarque Tailwind, Alpine.js, Lucide, l'état simulé (store), les actions,
  * les coquilles qu'elle utilise et le panneau « Scénarios ». Affiche les pages modifiées et supprime les
  * pages sans source.
@@ -21,13 +21,14 @@ import { fileURLToPath } from 'node:url';
 const args = process.argv.slice(2);
 const root = args[0] && !args[0].startsWith('--') && resolve(args[0]);
 if (!root || !existsSync(join(root, 'src', 'prototype.json'))) {
-  console.error('Usage: node build.mjs prototype-ui [--cdn]   (the folder must contain src/prototype.json)');
+  console.error('Usage: node build.mjs specs/prototype [--cdn]   (the folder must contain src/prototype.json)');
   process.exit(2);
 }
 const read = (path, fallback = '') => (existsSync(path) ? readFileSync(path, 'utf8') : fallback);
 const skillDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(read(join(root, 'src', 'prototype.json')));
-const specsDir = resolve(root, config.specs ?? '../specs-ui');
+// Specs : prototype.json → specs, sinon ../ui (disposition specs/), sinon ../specs-ui (disposition 1.x)
+const specsDir = config.specs ? resolve(root, config.specs) : [resolve(root, '../ui'), resolve(root, '../specs-ui')].find((d) => existsSync(join(d, 'sources', 'site.json'))) ?? resolve(root, '../ui');
 const outDir = join(root, 'site');
 
 // Identité : tokens et polices du projet de specs
@@ -43,7 +44,7 @@ const firstLot = (site.lots ?? []).find((l) => existsSync(join(specsDir, 'source
 const fonts = config.fonts ?? (firstLot ? JSON.parse(read(join(specsDir, 'sources', firstLot, 'lot.json'))).fonts : '');
 
 // Tailwind compilé au build (affichage immédiat, pas de compilation dans le navigateur) si la CLI est
-// disponible : prototype-ui/node_modules (npm install), variable TAILWIND_CLI, ou tailwindcss dans le PATH.
+// disponible : specs/prototype/node_modules (npm install), variable TAILWIND_CLI, ou tailwindcss dans le PATH.
 // Sinon, repli sur Tailwind navigateur (CDN).
 function findTailwind() {
   const candidates = [process.env.TAILWIND_CLI, join(root, 'node_modules', '.bin', 'tailwindcss')].filter(Boolean);
@@ -56,7 +57,7 @@ function findTailwind() {
   }
 }
 const tailwindCli = args.includes('--cdn') ? null : findTailwind();
-// Dossier de travail dans le prototype : la CLI y résout « tailwindcss » depuis prototype-ui/node_modules
+// Dossier de travail dans le prototype : la CLI y résout « tailwindcss » depuis specs/prototype/node_modules
 const workDir = tailwindCli ? join(root, '.build-tmp') : null;
 if (workDir) mkdirSync(workDir, { recursive: true });
 const baseCss = `[x-cloak] { display: none !important; }
@@ -155,7 +156,7 @@ function renderPage(title, body, name) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<!-- Page construite par prototype-ui/build.mjs depuis prototype-ui/src : modifier les sources, pas ce fichier. -->
+<!-- Page construite par build.mjs (skill prototype-ui) depuis src/ : modifier les sources, pas ce fichier. -->
 <title>${title}</title>
 <script>
 ${checkHook.trim()}

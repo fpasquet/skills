@@ -29,7 +29,8 @@ npx skills add <source> --skill requirements-doc -g
 
 - « Fais le cahier des charges à partir des specs. »
 - « Prépare le document pour l'équipe de dev : architecture, stack et découpage en lots chiffrés. »
-- « Mets à jour le CDC après les derniers retours sur le lot Sessions. »
+- « Mets à jour le cahier des charges après les derniers retours sur le lot Sessions. »
+- « Quels critères d'acceptation du lot Connexion ne sont pas encore testés ? »
 
 ## Contenu
 
@@ -41,20 +42,23 @@ npx skills add <source> --skill requirements-doc -g
 | `references/estimations.md` | Découpage (lot 0 « Socle »), méthode d'estimation en fourchettes, hypothèses, planning |
 | `references/redacteur.md` | Consigne des sous-agents qui rédigent les critères d'acceptation d'un lot |
 | `templates/sources/` | Une source Markdown par partie, avec gabarits `{{…}}` |
-| `templates/cdc.md` | Mémoire du cahier des charges (`CDC.md`) |
-| `scripts/init.mjs` | Crée `cdc/` depuis un projet de specs et lance l'extraction |
+| `templates/memory.md` | Mémoire du cahier des charges (`REQUIREMENTS.md`) |
+| `scripts/init.mjs` | Crée `specs/requirements/` depuis un projet de specs et lance l'extraction |
 | `scripts/extract.mjs` | Specs HTML → Markdown : inventaire, lots (règles, écrans, parcours, règles d'écran, mobile), points ouverts, tokens |
 | `scripts/build.mjs` | Assemble le document en Markdown et en page HTML (inclusions, ancres, sommaire, version à publier) |
 | `scripts/render.mjs` | Conversion Markdown → HTML sans dépendance (titres, listes, tableaux, diagrammes, pastilles et renvois d'identifiants) |
 | `templates/page.html` | Page du cahier des charges : sommaire latéral, recherche, copie du Markdown, thème clair et sombre |
+| `scripts/config.mjs` | Lecture de `requirements.json` (et de l'ancien `cdc.json`), chemin des specs |
+| `scripts/prepare-publish.mjs` | Page à publier, `--confirm` après publication, `--check` : artifact en retard sur la page locale |
+| `scripts/trace.mjs` | Traçabilité CA / RF / NF ↔ code et tests : couverture par lot, identifiants inconnus, écrans livrés non testés |
 | `scripts/check.mjs` | Parties manquantes, gabarits, liens, identifiants non définis, lots et fourchettes, couverture des écrans, doublons |
 
 ## Démarrage rapide
 
 ```sh
-node requirements-doc/scripts/init.mjs --specs specs-ui --out cdc --prototype prototype-ui
-node requirements-doc/scripts/build.mjs cdc
-node requirements-doc/scripts/check.mjs cdc
+node requirements-doc/scripts/init.mjs --specs specs/ui --out specs/requirements --prototype specs/prototype
+node requirements-doc/scripts/build.mjs specs/requirements
+node requirements-doc/scripts/check.mjs specs/requirements
 ```
 
 Aucune dépendance : Node 18+.

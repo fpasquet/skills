@@ -59,7 +59,7 @@ Si la marque impose une couleur, les trois thèmes la gardent et diffèrent par 
 - Partir de la couleur principale, puis teinter légèrement les neutres vers sa teinte.
 - `primary-soft` : la couleur principale très claire (ou très sombre en thème sombre), en fond d'élément actif. `primary-hover` : 10 à 15 % plus sombre (plus claire en thème sombre).
 - Thème sombre : `canvas` et `surface` sombres (pas de noir pur), `ink` clair, couleurs d'état éclaircies, `-soft` sombres, et `on-primary` / `on-danger` foncés si les couleurs pleines sont claires.
-- Toutes les valeurs en hexadécimal. Lancer `node <skill>/scripts/check-contrast.mjs specs-ui/propositions.html` : toutes les paires obligatoires doivent passer le niveau AA. Corriger avant de montrer. La paire `line-strong` est un conseil (3:1).
+- Toutes les valeurs en hexadécimal. Lancer `node <skill>/scripts/check-contrast.mjs specs/ui/propositions.html` : toutes les paires obligatoires doivent passer le niveau AA. Corriger avant de montrer. La paire `line-strong` est un conseil (3:1).
 
 ### Typographie
 

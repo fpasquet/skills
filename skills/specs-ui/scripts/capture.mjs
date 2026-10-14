@@ -22,7 +22,7 @@ import { resolve, join, relative, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const TEMPLATE_VERSION = '2.4.0'; // version des templates de ce skill (meta specs-ui-template)
+const TEMPLATE_VERSION = '3.0.0'; // version des templates de ce skill (meta specs-ui-template)
 
 const args = process.argv.slice(2);
 const WITH_VALUE = new Set(['--ids', '--height', '--width', '--themes', '--lot']);

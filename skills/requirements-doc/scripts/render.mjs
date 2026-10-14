@@ -24,6 +24,7 @@ export function inline(text) {
       const id = t.match(/^(RF|CA|NF|DT|RQ)-[A-Z0-9-]+$/);
       return id ? `<strong class="id id-${id[1].toLowerCase()}" id="${t.toLowerCase()}">${t}</strong>` : `<strong>${t}</strong>`;
     })
+    .replace(/~~([^~]+?)~~/g, '<del>$1</del>')
     .replace(/(^|[\s(«])\*([^*\s][^*]*?)\*(?=[\s).,;:!?»]|$)/g, '$1<em>$2</em>')
     .replace(/\u0001(\d+)\u0001/g, (_, i) => `<span id="${anchors[i]}" class="anchor"></span>`)
     .replace(/\u0002/g, '<br>')

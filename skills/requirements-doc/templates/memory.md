@@ -1,11 +1,11 @@
-# CDC · {{PRODUCT}}
+# Cahier des charges · {{PRODUCT}}
 
 Mémoire du cahier des charges. À lire en premier à chaque reprise, à mettre à jour à la fin de chaque étape. Moins de 150 lignes.
 
 ## État
 
-- **Artifact** : {{URL}} (aussi dans `cdc.json` → `artifacts.cdc`)
-- **Specs de référence** : extraction du {{date}} (`node <skill>/scripts/extract.mjs cdc` après toute évolution des specs)
+- **Artifact** : {{URL}} (aussi dans `requirements.json` → `artifacts.requirements`)
+- **Specs de référence** : extraction du {{date}} (`node <skill>/scripts/extract.mjs specs/requirements` après toute évolution des specs)
 - **Prochaine étape** : {{…}}
 
 ## Sources et avancement

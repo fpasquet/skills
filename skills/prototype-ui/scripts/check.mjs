@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Contrôle le prototype construit (prototype-ui/site), du moins coûteux au plus coûteux.
+ * Contrôle le prototype construit (specs/prototype/site), du moins coûteux au plus coûteux.
  *
- * Usage : node check.mjs prototype-ui [output-dir] [--pages e2,e13] [--sheet] [--scenarios]
+ * Usage : node check.mjs specs/prototype [output-dir] [--pages e2,e13] [--sheet] [--scenarios]
  *
  *   (par défaut)   contrôles sans image :
  *                  - statiques : liens et go('…') vers des pages absentes, départs de scénarios, restes de
@@ -16,7 +16,7 @@
  *   --pages e2,e13 limite aux pages dont le nom commence par ces identifiants (index : --pages index ;
  *                  étapes des scénarios : --pages scenarios)
  *
- * Images dans output-dir (par défaut prototype-ui/.check). Nécessite Chrome ou Chromium (variable
+ * Images dans output-dir (par défaut specs/prototype/.check). Nécessite Chrome ou Chromium (variable
  * CHROME_PATH si le chemin n'est pas standard). Aucune dépendance. Code de sortie 1 si un problème bloquant.
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -34,7 +34,7 @@ const [input, outputArg] = args.filter((a, i) => !a.startsWith('--') && !WITH_VA
 const root = input && resolve(input);
 const siteDir = root && join(root, 'site');
 if (!root || !existsSync(siteDir)) {
-  console.error('Usage: node check.mjs prototype-ui [output-dir] [--pages e2,e13] [--sheet]   (run build.mjs first)');
+  console.error('Usage: node check.mjs specs/prototype [output-dir] [--pages e2,e13] [--sheet]   (run build.mjs first)');
   process.exit(2);
 }
 const outputDir = resolve(outputArg ?? join(root, '.check'));

@@ -4,10 +4,10 @@ Tu rédiges les critères d'acceptation d'un lot du cahier des charges. Ils serv
 
 ## Ce que tu lis, et rien d'autre
 
-- `cdc/sources/generated/lot-<lot>.md` : règles du lot (RF) et écrans avec leurs états, parcours et règles. C'est ta seule source fonctionnelle.
-- Le fichier à écrire : `cdc/sources/lots/<lot>-criteres.md`, qui contient un gabarit `{{…}}`.
+- `specs/requirements/sources/generated/lot-<lot>.md` : règles du lot (RF) et écrans avec leurs états, parcours et règles. C'est ta seule source fonctionnelle.
+- Le fichier à écrire : `specs/requirements/sources/lots/<lot>-criteres.md`, qui contient un gabarit `{{…}}`.
 
-Ne lis ni les specs HTML, ni `cahier-des-charges.md`, ni les autres lots. Lis le fichier du lot une fois, par morceaux de 300 lignes au plus si besoin, sans y revenir.
+Ne lis ni les specs HTML, ni `requirements.md`, ni les autres lots. Lis le fichier du lot une fois, par morceaux de 300 lignes au plus si besoin, sans y revenir.
 
 ## Ce que tu écris
 
@@ -23,6 +23,7 @@ Remplace le gabarit par :
 
 - **2 à 5 critères par état d'écran**, ceux qui comptent : le cas nominal, les cas bloquants ou d'erreur montrés par l'état, les règles chiffrées (délais, limites, conservation).
 - Préfixe : celui des règles RF du lot (les 4 premières lettres du nom du lot), numérotation continue sur tout le lot.
+- **Fichier déjà rempli** (mise à jour après une évolution des specs) : ne renumérote jamais. Un critère existant garde son numéro, un nouveau prend le numéro suivant du lot même s'il s'insère au milieu, un critère qui n'a plus lieu d'être reste avec ~~son texte barré~~ et « Retiré (date, raison) ». Le code et les tests citent ces identifiants.
 - Format : « Étant donné … quand … alors … », une phrase, avec le renvoi à l'état et, si elle existe, à la règle RF.
 - Mots et valeurs **exactement** ceux du fichier du lot. Aucune technique (ni base, ni API, ni nom de bibliothèque).
 - Rien d'inventé : une règle floue ou contradictoire se signale dans le compte rendu, au lieu d'être tranchée.

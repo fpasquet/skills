@@ -5,7 +5,7 @@ Mémoire du prototype. À lire en premier à chaque reprise (avec `CONTEXTE.md` 
 ## État
 
 - **Artifact** : {{URL}} (aussi dans `src/prototype.json` → `artifact`)
-- **Specs de référence** : {{chemin vers specs-ui}}, version du {{date}}
+- **Specs de référence** : {{chemin vers les specs, en général ../ui}}, version du {{date}}
 - **Prochaine étape** : {{…}}
 
 ## Parcours couverts

@@ -34,9 +34,9 @@ Une installation en portée projet écrit un `skills-lock.json` à la racine du 
 
 | Skill                                                      | Version | Description                                                                                     |
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| [`specs-ui`](skills/specs-ui/README.md)                     | 2.6.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
-| [`prototype-ui`](skills/prototype-ui/README.md)             | 1.4.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
-| [`requirements-doc`](skills/requirements-doc/README.md) | 1.1.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
+| [`specs-ui`](skills/specs-ui/README.md)                     | 3.0.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
+| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.0.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
+| [`requirements-doc`](skills/requirements-doc/README.md) | 2.0.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
 
 Chaque skill publie son résultat comme un artifact claude.ai partageable, et garde une copie locale.
 
@@ -48,17 +48,29 @@ specs-ui ──────────► prototype-ui ────────
  règles, parcours     scénarios de test         lots et estimations
 ```
 
-Les skills travaillent dans le dossier du projet de la personne, côte à côte :
+Les skills rangent leurs livrables dans un seul dossier `specs/`, à la racine du projet, qui est en général le dépôt de code de l'application :
 
 ```text
 mon-projet/
-├── specs-ui/                 # specs : sources par écran, site construit, CONTEXTE.md (mémoire)
-├── design-system-package/    # (option) paquet de tokens pour Claude Design
-├── prototype-ui/             # prototype : sources, site construit, PROTOTYPE.md (mémoire)
-└── cdc/                      # cahier des charges : sources par partie, CDC.md (mémoire)
+├── apps/, packages/…         # le code de l'application
+└── specs/
+    ├── ui/                   # specs : sources par écran, site construit, CONTEXTE.md (mémoire)
+    ├── prototype/            # prototype : sources, site construit, PROTOTYPE.md (mémoire)
+    ├── requirements/         # cahier des charges : sources par partie, document construit, REQUIREMENTS.md (mémoire)
+    └── design-system-package/  # (option) paquet de tokens pour Claude Design
 ```
 
-`prototype-ui` et `requirements-doc` lisent `specs-ui/` ; le cahier des charges reprend aussi le prototype s'il existe. Chaque dossier garde une mémoire courte (`CONTEXTE.md`, `PROTOTYPE.md`, `CDC.md`) avec les URL des artifacts publiés : une nouvelle session reprend là où la précédente s'est arrêtée, et met à jour les mêmes artifacts.
+`prototype-ui` et `requirements-doc` lisent `specs/ui/` ; le cahier des charges reprend aussi le prototype s'il existe. Chaque dossier garde une mémoire courte (`CONTEXTE.md`, `PROTOTYPE.md`, `REQUIREMENTS.md`) avec les URL des artifacts publiés : une nouvelle session reprend là où la précédente s'est arrêtée, et met à jour les mêmes artifacts. Un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) se range avec `migrate-layout.mjs` du skill `specs-ui`.
+
+### Pendant les développements
+
+Les trois livrables vivent dans le dépôt de l'application et suivent l'implémentation :
+
+- **sources et HTML commités** : les builds sont déterministes, le HTML ne change que si son contenu change, et toute l'équipe lit les specs sans rien construire ;
+- **statut par écran** dans les specs (À développer, En cours, Livré, Écart), repris dans le cahier des charges ;
+- **fraîcheur** : rebuild puis `git diff` pour le HTML, `prepare-publish.mjs --check` pour les artifacts, `drift.mjs` pour le prototype ;
+- **traçabilité** : les tests citent les critères d'acceptation (`CA-CONN-27`), et `trace.mjs` donne la couverture par lot ;
+- **un écart** se reporte dans les specs, puis dans le prototype et le cahier des charges, dans le même changement que le code.
 
 ## 📂 Architecture du dépôt
 

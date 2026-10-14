@@ -1,5 +1,22 @@
 # Changelog
 
+## 3.0.0 · 14 oct. 2026
+
+Les specs suivent l'implémentation, dans le dépôt de l'application.
+
+- **Disposition `specs/`** (rupture) : les livrables de la chaîne vont dans un seul dossier `specs/` à la racine du projet, `specs/ui` pour les specs (au lieu de `specs-ui/`). `migrate-layout.mjs` range un projet existant (specs, prototype, cahier des charges, paquet Design System) et garde les URL d'artifacts.
+- **Statut d'implémentation** par écran (`site.json` → `implementation`, `lot.json` → `status`) : À développer, En cours, Livré, Écart avec une note.
+  - Le badge remplace « Nouveau » dans le titre de chaque état.
+  - Une pastille apparaît dans la navigation, et l'avancement sur l'index des lots et sur l'accueil.
+  - Couleur `doc-gap` ajoutée à l'habillage : template 3.0.0, toutes les pages se reconstruisent une fois.
+- **Build déterministe** : plus de date dans `site/.build.json`. Le site construit se commite avec ses sources et ne change que si son contenu change.
+- `prepare-publish.mjs --check` dit si l'artifact est en retard sur le site local (`--strict` pour la CI).
+- **Étape 7 « Maintenir pendant les développements »** :
+  - trancher un écart (le code a raison, les specs ont raison, question ouverte) ;
+  - le reporter dans les specs, puis dans le prototype et le cahier des charges ;
+  - publier et commiter ensemble ;
+  - numérotation stable des règles, écrans et états, cités par le code.
+
 ## 2.6.0 · 14 oct. 2026
 
 - **Paquet « tokens seuls » pour Claude Design.** Le skill `/design-sync` attend un paquet React. Le dossier exporté en 2.5.0 n'en est pas un, donc on lui envoie l'identité sous forme de tokens et de classes utilitaires.

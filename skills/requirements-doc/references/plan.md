@@ -35,7 +35,7 @@ En gras à leur définition (`**NF-03**`), en texte simple quand on y renvoie. `
 
 - **Concret et vérifiable** : chaque exigence dit ce qui doit être vrai et comment on le vérifie. Pas d'adjectifs vagues (« rapide », « intuitif ») sans chiffre ou critère.
 - **Fidèle aux specs** : mêmes mots que l'interface, mêmes valeurs que le fil rouge, renvoi à l'écran (`[E13a](#e13a)`) plutôt que paraphrase. Les parties 1 à 5 restent fonctionnelles, et la technique commence à la partie 6.
-- **Décidé ou supposé, toujours dit** : une décision porte sa date ou son identifiant DT ; une hypothèse est écrite « hypothèse » et se retrouve dans « À valider » de `CDC.md`.
+- **Décidé ou supposé, toujours dit** : une décision porte sa date ou son identifiant DT ; une hypothèse est écrite « hypothèse » et se retrouve dans « À valider » de `REQUIREMENTS.md`.
 - **Exigences non fonctionnelles** : les chiffrer. Par exemple :
   - p95 d'affichage d'un écran < 1 s ;
   - événement externe traité en < 30 s ;
@@ -54,4 +54,4 @@ Rédigés par lot, depuis `generated/lot-<lot>.md` seulement, par un rédacteur 
 
 ## Version et suivi
 
-`00-titre.md` porte la version (0.1, 0.2… puis 1.0 à la validation) et le statut (Brouillon, En relecture, Validé). Une nouvelle version après une évolution des specs : réextraire, relancer `check.mjs`, mettre à jour les parties touchées (lots, estimations, risques), puis noter le changement dans `CDC.md`.
+`00-titre.md` porte la version (0.1, 0.2… puis 1.0 à la validation) et le statut (Brouillon, En relecture, Validé). Une nouvelle version après une évolution des specs : réextraire, relancer `check.mjs`, mettre à jour les parties touchées (lots, estimations, risques), puis noter le changement dans `REQUIREMENTS.md`.

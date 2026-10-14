@@ -32,7 +32,7 @@ Le CLI parse le frontmatter en YAML et, en cas d'erreur, **ignore le skill sans 
 
 ## Espaces de travail
 
-Les projets produits par les skills (`specs-ui/`, `prototype-ui/`, `cdc/`, `design-system-package/`) vivent dans le dossier du projet concerné, **jamais dans ce dépôt**. Pour tester un skill, travailler dans un dossier à part. Le `.gitignore` exclut `*-workspace/` par sécurité.
+Les projets produits par les skills (`specs/ui/`, `specs/prototype/`, `specs/requirements/`, anciennement `specs-ui/`, `prototype-ui/`, `cdc/`) vivent dans le dossier du projet concerné, **jamais dans ce dépôt**. Pour tester un skill, travailler dans un dossier à part. Le `.gitignore` exclut `*-workspace/` par sécurité.
 
 Ne jamais supprimer ni déplacer un espace de travail existant sans accord : ses fichiers `.published.json` et les URL d'artifacts de sa mémoire de projet permettent de mettre à jour les artifacts déjà publiés.
 

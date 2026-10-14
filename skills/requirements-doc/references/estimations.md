@@ -43,7 +43,7 @@ Méthode pour la partie 9. Les estimations sont **indicatives** : des fourchette
    - ce qui est inclus et exclu (design déjà fait, contenu, migration de données) ;
    - les points ouverts qui feraient bouger la fourchette, avec leur sens (« si la reprise de sandbox passe par instantané disque : + 5 à 8 j sur le lot 5 »).
 
-Détail du calcul : dans `CDC.md` (« Hypothèses d'estimation ») ou en note sous le tableau, pas dans le corps du document. Le document montre les fourchettes et les hypothèses, pas l'arithmétique.
+Détail du calcul : dans `REQUIREMENTS.md` (« Hypothèses d'estimation ») ou en note sous le tableau, pas dans le corps du document. Le document montre les fourchettes et les hypothèses, pas l'arithmétique.
 
 ## Planning indicatif
 

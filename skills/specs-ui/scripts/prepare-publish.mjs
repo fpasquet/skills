@@ -3,12 +3,14 @@
  * Prépare la publication avec l'outil Artifact.
  *
  * Site de specs (dossier construit par build.mjs) :
- *   node prepare-publish.mjs specs-ui/site <out-dir>    prépare la page principale et liste les pages à envoyer
- *   node prepare-publish.mjs specs-ui/site --confirm    à lancer après une publication réussie
+ *   node prepare-publish.mjs specs/ui/site <out-dir>    prépare la page principale et liste les pages à envoyer
+ *   node prepare-publish.mjs specs/ui/site --confirm    à lancer après une publication réussie
+ *   node prepare-publish.mjs specs/ui/site --check      dit si l'artifact est en retard sur le site local
+ *                                                       (--strict : code de sortie 1 s'il l'est, pour la CI)
  *
  *   La page principale (index.html) est publiée sans enveloppe (l'outil l'ajoute) ; les autres pages sont des
  *   documents complets envoyés dans « files » avec leur chemin relatif, ce qui garde les liens entre pages.
- *   Seules les pages modifiées depuis la dernière publication confirmée (specs-ui/site/.published.json) sont
+ *   Seules les pages modifiées depuis la dernière publication confirmée (site/.published.json, à commiter) sont
  *   listées : une mise à jour n'envoie que celles-là, les autres restent en ligne.
  *
  * Document isolé (ex. propositions.html publié à part) :
@@ -22,7 +24,7 @@ import { createHash } from 'node:crypto';
 
 const [input, second] = process.argv.slice(2);
 if (!input || !second) {
-  console.error('Usage: node prepare-publish.mjs specs-ui/site <out-dir> | specs-ui/site --confirm | <file.html> <copy.html>');
+  console.error('Usage: node prepare-publish.mjs specs/ui/site <out-dir> | specs/ui/site --confirm | specs/ui/site --check [--strict] | <file.html> <copy.html>');
   process.exit(2);
 }
 const stripEnvelope = (html) =>
@@ -47,12 +49,19 @@ if (statSync(input).isDirectory()) {
     console.log(`Recorded ${pages.length} published pages in ${statePath}.`);
     process.exit(0);
   }
+  const changed = pages.filter((p) => p !== 'index.html' && published[p] !== hash(p));
+  const removed = Object.keys(published).filter((p) => !pages.includes(p));
+  if (second === '--check') {
+    const site = JSON.parse(readFileSync(join(siteDir, '..', 'sources', 'site.json'), 'utf8'));
+    const pending = [...(published['index.html'] !== hash('index.html') ? ['index.html'] : []), ...changed, ...removed.map((p) => `${p} (removed)`)];
+    const where = site.artifact ? `artifact ${site.artifact}` : 'not published yet (no "artifact" in sources/site.json)';
+    console.log(pending.length ? `Specs UI: ${pending.length} page(s) not published, ${where}: ${pending.join(', ')}` : `Specs UI: published, up to date (${where}).`);
+    process.exit(pending.length && process.argv.includes('--strict') ? 1 : 0);
+  }
   const outDir = resolve(second);
   mkdirSync(outDir, { recursive: true });
   const main = join(outDir, 'index.html');
   writeFileSync(main, stripEnvelope(readFileSync(join(siteDir, 'index.html'), 'utf8')));
-  const changed = pages.filter((p) => p !== 'index.html' && published[p] !== hash(p));
-  const removed = Object.keys(published).filter((p) => !pages.includes(p));
   const files = Object.fromEntries(changed.map((p) => [p, join(siteDir, p)]));
   for (const p of removed) files[p] = null;
   console.log(`Main page (file_path): ${main}`);

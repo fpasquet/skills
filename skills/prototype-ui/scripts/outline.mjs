@@ -2,8 +2,8 @@
 /**
  * Résume les pages d'un prototype pour écrire les fiches de câblage sans lire tout leur HTML.
  *
- * Usage : node outline.mjs prototype-ui e3 [e4 …] [--chars 700] [--specs]
- *         node outline.mjs prototype-ui --shells
+ * Usage : node outline.mjs specs/prototype e3 [e4 …] [--chars 700] [--specs]
+ *         node outline.mjs specs/prototype --shells
  *
  * Pour chaque état d'une page générée (sections data-state) : ses lignes dans le fichier (à lire avec
  * offset / limit plutôt que la page entière), le texte de la version desktop (tronqué à --chars
@@ -24,7 +24,7 @@ const root = input && resolve(input);
 const dir = root && join(root, 'src', args.includes('--specs') ? '_from-specs' : 'pages');
 const shellsMode = args.includes('--shells');
 if (!root || (!screens.length && !shellsMode) || !existsSync(dir)) {
-  console.error('Usage: node outline.mjs prototype-ui e3 [e4 …] [--chars 700] [--specs] | prototype-ui --shells');
+  console.error('Usage: node outline.mjs specs/prototype e3 [e4 …] [--chars 700] [--specs] | specs/prototype --shells');
   process.exit(2);
 }
 const lineOf = (html, index) => html.slice(0, index).split('\n').length;

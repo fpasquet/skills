@@ -3,22 +3,28 @@
  * Construit le site de specs d'un projet à partir de ses sources : une page d'accueil, une page
  * d'index par lot et une page par écran (tous les états d'un écran sur la même page).
  *
- * Usage : node build.mjs specs-ui
+ * Usage : node build.mjs specs/ui
  *
  * Sources (voir SKILL.md, « Sources et site ») :
- *   specs-ui/tokens.css                   bloc @theme du produit, injecté dans chaque page
- *   specs-ui/propositions.html            (facultatif) copié tel quel dans le site
- *   specs-ui/sources/site.json            { "title", "heading", "intro" (texte ou liste de paragraphes), "artifact", "lots": ["connexion", …] }
- *   specs-ui/sources/shared/*.html        <template> partagés par tous les lots : shells.html (coquilles),
- *                                         components.html (composants communs : en-tête de projet…)
- *   specs-ui/sources/<lot>/lot.json       { "label", "title", "fonts", "screens": { "e13": "titre court" } }
- *   specs-ui/sources/<lot>/style.css      (facultatif) CSS propre au lot
- *   specs-ui/sources/<lot>/NNN-*.html     000-header.html, une section par fichier (ordre numérique) :
- *                                         les sections eN… vont sur la page de l'écran N, les autres
- *                                         (règles, points ouverts, journal, identité) sur l'index du lot
- *   specs-ui/sources/<lot>/templates.html (facultatif) <template> propres au lot (même id = remplace le partagé)
+ *   ui/tokens.css                   bloc @theme du produit, injecté dans chaque page
+ *   ui/propositions.html            (facultatif) copié tel quel dans le site
+ *   ui/sources/site.json            { "title", "heading", "intro" (texte ou liste de paragraphes), "artifact",
+ *                                   "lots": ["connexion", …], "implementation": true (statut d'implémentation affiché) }
+ *   ui/sources/shared/*.html        <template> partagés par tous les lots : shells.html (coquilles),
+ *                                   components.html (composants communs : en-tête de projet…)
+ *   ui/sources/<lot>/lot.json       { "label", "title", "fonts", "screens": { "e13": "titre court" },
+ *                                   "status": { "e13": "done", "e14": { "status": "gap", "note": "…" } } }
+ *   ui/sources/<lot>/style.css      (facultatif) CSS propre au lot
+ *   ui/sources/<lot>/NNN-*.html     000-header.html, une section par fichier (ordre numérique) :
+ *                                   les sections eN… vont sur la page de l'écran N, les autres
+ *                                   (règles, points ouverts, journal, identité) sur l'index du lot
+ *   ui/sources/<lot>/templates.html (facultatif) <template> propres au lot (même id = remplace le partagé)
  *
- * Sortie : specs-ui/site/index.html, site/<lot>/index.html, site/<lot>/eN.html, site/propositions.html.
+ * Statut d'implémentation (site.json → implementation) : todo (défaut), doing, done, gap. Le badge remplace
+ * le badge « Nouveau » de chaque état, et l'avancement apparaît dans la navigation, l'index du lot et l'accueil.
+ *
+ * Sortie : ui/site/index.html, site/<lot>/index.html, site/<lot>/eN.html, site/propositions.html.
+ * Le build est déterministe (aucune date) : le site construit peut être commité avec ses sources.
  * Les liens « #e13b », « sessions.html#e13b » ou « propositions.html#retenu » sont réécrits vers la bonne page.
  * L'habillage, le script et la version viennent du template du skill ; la typographie française est appliquée.
  * Affiche la liste des pages modifiées depuis la construction précédente.
@@ -30,7 +36,7 @@ import { applyTypography } from './typography.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !existsSync(join(root, 'sources', 'site.json'))) {
-  console.error('Usage: node build.mjs specs-ui   (the folder must contain sources/site.json)');
+  console.error('Usage: node build.mjs specs/ui   (the folder must contain sources/site.json)');
   process.exit(2);
 }
 const read = (path, fallback = '') => (existsSync(path) ? readFileSync(path, 'utf8') : fallback);
@@ -52,6 +58,35 @@ const extractTemplates = (html) => [...html.matchAll(/(?:<!--(?:(?!-->)[\s\S])*-
 const sharedDir = join(root, 'sources', 'shared');
 const sharedTemplates = existsSync(sharedDir) ? readdirSync(sharedDir).filter((f) => f.endsWith('.html')).sort().flatMap((f) => extractTemplates(read(join(sharedDir, f)))) : [];
 const stripTags = (html) => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+// ---------- Statut d'implémentation ----------
+const STATUSES = {
+  todo: { label: 'À développer', color: 'doc-muted' },
+  doing: { label: 'En cours', color: 'doc-accent' },
+  done: { label: 'Livré', color: 'doc-new' },
+  gap: { label: 'Écart', color: 'doc-gap' },
+};
+const tracking = site.implementation === true;
+const invalidStatuses = new Set();
+function statusOf(lot, screen) {
+  if (!tracking) return null;
+  const raw = lot.status?.[screen] ?? 'todo';
+  const code = typeof raw === 'string' ? raw : raw.status;
+  if (!STATUSES[code]) invalidStatuses.add(`${screen}: ${code}`);
+  return { code: STATUSES[code] ? code : 'todo', note: typeof raw === 'object' ? raw.note ?? '' : '', ...STATUSES[STATUSES[code] ? code : 'todo'] };
+}
+const statusBadge = (st) => `<span data-status="${st.code}" class="rounded bg-${st.color}/15 px-1.5 py-0.5 font-doc text-xs font-semibold text-${st.color}">${st.label}</span>`;
+const statusDot = (st) => `<span title="${st.label}" class="inline-block size-2 rounded-full bg-${st.color}"></span>`;
+// Le badge de statut remplace le badge « Nouveau » du titre de chaque état (ou s'ajoute à la fin du titre)
+const NEW_BADGE = /<span\b[^>]*\bdoc-new\b[^>]*>Nouveau<\/span>/;
+function withStatus(html, st) {
+  if (!st) return html;
+  return html.replace(/(<h2\b[^>]*>)([\s\S]*?)(<\/h2>)/, (_, open, inner, close) => `${open}${NEW_BADGE.test(inner) ? inner.replace(NEW_BADGE, statusBadge(st)) : `${inner}${statusBadge(st)}`}${close}`);
+}
+function progress(pages) {
+  const counts = Object.fromEntries(['done', 'doing', 'gap', 'todo'].map((k) => [k, pages.filter((p) => p.status?.code === k).length]));
+  return Object.entries(counts).filter(([, n]) => n).map(([k, n]) => `${statusDot(STATUSES[k])} ${n} ${STATUSES[k].label.toLowerCase()}`).join(' · ');
+}
 
 // ---------- Lecture des lots ----------
 const lots = site.lots.map((name) => {
@@ -79,6 +114,7 @@ const lots = site.lots.map((name) => {
     const full = stripTags(h2.replace(/<span\b[^>]*>[\s\S]*?<\/span>/g, ''));
     page.title = lot.screens?.[page.screen] ?? full.split(/\s[:·–—]\s/)[0] ?? page.screen.toUpperCase();
     page.path = `${name}/${page.screen}.html`;
+    page.status = statusOf(lot, page.screen);
     page.states = page.sections.map((s) => ({ id: s.id, title: stripTags((s.html.match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/)?.[1] ?? '').replace(/<span\b[^>]*>[\s\S]*?<\/span>/g, '')) }));
   }
   lot.indexPath = `${name}/index.html`;
@@ -137,7 +173,7 @@ function renderPage({ title, fonts, lotStyle = '', templates = [], body }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="specs-ui-template" content="${version}">
-<!-- Page construite par build.mjs depuis specs-ui/sources : modifier les sources, pas ce fichier. -->
+<!-- Page construite par build.mjs (skill specs-ui) depuis les sources : modifier les sources, pas ce fichier. -->
 <title>${title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -169,7 +205,7 @@ function lotNav(lot, pagePath) {
   return `<nav aria-label="Écrans du lot" class="sticky top-[env(safe-area-inset-top,0px)] z-40 -mx-4 mb-6 flex flex-wrap items-center gap-2 bg-doc-bg/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6">
   <a href="${rel('index.html')}" class="text-sm text-doc-muted hover:text-doc-accent">${site.title}</a><span class="text-doc-muted">/</span>
   ${chip(rel(lot.indexPath), lot.label ?? lot.name, pagePath === lot.indexPath)}
-  ${lot.pages.map((p) => chip(rel(p.path), `${p.screen.toUpperCase()} · ${p.title}`, pagePath === p.path)).join('\n  ')}
+  ${lot.pages.map((p) => chip(rel(p.path), `${p.status ? `${statusDot(p.status)} ` : ''}${p.screen.toUpperCase()} · ${p.title}`, pagePath === p.path)).join('\n  ')}
 </nav>`;
 }
 
@@ -180,8 +216,9 @@ for (const lot of lots) {
   // Index du lot : en-tête, liste des écrans, sections hors écran
   const screenList = `<section id="ecrans" class="mt-10 scroll-mt-16">
   <h2 class="text-xl font-semibold">Écrans du lot</h2>
+  ${tracking ? `<p class="mt-1 text-sm text-doc-muted">Implémentation : ${progress(lot.pages)}</p>` : ''}
   <ol class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-    ${lot.pages.map((p) => `<li class="rounded-xl border border-doc-line bg-doc-card px-4 py-3"><a href="${relativeTo(lot.indexPath, p.path)}" class="font-semibold hover:text-doc-accent"><span class="font-mono text-sm text-doc-accent">${p.screen.toUpperCase()}</span> ${p.title}</a><ul class="mt-1 text-sm text-doc-muted">${p.states.map((s) => `<li><a href="${relativeTo(lot.indexPath, p.path)}#${s.id}" class="hover:text-doc-accent"><span class="font-mono">${s.id.toUpperCase()}</span> ${s.title}</a></li>`).join('')}</ul></li>`).join('\n    ')}
+    ${lot.pages.map((p) => `<li class="rounded-xl border border-doc-line bg-doc-card px-4 py-3"><a href="${relativeTo(lot.indexPath, p.path)}" class="font-semibold hover:text-doc-accent"><span class="font-mono text-sm text-doc-accent">${p.screen.toUpperCase()}</span> ${p.title}</a>${p.status ? ` ${statusBadge(p.status)}` : ''}${p.status?.note ? `<p class="mt-1 text-sm text-doc-gap">${p.status.note}</p>` : ''}<ul class="mt-1 text-sm text-doc-muted">${p.states.map((s) => `<li><a href="${relativeTo(lot.indexPath, p.path)}#${s.id}" class="hover:text-doc-accent"><span class="font-mono">${s.id.toUpperCase()}</span> ${s.title}</a></li>`).join('')}</ul></li>`).join('\n    ')}
   </ol>
 </section>`;
   // Seul le contenu issu des sources est réécrit ; la navigation générée a déjà des liens relatifs
@@ -192,7 +229,8 @@ for (const lot of lots) {
     const prev = lot.pages[i - 1];
     const next = lot.pages[i + 1];
     const pager = `<div class="mt-16 flex justify-between gap-4 border-t border-doc-line pt-4 text-sm">${prev ? `<a href="${relativeTo(p.path, prev.path)}" class="hover:text-doc-accent">← ${prev.screen.toUpperCase()} · ${prev.title}</a>` : '<span></span>'}${next ? `<a href="${relativeTo(p.path, next.path)}" class="hover:text-doc-accent">${next.screen.toUpperCase()} · ${next.title} →</a>` : '<span></span>'}</div>`;
-    const body = [lotNav(lot, p.path), ...p.sections.map((s) => rewriteLinks(s.html, p.path)), pager].join('\n\n');
+    const note = p.status?.note ? `<p class="mb-6 max-w-[100ch] rounded-xl border border-doc-line border-l-4 border-l-${p.status.color} bg-doc-card px-5 py-3 text-sm"><b class="font-semibold">${p.status.label}</b> · ${p.status.note}</p>` : '';
+    const body = [lotNav(lot, p.path), note, ...p.sections.map((s) => withStatus(rewriteLinks(s.html, p.path), p.status)), pager].filter(Boolean).join('\n\n');
     pages.set(p.path, renderPage({ title: `${p.screen.toUpperCase()} · ${p.title} · ${site.title}`, fonts: lot.fonts, lotStyle: lot.style, templates: usedTemplates(body, allTemplates), body }));
   });
 }
@@ -202,11 +240,12 @@ const homeBody = `<header>
   <h1 class="mt-1 text-3xl font-semibold tracking-tight text-balance">${site.heading ?? site.title}</h1>
   ${[site.intro ?? []].flat().map((paragraph) => `<p class="mt-4 text-doc-muted">${paragraph}</p>`).join('\n  ')}
 </header>
+${tracking ? `<p class="mt-6 text-sm text-doc-muted"><b class="font-semibold text-doc-fg">Implémentation</b> : ${progress(lots.flatMap((l) => l.pages))}</p>` : ''}
 ${hasPropositions ? `<p class="mt-6"><a href="propositions.html" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">Propositions d'interface et décision →</a></p>` : ''}
 <section id="lots" class="mt-8">
   <h2 class="text-xl font-semibold">Lots</h2>
   <ol class="mt-3 grid gap-4 md:grid-cols-2">
-    ${lots.map((lot) => `<li class="rounded-xl border border-doc-line bg-doc-card px-5 py-4"><a href="${lot.indexPath}" class="text-lg font-semibold hover:text-doc-accent">${lot.label ?? lot.name}</a><p class="mt-1 text-sm text-doc-muted">${lot.pages.map((p) => `<a href="${p.path}" class="hover:text-doc-accent">${p.screen.toUpperCase()} ${p.title}</a>`).join(' · ')}</p></li>`).join('\n    ')}
+    ${lots.map((lot) => `<li class="rounded-xl border border-doc-line bg-doc-card px-5 py-4"><a href="${lot.indexPath}" class="text-lg font-semibold hover:text-doc-accent">${lot.label ?? lot.name}</a><p class="mt-1 text-sm text-doc-muted">${lot.pages.map((p) => `<a href="${p.path}" class="hover:text-doc-accent">${p.status ? `${statusDot(p.status)} ` : ''}${p.screen.toUpperCase()} ${p.title}</a>`).join(' · ')}</p>${tracking ? `<p class="mt-2 text-sm text-doc-muted">Implémentation : ${progress(lot.pages)}</p>` : ''}</li>`).join('\n    ')}
   </ol>
 </section>`;
 pages.set('index.html', renderPage({ title: `${site.title} · Specs UI`, fonts: lots[0]?.fonts, body: homeBody }));
@@ -235,14 +274,16 @@ for (const file of listPages(outDir)) {
     removed.push(path);
   }
 }
-// Changement de version du template entre deux constructions : toutes les pages changent, le dire
+// Changement de version du template entre deux constructions : toutes les pages changent, le dire.
+// Aucune date dans ce fichier : deux builds des mêmes sources donnent un site identique (commitable).
 const buildInfoPath = join(outDir, '.build.json');
 const previousVersion = existsSync(buildInfoPath) ? JSON.parse(readFileSync(buildInfoPath, 'utf8')).version : null;
-writeFileSync(buildInfoPath, JSON.stringify({ version, builtAt: new Date().toISOString() }, null, 2) + '\n');
+writeFileSync(buildInfoPath, JSON.stringify({ version }, null, 2) + '\n');
 if (previousVersion && previousVersion !== version) console.log(`NOTE: template changed from ${previousVersion} to ${version} since the last build (skill updated): every page is rebuilt.`);
 const sizes = [...pages.values()].map((h) => h.length);
 console.log(`Built ${relative(process.cwd(), outDir) || outDir}: ${pages.size + (hasPropositions ? 1 : 0)} pages (largest ${Math.round(Math.max(...sizes) / 1024)} KB), template ${version}.`);
 console.log(changed.length ? `Changed pages (${changed.length}): ${changed.join(', ')}` : 'No page changed.');
 if (duplicates.size) console.log(`WARNING: screen ids used in several lots (links will be wrong): ${[...duplicates].join(', ')}`);
 if (removed.length) console.log(`Removed pages without source: ${removed.join(', ')}`);
+if (invalidStatuses.size) console.log(`WARNING: unknown implementation status (todo, doing, done, gap): ${[...invalidStatuses].join(', ')}`);
 if (unresolved.size) console.log(`WARNING: unresolved links: ${[...unresolved].slice(0, 10).join(', ')}`);

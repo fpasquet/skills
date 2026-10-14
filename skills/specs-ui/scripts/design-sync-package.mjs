@@ -3,7 +3,7 @@
  * Prépare le paquet « tokens seuls » qui permet d'envoyer l'identité des specs vers Claude Design avec le
  * skill /design-sync (option facultative, voir SKILL.md « Option · Design System Claude Design »).
  *
- * Usage : node design-sync-package.mjs specs-ui [--out design-system-package]
+ * Usage : node design-sync-package.mjs specs/ui [--out specs/design-system-package]
  *
  * Crée, à côté du projet de specs (sans écraser un fichier existant) :
  *   package.json                  mini-paquet sans composant (Tailwind CLI, React pour le convertisseur)
@@ -11,7 +11,7 @@
  *   .design-sync/config.json      configuration du convertisseur design-sync
  *   .design-sync/conventions.md   brouillon de l'en-tête de conventions, à compléter
  *   .design-sync/NOTES.md         notes de synchronisation
- * Prérequis : avoir lancé export-design-system.mjs (catalogue specs-ui/design-system/, source des cartes).
+ * Prérequis : avoir lancé export-design-system.mjs (catalogue <specs>/design-system/, source des cartes).
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join, dirname, resolve, relative } from 'node:path';
@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 const args = process.argv.slice(2);
 const specsDir = args[0] && !args[0].startsWith('--') && resolve(args[0]);
 if (!specsDir || !existsSync(join(specsDir, 'tokens.css'))) {
-  console.error('Usage: node design-sync-package.mjs specs-ui [--out design-system-package]   (specs-ui must contain tokens.css)');
+  console.error('Usage: node design-sync-package.mjs specs/ui [--out specs/design-system-package]   (the specs folder must contain tokens.css)');
   process.exit(2);
 }
 const outDir = resolve(args.includes('--out') ? args[args.indexOf('--out') + 1] : join(dirname(specsDir), 'design-system-package'));
@@ -74,5 +74,5 @@ writeIfMissing('.design-sync/NOTES.md', fill(readFileSync(join(templates, 'notes
 writeIfMissing('.gitignore', '.ds-sync/\nds-bundle/\n.design-sync/.cache/\n.design-sync/learnings/\n.design-sync/node_modules\nnode_modules/\n');
 
 console.log(written.length ? `Wrote in ${outDir}: ${written.join(', ')}` : `${outDir} already set up, nothing written.`);
-if (!existsSync(join(specsDir, 'design-system'))) console.log('WARNING: run export-design-system.mjs first (the cards come from specs-ui/design-system/).');
+if (!existsSync(join(specsDir, 'design-system'))) console.log('WARNING: run export-design-system.mjs first (the cards come from <specs>/design-system/).');
 console.log('Next: complete .design-sync/conventions.md from CONTEXTE.md, then `npm install && npm run build`, then the person runs /design-sync from this folder.');

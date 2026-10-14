@@ -3,7 +3,7 @@
  * Prépare un prototype à partir d'un projet de specs (skill specs-ui) : une page par écran, avec les
  * maquettes desktop et mobile de chaque état, sans l'habillage des specs, prêtes à être câblées.
  *
- * Usage : node scaffold.mjs --specs specs-ui --out prototype-ui [--pages e2,e13] [--force]
+ * Usage : node scaffold.mjs --specs specs/ui --out specs/prototype [--pages e2,e13] [--force]
  *
  * Écrit dans <out>/src/ :
  *   pages/eN.html     un bloc <section data-state="eNa"> par état, affiché selon ?state=eNa (premier état par
@@ -26,7 +26,7 @@ const outDir = valueOf('--out') && resolve(valueOf('--out'));
 const onlyPages = valueOf('--pages')?.split(',').map((p) => p.toLowerCase());
 const force = args.includes('--force');
 if (!specsDir || !outDir || !existsSync(join(specsDir, 'sources', 'site.json'))) {
-  console.error('Usage: node scaffold.mjs --specs specs-ui --out prototype-ui [--pages e2,e13] [--force]   (specs-ui must contain sources/site.json)');
+  console.error('Usage: node scaffold.mjs --specs specs/ui --out specs/prototype [--pages e2,e13] [--force]   (the specs folder must contain sources/site.json)');
   process.exit(2);
 }
 const skillDir = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -165,7 +165,7 @@ const writeIfMissing = (path, content, label) => {
 };
 writeIfMissing(
   join(outDir, 'src', 'data.js'),
-  `/*\n * État initial du prototype, tiré des faits du fil rouge (specs-ui/CONTEXTE.md).\n * Collections d'objets métier, identifiants stables, valeurs exactes des specs.\n */\nwindow.PROTO_DATA = {\n  user: {},\n};\n\n/*\n * Situations de départ des scénarios (prototype.json → scenarios[].preset) : chaque preset modifie une\n * copie de l'état initial.\n */\nwindow.PROTO_PRESETS = {\n};\n`,
+  `/*\n * État initial du prototype, tiré des faits du fil rouge (specs/ui/CONTEXTE.md).\n * Collections d'objets métier, identifiants stables, valeurs exactes des specs.\n */\nwindow.PROTO_DATA = {\n  user: {},\n};\n\n/*\n * Situations de départ des scénarios (prototype.json → scenarios[].preset) : chaque preset modifie une\n * copie de l'état initial.\n */\nwindow.PROTO_PRESETS = {\n};\n`,
   'data.js (initial state to fill)',
 );
 writeIfMissing(

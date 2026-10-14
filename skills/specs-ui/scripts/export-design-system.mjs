@@ -3,11 +3,11 @@
  * Prépare un dossier Design System (Claude Design) à partir de l'identité d'un projet de specs.
  * Fonctionnalité facultative : à lancer seulement si la personne a choisi de l'utiliser.
  *
- * Usage : node export-design-system.mjs specs-ui [--out specs-ui/design-system]
+ * Usage : node export-design-system.mjs specs/ui [--out specs/ui/design-system]
  *
  * Produit :
  *   README.md                  consignes : produit, thème, vocabulaire des tokens, règles d'usage, composants
- *   tokens.css                 copie de specs-ui/tokens.css
+ *   tokens.css                 copie de tokens.css
  *   foundations/*.html         couleurs, typographie, formes et relief (valeurs lues dans tokens.css)
  *   components/*.html          composants du catalogue du skill (templates/design-system.html)
  *   patterns/*.html            composants propres au projet (sources/shared/*.html : coquilles, en-têtes…)
@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 const args = process.argv.slice(2);
 const root = args[0] && resolve(args[0]);
 if (!root || !existsSync(join(root, 'tokens.css'))) {
-  console.error('Usage: node export-design-system.mjs specs-ui [--out specs-ui/design-system]   (the folder must contain tokens.css)');
+  console.error('Usage: node export-design-system.mjs specs/ui [--out specs/ui/design-system]   (the folder must contain tokens.css)');
   process.exit(2);
 }
 const outDir = args.includes('--out') ? resolve(args[args.indexOf('--out') + 1]) : join(root, 'design-system');
@@ -143,7 +143,7 @@ for (const t of sharedTemplates) write(`patterns/${t.id.replace(/^tpl-/, '')}.ht
 
 const readme = `# ${product} · Design System
 
-Généré par le skill specs-ui (scripts/export-design-system.mjs) à partir de \`specs-ui/tokens.css\` et des composants partagés des specs. Les specs restent la référence fonctionnelle ; ce Design System en est l'identité visuelle et les composants.
+Généré par le skill specs-ui (scripts/export-design-system.mjs) à partir de \`tokens.css\` et des composants partagés des specs. Les specs restent la référence fonctionnelle ; ce Design System en est l'identité visuelle et les composants.
 
 ## Thème
 

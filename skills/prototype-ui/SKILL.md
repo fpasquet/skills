@@ -10,7 +10,7 @@ description: >
   sans prononcer le mot « prototype ».
 metadata:
   author: fpasquet
-  version: "1.4.0"
+  version: "2.0.0"
 ---
 
 # Prototype UI à partir des specs
@@ -19,15 +19,15 @@ Ce skill part d'un projet de specs (skill `specs-ui`) et en fait un **prototype 
 
 Textes de l'interface, scénarios et échanges sont en français. Le code (scripts, attributs, variables, actions, identifiants) est en anglais ; ses commentaires peuvent être en français.
 
-`<skill>` désigne le dossier de ce skill : les scripts se lancent avec `node <skill>/scripts/…` depuis le dossier qui contient `specs-ui/`.
+`<skill>` désigne le dossier de ce skill : les scripts se lancent avec `node <skill>/scripts/…` depuis la racine du projet, qui contient `specs/` (`specs/ui` pour les specs, `specs/prototype` pour le prototype). Un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/` à la racine) se range d'abord avec `migrate-layout.mjs` du skill `specs-ui`.
 
 ## Économiser les tokens (à lire en premier)
 
 Une page de prototype pèse 35 à 70 Ko (10 000 à 20 000 tokens) et `shells.html` plus de 150 Ko. Lire un fichier entier « pour voir » est la première source de gaspillage. Règles :
 
-1. **`prototype-ui/PROTOTYPE.md` est la mémoire** : à lire en premier en reprise, et à s'en contenter tant que possible. Le tenir à jour à la fin de chaque étape, sous 150 lignes. `specs-ui/CONTEXTE.md` ne se lit qu'au cadrage (étape 1) : ensuite, `data.js` porte les faits du fil rouge.
-2. **Résumer avant de lire** : `outline.mjs prototype-ui e3 e4` résume chaque état d'une page avec ses lignes (environ douze fois plus court que le HTML), et `outline.mjs prototype-ui --shells` fait de même pour les coquilles. Lire ensuite **seulement les lignes utiles** (offset / limit). Jamais `site/`, jamais `shells.html` en entier.
-3. **Fiches de câblage enregistrées** dans `prototype-ui/fiches/eN.md` (modèle `templates/fiche.md`). Elles sont écrites une fois, puis mises à jour à chaque itération. Le rédacteur reçoit le chemin de sa fiche, pas un long message.
+1. **`specs/prototype/PROTOTYPE.md` est la mémoire** : à lire en premier en reprise, et à s'en contenter tant que possible. Le tenir à jour à la fin de chaque étape, sous 150 lignes. `specs/ui/CONTEXTE.md` ne se lit qu'au cadrage (étape 1) : ensuite, `data.js` porte les faits du fil rouge.
+2. **Résumer avant de lire** : `outline.mjs specs/prototype e3 e4` résume chaque état d'une page avec ses lignes (environ douze fois plus court que le HTML), et `outline.mjs specs/prototype --shells` fait de même pour les coquilles. Lire ensuite **seulement les lignes utiles** (offset / limit). Jamais `site/`, jamais `shells.html` en entier.
+3. **Fiches de câblage enregistrées** dans `specs/prototype/fiches/eN.md` (modèle `templates/fiche.md`). Elles sont écrites une fois, puis mises à jour à chaque itération. Le rédacteur reçoit le chemin de sa fiche, pas un long message.
 4. **Rédacteurs sobres** : ils lisent `references/redacteur.md` (la consigne courte), pas `alpine.md` en entier. Ils lisent leur page par morceaux, font des modifications ciblées sans relire, lancent `build` et `check` une fois à la fin, n'écrivent aucun script de test et ne lisent aucune capture.
 5. **Contrôler avant de regarder** : le texte de `check.mjs` d'abord, puis la planche du scénario (`--scenarios`, une image par étape), et les planches de pages seulement en cas de doute. Desktop d'abord ; la planche mobile seulement pour les écrans dont la portée mobile est complète.
 6. **Ne câbler que les parcours choisis.** Une page non câblée ne coûte rien : elle montre les maquettes, et chaque état par `?state=`.
@@ -49,11 +49,11 @@ Câbler une page demande de comprendre la maquette et de la rendre vivante sans 
 
 ## Étape 0 · Prérequis
 
-Il faut un projet `specs-ui` à jour (`sources/site.json`, au moins un lot, `CONTEXTE.md`). Sinon, proposer d'abord les specs avec le skill `specs-ui`. Si `prototype-ui/PROTOTYPE.md` existe, c'est une reprise : lire la mémoire et passer à l'étape utile.
+Il faut un projet `specs-ui` à jour (`sources/site.json`, au moins un lot, `CONTEXTE.md`). Sinon, proposer d'abord les specs avec le skill `specs-ui`. Si `specs/prototype/PROTOTYPE.md` existe, c'est une reprise : lire la mémoire et passer à l'étape utile.
 
 ## Étape 1 · Cadrage
 
-Lire `specs-ui/CONTEXTE.md` (parcours, personas, faits du fil rouge, inventaire). Demander avec **AskUserQuestion**, choix tirés des specs :
+Lire `specs/ui/CONTEXTE.md` (parcours, personas, faits du fil rouge, inventaire). Demander avec **AskUserQuestion**, choix tirés des specs :
 
 - **les parcours à câbler**, en général 2 à 4 : premier usage, tâche principale, cas d'erreur important ;
 - **l'usage** : tests utilisateurs, démo, ou les deux ;
@@ -64,9 +64,10 @@ Une question en suspens va aussi dans `PROTOTYPE.md` (« À valider »), jamais 
 ## Étape 2 · Préparer le prototype
 
 ```sh
-node <skill>/scripts/scaffold.mjs --specs specs-ui --out prototype-ui
-(cd prototype-ui && npm install)          # une fois : Tailwind compilé, Alpine et Lucide servis localement
-node <skill>/scripts/build.mjs prototype-ui
+node <skill>/scripts/scaffold.mjs --specs specs/ui --out specs/prototype
+(cd specs/prototype && npm install)          # une fois : Tailwind compilé, Alpine et Lucide servis localement
+node <skill>/scripts/build.mjs specs/prototype
+node <skill>/scripts/drift.mjs specs/prototype --mark   # point de départ du suivi des specs
 ```
 
 Le scaffold écrit :
@@ -109,8 +110,8 @@ Dans `prototype.json` → `scenarios` : `id`, `title`, `persona`, `goal`, `start
 ## Étape 6 · Construire, contrôler, relire
 
 ```sh
-node <skill>/scripts/build.mjs prototype-ui
-node <skill>/scripts/check.mjs prototype-ui --scenarios   # --sheet pour les planches de pages
+node <skill>/scripts/build.mjs specs/prototype
+node <skill>/scripts/check.mjs specs/prototype --scenarios   # --sheet pour les planches de pages
 ```
 
 `check.mjs` signale ce qui bloque :
@@ -125,7 +126,7 @@ Chaque étape de chaque scénario est contrôlée sur son écran, avec son état
 ## Étape 7 · Publier
 
 ```sh
-node <skill>/scripts/prepare-publish.mjs prototype-ui <scratchpad>/prototype-publish
+node <skill>/scripts/prepare-publish.mjs specs/prototype <scratchpad>/prototype-publish
 ```
 
 Publier avec l'outil Artifact :
@@ -134,8 +135,19 @@ Publier avec l'outil Artifact :
 - `files` : la liste fournie, limitée aux fichiers modifiés ;
 - `url` : celle de l'artifact, pour une mise à jour.
 
-Puis lancer `prepare-publish.mjs prototype-ui --confirm` et noter l'URL dans `PROTOTYPE.md` et dans `prototype.json` → `artifact`. Chaque visiteur a ses propres données, gardées dans son navigateur.
+Puis lancer `prepare-publish.mjs specs/prototype --confirm` et noter l'URL dans `PROTOTYPE.md` et dans `prototype.json` → `artifact`. Chaque visiteur a ses propres données, gardées dans son navigateur. `prepare-publish.mjs specs/prototype --check` dit, sans rien préparer, si l'artifact est en retard sur le site local.
+
+Dans un dépôt git, commiter `src/`, `fiches/`, `PROTOTYPE.md`, le site construit, `site/.published.json` et `src/specs-sync.json` ; `node_modules/`, `.check/` et `.build-tmp/` restent hors du dépôt.
 
 ## Suivre les specs
 
-Specs modifiées après le câblage : relancer `scaffold.mjs`, qui dépose la version des specs dans `src/_from-specs/`. Comparer avec `outline.mjs prototype-ui eN --specs` plutôt qu'en lisant les deux pages, reporter les changements dans la page câblée et dans sa fiche, puis supprimer `src/_from-specs/`. `--pages e7,e8 --force` régénère seulement des pages pas encore câblées.
+`drift.mjs specs/prototype` dit quels écrans ont changé dans les specs depuis la dernière reprise (empreintes dans `src/specs-sync.json`), ainsi que l'identité et les coquilles partagées. Specs modifiées après le câblage : relancer `scaffold.mjs`, qui dépose la version des specs dans `src/_from-specs/`. Comparer avec `outline.mjs specs/prototype eN --specs` plutôt qu'en lisant les deux pages, reporter les changements dans la page câblée et dans sa fiche, puis supprimer `src/_from-specs/` et lancer `drift.mjs specs/prototype --mark eN`. `--pages e7,e8 --force` régénère seulement des pages pas encore câblées (puis `--mark` sur ces écrans).
+
+## Maintenir pendant les développements
+
+Quand l'application se construit, le prototype garde son rôle de **support de tests utilisateurs et de démos** ; il ne suit pas le code, il suit les specs.
+
+- **Pages câblées** : à chaque évolution des specs qui les touche (`drift.mjs`), reporter le changement comme ci-dessus, dans le même changement que les specs quand c'est possible.
+- **Pages non câblées** : les régénérer (`scaffold.mjs --pages eN --force`), puis `--mark`.
+- **Parcours dépassé** : quand l'application livrée couvre un parcours (statut « Livré » dans les specs), les tests utilisateurs se font sur l'application. Noter le parcours « figé » dans `PROTOTYPE.md` plutôt que de continuer à le maintenir.
+- Reconstruire, contrôler, republier les fichiers modifiés, et commiter avec les specs.
