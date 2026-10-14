@@ -48,7 +48,7 @@ Celle de `templates/specs.html`, dans cet ordre :
 3. **Parcours** : une ligne par parcours, écrans en pastilles cliquables reliées par des flèches.
 4. **Navigation collante** : un lien par écran, puis Points ouverts, Journal, Identité.
 5. **Écrans**, dans l'ordre du parcours principal.
-6. **Points ouverts** : question, qui tranche, écrans concernés.
+6. **Points ouverts** : un tableau à quatre colonnes, dans cet ordre : question, réponse recommandée (appliquée dans les maquettes en attendant la décision, « — » s'il n'y en a pas), qui tranche, écrans concernés. Pas de colonne de numéro : l'extraction du cahier des charges lit les colonnes par leur en-tête.
 7. **Journal des itérations**.
 8. **Annexe · Identité visuelle** : palette, typographie et composants lus dans la page.
 

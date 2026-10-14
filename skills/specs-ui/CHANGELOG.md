@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.0 · 14 oct. 2026
+
+- **Points ouverts à quatre colonnes** : question, réponse recommandée, qui tranche, écrans. Gabarit et consigne de rédaction mis à jour ; plus de colonne de numéro. Le cahier des charges (requirements-doc 2.1.0) reprend la recommandation.
+- `build.mjs` signale les balises de structure non fermées ou en trop (`header`, `section`, `div`…) dans chaque page : un `<header>` resté ouvert faisait passer toute la suite de la page dans l'en-tête, sans aucune alerte (mise en page cassée, captures `--sections` vides).
+
 ## 3.1.1 · 14 oct. 2026
 
 - `build.mjs` signale les liens vers un écran ou un état inexistant (`#e9a`, `marketplace.html#e20`), par exemple après le retrait d'un écran. Ces liens restaient muets. Un renvoi vers un écran entier (`#e9`) mène désormais à sa page.

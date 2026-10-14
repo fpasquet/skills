@@ -9,7 +9,7 @@
  *   inventaire.md        tous les écrans et états, par lot, avec le lien vers les specs
  *   lot-<nom>.md         par lot : règles fonctionnelles, puis chaque écran (états, contexte, parcours,
  *                        règles annotées, portée mobile)
- *   points-ouverts.md    points ouverts de tous les lots (question, à trancher par, écrans)
+ *   points-ouverts.md    points ouverts de tous les lots (question, recommandé, à trancher par, écrans)
  *   identite.md          tokens de l'identité visuelle (couleurs, polices, formes) depuis tokens.css
  * Affiche la taille de chaque fichier : c'est ce que liront le modèle et les rédacteurs, à la place du HTML.
  */
@@ -73,8 +73,24 @@ for (const name of site.lots ?? []) {
       continue;
     }
     if (/^\d+-ouverts/.test(f)) {
-      for (const row of html.matchAll(/<tr>\s*<td\b[^>]*>([\s\S]*?)<\/td>\s*<td\b[^>]*>([\s\S]*?)<\/td>\s*<td\b[^>]*>([\s\S]*?)<\/td>/gi)) {
-        openPoints.push({ lot: lot.label ?? name, question: md(row[1]), owner: md(row[2]), screens: md(row[3]) });
+      // Colonnes lues par leur en-tête (Question, Recommandé, À trancher par, Écrans ; une colonne « # » est ignorée).
+      // Sans en-tête : Question, À trancher par, Écrans, dans cet ordre.
+      const head = [...(html.match(/<thead\b[\s\S]*?<\/thead>/i)?.[0] ?? '').matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)].map((m) => md(m[1]).toLowerCase());
+      const col = (re) => head.findIndex((h) => re.test(h));
+      const recommended = col(/recommand/);
+      const at = (re, fallback) => (col(re) >= 0 ? col(re) : fallback);
+      const index = { question: at(/question/, 0), owner: at(/trancher|qui/, recommended >= 0 ? 2 : 1), screens: at(/écran/, recommended >= 0 ? 3 : 2) };
+      const body = html.match(/<tbody\b[\s\S]*?<\/tbody>/i)?.[0] ?? html;
+      for (const tr of body.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+        const cells = [...tr[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => md(m[1]));
+        if (!cells.length) continue;
+        openPoints.push({
+          lot: lot.label ?? name,
+          question: cells[index.question] ?? '',
+          recommended: recommended >= 0 ? cells[recommended] ?? '' : '',
+          owner: cells[index.owner] ?? '',
+          screens: cells[index.screens] ?? '',
+        });
       }
       continue;
     }
@@ -156,8 +172,9 @@ for (const lot of lots) {
 
 // Points ouverts
 let open = header('points ouverts');
-open += `| Lot | Question | À trancher par | Écrans |\n|---|---|---|---|\n`;
-open += openPoints.map((p) => `| ${p.lot} | ${p.question.replace(/\|/g, '\\|')} | ${p.owner} | ${p.screens} |`).join('\n') + '\n';
+const cell = (text) => (text || '—').replace(/\|/g, '\\|');
+open += `| Lot | Question | Recommandé | À trancher par | Écrans |\n|---|---|---|---|---|\n`;
+open += openPoints.map((p) => `| ${p.lot} | ${cell(p.question)} | ${cell(p.recommended)} | ${cell(p.owner)} | ${cell(p.screens)} |`).join('\n') + '\n';
 write('points-ouverts.md', open);
 
 // Identité visuelle (tokens)

@@ -141,6 +141,16 @@ const screenAnchor = (anchor) => /^#e\d+[a-z]?$/i.test(anchor ?? '');
 const hasPropositions = existsSync(join(root, 'propositions.html'));
 const relativeTo = (from, to) => posix.relative(posix.dirname(from), to) || posix.basename(to);
 const unresolved = new Set();
+// Balises de structure non fermées dans le contenu d'une page (un <header> ouvert avale tout ce qui suit)
+const unbalanced = new Set();
+const checkStructure = (path, html) => {
+  const text = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<script\b[\s\S]*?<\/script>/gi, '');
+  for (const tag of ['header', 'section', 'div', 'table', 'template', 'aside', 'main', 'nav']) {
+    const opened = (text.match(new RegExp(`<${tag}[\\s>]`, 'gi')) ?? []).length;
+    const closed = (text.match(new RegExp(`</${tag}>`, 'gi')) ?? []).length;
+    if (opened !== closed) unbalanced.add(`${path} (<${tag}> ${opened} opened, ${closed} closed)`);
+  }
+};
 function rewriteLinks(html, pagePath) {
   return html.replace(/href="([\w.-]+\.html)?(#[\w-]+)?"/g, (link, file, anchor) => {
     if (!file && !anchor) return link;
@@ -230,6 +240,7 @@ for (const lot of lots) {
 </section>`;
   // Seul le contenu issu des sources est réécrit ; la navigation générée a déjà des liens relatifs
   const indexBody = [lotNav(lot, lot.indexPath), rewriteLinks(lot.header, lot.indexPath), screenList, ...lot.sections.filter((s) => !s.screen).map((s) => rewriteLinks(s.html, lot.indexPath))].join('\n\n');
+  checkStructure(lot.indexPath, indexBody);
   pages.set(lot.indexPath, renderPage({ title: `${lot.title ?? lot.label}`, fonts: lot.fonts, lotStyle: lot.style, templates: usedTemplates(indexBody, allTemplates), body: indexBody }));
   // Une page par écran
   lot.pages.forEach((p, i) => {
@@ -238,6 +249,7 @@ for (const lot of lots) {
     const pager = `<div class="mt-16 flex justify-between gap-4 border-t border-doc-line pt-4 text-sm">${prev ? `<a href="${relativeTo(p.path, prev.path)}" class="hover:text-doc-accent">← ${prev.screen.toUpperCase()} · ${prev.title}</a>` : '<span></span>'}${next ? `<a href="${relativeTo(p.path, next.path)}" class="hover:text-doc-accent">${next.screen.toUpperCase()} · ${next.title} →</a>` : '<span></span>'}</div>`;
     const note = p.status?.note ? `<p class="mb-6 max-w-[100ch] rounded-xl border border-doc-line border-l-4 border-l-${p.status.color} bg-doc-card px-5 py-3 text-sm"><b class="font-semibold">${p.status.label}</b> · ${p.status.note}</p>` : '';
     const body = [lotNav(lot, p.path), note, ...p.sections.map((s) => withStatus(rewriteLinks(s.html, p.path), p.status)), pager].filter(Boolean).join('\n\n');
+    checkStructure(p.path, body);
     pages.set(p.path, renderPage({ title: `${p.screen.toUpperCase()} · ${p.title} · ${site.title}`, fonts: lot.fonts, lotStyle: lot.style, templates: usedTemplates(body, allTemplates), body }));
   });
 }
@@ -293,4 +305,5 @@ console.log(changed.length ? `Changed pages (${changed.length}): ${changed.join(
 if (duplicates.size) console.log(`WARNING: screen ids used in several lots (links will be wrong): ${[...duplicates].join(', ')}`);
 if (removed.length) console.log(`Removed pages without source: ${removed.join(', ')}`);
 if (invalidStatuses.size) console.log(`WARNING: unknown implementation status (todo, doing, done, gap): ${[...invalidStatuses].join(', ')}`);
+if (unbalanced.size) console.log(`WARNING: unclosed or extra tags, the layout breaks after them (${unbalanced.size}): ${[...unbalanced].join(', ')}`);
 if (unresolved.size) console.log(`WARNING: unresolved links (${unresolved.size}): ${[...unresolved].slice(0, 15).join(', ')}${unresolved.size > 15 ? ', …' : ''}`);
