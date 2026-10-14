@@ -57,6 +57,10 @@ if (args.includes('--mark')) {
     if (current[k]) synced[k] = current[k];
     else console.log(`WARNING: unknown screen or key: ${k}`);
   }
+  // Les écrans retirés des specs sont oubliés : ils ne sont plus à suivre
+  const gone = Object.keys(synced).filter((k) => !(k in current));
+  for (const k of gone) delete synced[k];
+  if (gone.length) console.log(`Forgot screens removed from the specs: ${gone.map((k) => k.toUpperCase()).join(', ')}.`);
   const sorted = Object.fromEntries(Object.keys(synced).sort().map((k) => [k, synced[k]]));
   writeFileSync(statePath, JSON.stringify(sorted, null, 2) + '\n');
   console.log(`Marked as synced with the specs: ${keys.join(', ')}.`);

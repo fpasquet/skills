@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 2.2.0 · 14/10/2026
+
+- `scaffold.mjs` réécrit les liens des maquettes vers un écran ou un état (`#e19c`, `projets.html#e6d`) en liens vers la page du prototype qui le montre (`e19.html?state=e19c`, `e6.html?state=e6d`), dans les pages comme dans `shells.html`. Ces liens menaient à des pages des specs absentes du prototype, et `check.mjs` les signalait.
+- `drift.mjs --mark` oublie les écrans retirés des specs : ils n'apparaissent plus dans « screens removed from the specs » après la reprise.
+
 ## 2.1.0 · 14/10/2026
 
 - `prepare-publish.mjs --all` liste tous les fichiers, socle compris (`data.js`, `proto.js`, Alpine, Lucide), pour publier un nouvel artifact : sans cette option, les fichiers inchangés depuis la publication précédente manquaient.

@@ -35,7 +35,7 @@ Une installation en portée projet écrit un `skills-lock.json` à la racine du 
 | Skill                                                      | Version | Description                                                                                     |
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
 | [`specs-ui`](skills/specs-ui/README.md)                     | 3.2.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
-| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.1.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
+| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.2.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
 | [`requirements-doc`](skills/requirements-doc/README.md) | 2.1.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
 
 Chaque skill publie son résultat comme un artifact claude.ai partageable, et garde une copie locale.

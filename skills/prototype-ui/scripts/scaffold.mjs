@@ -43,6 +43,12 @@ function stripSpecsChrome(html) {
     .replace(/(class="[^"]*?)\bnext-step\b\s*/g, '$1');
 }
 
+// Un lien des maquettes vers un écran ou un état (« #e19c », « projets.html#e6d ») mène à la page du prototype
+// qui le montre (« e19.html?state=e19c », « e6.html?state=e6d »), au lieu de la page des specs
+function linkToPrototype(html) {
+  return html.replace(/href="(?:[\w-]+\.html)?#(e(\d+)([a-z]?))"/g, (_, id, n, letter) => `href="e${n}.html${letter ? `?state=${id}` : ''}"`);
+}
+
 // Extrait l'élément <div …> qui porte un attribut donné, avec son contenu (comptage des div)
 function extractDiv(html, attr) {
   const at = html.indexOf(attr);
@@ -97,7 +103,7 @@ for (const name of site.lots) {
     const title = lot.screens?.[screen] ?? screen.toUpperCase();
     const blocks = states
       .map((s, i) => {
-        const parts = [s.desktop && toFullScreen(stripSpecsChrome(s.desktop), s.mobile ? 'desktop' : 'only'), s.mobile && toFullScreen(stripSpecsChrome(s.mobile), 'mobile')].filter(Boolean);
+        const parts = [s.desktop && toFullScreen(linkToPrototype(stripSpecsChrome(s.desktop)), s.mobile ? 'desktop' : 'only'), s.mobile && toFullScreen(linkToPrototype(stripSpecsChrome(s.mobile)), 'mobile')].filter(Boolean);
         const missing = s.mobile ? '' : '\n  <!-- Pas de maquette mobile dans les specs (portée simplifiée) : prévoir un rendu mobile simple. -->';
         return `<section data-state="${s.state}" x-show="state === '${s.state}'"${i ? ' x-cloak' : ''}>${missing}\n  ${parts.join('\n  ')}\n</section>`;
       })
@@ -144,7 +150,7 @@ for (const name of site.lots) {
   const t = read(join(specsDir, 'sources', name, 'templates.html')).trim();
   if (t) templateBlocks.push(`<!-- specs-ui : ${name}/templates.html -->\n${t}`);
 }
-const shells = stripSpecsChrome(templateBlocks.join('\n\n')) + '\n';
+const shells = linkToPrototype(stripSpecsChrome(templateBlocks.join('\n\n'))) + '\n';
 const shellsPath = join(outDir, 'src', 'shells.html');
 // shells.html est câblé par le modèle principal : --force ne l'écrase que sur un scaffold complet (sans --pages)
 if (existsSync(shellsPath) && (!force || onlyPages)) {
