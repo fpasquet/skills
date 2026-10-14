@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.1.0 · 14/10/2026
+
+- `prepare-publish.mjs --all` liste tous les fichiers, socle compris (`data.js`, `proto.js`, Alpine, Lucide), pour publier un nouvel artifact : sans cette option, les fichiers inchangés depuis la publication précédente manquaient.
+
 ## 2.0.0 · 14/10/2026
 
 - **Disposition `specs/`** (rupture) : le prototype vit dans `specs/prototype`, les specs dans `specs/ui` (chemin par défaut `../ui`, repli sur `../specs-ui`). Migration avec `migrate-layout.mjs` du skill `specs-ui`.

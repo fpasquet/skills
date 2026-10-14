@@ -4,6 +4,7 @@
  *
  * Site de specs (dossier construit par build.mjs) :
  *   node prepare-publish.mjs specs/ui/site <out-dir>    prépare la page principale et liste les pages à envoyer
+ *                                                       (--all : toutes les pages, pour un nouvel artifact)
  *   node prepare-publish.mjs specs/ui/site --confirm    à lancer après une publication réussie
  *   node prepare-publish.mjs specs/ui/site --check      dit si l'artifact est en retard sur le site local
  *                                                       (--strict : code de sortie 1 s'il l'est, pour la CI)
@@ -49,8 +50,10 @@ if (statSync(input).isDirectory()) {
     console.log(`Recorded ${pages.length} published pages in ${statePath}.`);
     process.exit(0);
   }
-  const changed = pages.filter((p) => p !== 'index.html' && published[p] !== hash(p));
-  const removed = Object.keys(published).filter((p) => !pages.includes(p));
+  // --all : nouvel artifact (première publication, ou artifact d'un autre compte) : tout envoyer
+  const all = process.argv.includes('--all');
+  const changed = pages.filter((p) => p !== 'index.html' && (all || published[p] !== hash(p)));
+  const removed = all ? [] : Object.keys(published).filter((p) => !pages.includes(p));
   if (second === '--check') {
     const site = JSON.parse(readFileSync(join(siteDir, '..', 'sources', 'site.json'), 'utf8'));
     const pending = [...(published['index.html'] !== hash('index.html') ? ['index.html'] : []), ...changed, ...removed.map((p) => `${p} (removed)`)];

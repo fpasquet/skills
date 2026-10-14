@@ -10,7 +10,7 @@ description: >
   sans prononcer le mot « prototype ».
 metadata:
   author: fpasquet
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # Prototype UI à partir des specs
@@ -132,7 +132,7 @@ node <skill>/scripts/prepare-publish.mjs specs/prototype <scratchpad>/prototype-
 Publier avec l'outil Artifact :
 
 - `file_path` : la page principale ;
-- `files` : la liste fournie, limitée aux fichiers modifiés ;
+- `files` : la liste fournie, limitée aux fichiers modifiés (`--all` pour un nouvel artifact : première publication, ou artifact d'un autre compte) ;
 - `url` : celle de l'artifact, pour une mise à jour.
 
 Puis lancer `prepare-publish.mjs specs/prototype --confirm` et noter l'URL dans `PROTOTYPE.md` et dans `prototype.json` → `artifact`. Chaque visiteur a ses propres données, gardées dans son navigateur. `prepare-publish.mjs specs/prototype --check` dit, sans rien préparer, si l'artifact est en retard sur le site local.

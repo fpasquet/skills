@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -199,7 +199,7 @@ node <skill>/scripts/prepare-publish.mjs specs/ui/site <tmp>/publish    # page p
 ```
 
 - Passer à l'outil Artifact la page principale préparée (`file_path`) et la table `files` affichée par le script : chemin publié → fichier de `specs/ui/site/`. Les pages secondaires sont des documents complets ; les liens relatifs entre pages fonctionnent tels quels.
-- Première publication : toutes les pages. Ensuite, seules les pages modifiées depuis la dernière publication ; les autres restent en ligne. Avec `url`, l'outil peut exiger d'avoir vu la liste des fichiers : demander la liste (`scope: "files"`) plutôt que de relire les pages.
+- Première publication : toutes les pages (`--all`). Ensuite, seules les pages modifiées depuis la dernière publication ; les autres restent en ligne. Un artifact introuvable (supprimé, ou publié depuis un autre compte claude.ai) se remplace par un nouveau : publier avec `--all`, puis remplacer l'URL partout (`site.json`, `CONTEXTE.md`, configurations du prototype et du cahier des charges, README du projet) en notant l'ancienne comme remplacée. Avec `url`, l'outil peut exiger d'avoir vu la liste des fichiers : demander la liste (`scope: "files"`) plutôt que de relire les pages.
 - Après une publication réussie : `prepare-publish.mjs specs/ui/site --confirm`. Noter l'URL dans `sources/site.json` (`artifact`) et dans `CONTEXTE.md`.
 - Respecter les règles de l'outil Artifact pour la publication ; titre de deux à quatre mots.
 

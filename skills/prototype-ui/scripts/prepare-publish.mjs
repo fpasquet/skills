@@ -3,6 +3,7 @@
  * Prépare la publication du prototype avec l'outil Artifact.
  *
  *   node prepare-publish.mjs specs/prototype <out-dir>    prépare la page principale et liste les pages à envoyer
+ *                                                         (--all : tous les fichiers, pour un nouvel artifact)
  *   node prepare-publish.mjs specs/prototype --confirm    à lancer après une publication réussie
  *   node prepare-publish.mjs specs/prototype --check      dit si l'artifact est en retard sur le site local
  *                                                         (--strict : code de sortie 1 s'il l'est, pour la CI)
@@ -43,8 +44,10 @@ if (second === '--confirm') {
   console.log(`Recorded ${pages.length} published files in ${statePath}.`);
   process.exit(0);
 }
-const changed = pages.filter((p) => p !== 'index.html' && published[p] !== hash(p));
-const removed = Object.keys(published).filter((p) => !pages.includes(p));
+// --all : nouvel artifact (première publication, ou artifact d'un autre compte) : tout envoyer, socle compris
+const all = process.argv.includes('--all');
+const changed = pages.filter((p) => p !== 'index.html' && (all || published[p] !== hash(p)));
+const removed = all ? [] : Object.keys(published).filter((p) => !pages.includes(p));
 if (second === '--check') {
   const config = JSON.parse(readFileSync(join(resolve(input), 'src', 'prototype.json'), 'utf8'));
   const pending = [...(published['index.html'] !== hash('index.html') ? ['index.html'] : []), ...changed, ...removed.map((p) => `${p} (removed)`)];

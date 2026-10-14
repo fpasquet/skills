@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0 · 14 oct. 2026
+
+- `prepare-publish.mjs --all` liste toutes les pages, pour publier un nouvel artifact (première publication, ou artifact d'un autre compte claude.ai devenu inaccessible). Procédure de remplacement d'un artifact dans l'étape 4.
+
 ## 3.0.0 · 14 oct. 2026
 
 Les specs suivent l'implémentation, dans le dépôt de l'application.
