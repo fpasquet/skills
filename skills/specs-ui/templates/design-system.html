@@ -1,0 +1,124 @@
+<!--
+  Catalogue de composants exporté vers un Design System Claude Design par scripts/export-design-system.mjs.
+  Chaque <section data-card="…" data-group="…"> devient une carte d'aperçu (un fichier HTML).
+  Uniquement des tokens du produit (bg-primary, text-muted, rounded-control, h-control…) : l'aperçu prend
+  automatiquement l'identité du projet. Les libellés sont génériques ; le script ne les adapte pas.
+-->
+
+<section data-card="Boutons" data-group="Composants" data-slug="buttons" data-width="720">
+  <div class="flex flex-wrap items-center gap-3">
+    <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-primary px-4 font-medium text-on-primary"><i data-lucide="check" class="size-4"></i>Principal</button>
+    <button type="button" class="inline-flex h-control items-center gap-2 rounded-control border border-line-strong bg-surface px-4 font-medium">Secondaire</button>
+    <button type="button" class="inline-flex h-control items-center gap-2 rounded-control px-3 font-medium text-muted">Discret</button>
+    <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-danger px-4 font-medium text-on-danger">Supprimer</button>
+    <button type="button" aria-disabled="true" class="inline-flex h-control items-center gap-2 rounded-control bg-primary px-4 font-medium text-on-primary opacity-50">Désactivé</button>
+  </div>
+  <p class="mt-4 text-xs text-muted">Une seule action principale par écran. Libellé : un verbe qui dit ce qui va se passer.</p>
+</section>
+
+<section data-card="Champs de saisie" data-group="Composants" data-slug="fields" data-width="720">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div><p class="mb-1 text-xs font-medium text-muted">Libellé</p><div class="flex h-control items-center rounded-control border border-line-strong bg-surface px-3">Valeur saisie</div></div>
+    <div><p class="mb-1 text-xs font-medium text-muted">Avec indication</p><div class="flex h-control items-center rounded-control border border-line-strong bg-surface px-3 text-muted">Texte d'exemple</div></div>
+    <div><p class="mb-1 text-xs font-medium text-muted">Liste déroulante</p><div class="flex h-control items-center justify-between rounded-control border border-line-strong bg-surface px-3">Option choisie<i data-lucide="chevron-down" class="size-4 text-muted"></i></div></div>
+    <div><p class="mb-1 text-xs font-medium text-muted">En erreur</p><div class="flex h-control items-center rounded-control border border-danger bg-surface px-3">valeur incorrecte</div><p class="mt-1 text-xs text-danger">Ce qui ne va pas, et comment le corriger.</p></div>
+  </div>
+</section>
+
+<section data-card="Cases, choix et interrupteurs" data-group="Composants" data-slug="selection" data-width="560">
+  <div class="flex flex-col gap-3 text-sm">
+    <label class="flex items-center gap-2"><span class="flex size-4 items-center justify-center rounded-[3px] bg-primary text-on-primary"><i data-lucide="check" class="size-3"></i></span>Option cochée</label>
+    <label class="flex items-center gap-2"><span class="size-4 rounded-[3px] border border-line-strong bg-surface"></span>Option non cochée</label>
+    <label class="flex items-center gap-2"><span class="grid size-4 place-items-center rounded-full border border-primary"><span class="size-2 rounded-full bg-primary"></span></span>Choix unique sélectionné</label>
+    <label class="flex items-center gap-2"><span class="flex h-5 w-9 items-center rounded-full bg-primary p-0.5"><span class="ml-auto size-4 rounded-full bg-surface"></span></span>Interrupteur activé</label>
+  </div>
+</section>
+
+<section data-card="Badges d'état" data-group="Composants" data-slug="badges" data-width="640">
+  <div class="flex flex-wrap gap-2">
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success"><span class="size-1.5 rounded-full bg-success"></span>Terminé</span>
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-2 py-0.5 text-xs font-medium text-info"><span class="size-1.5 rounded-full bg-info"></span>En cours</span>
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>En attente</span>
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger"><span class="size-1.5 rounded-full bg-danger"></span>Échec</span>
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-alt px-2 py-0.5 text-xs font-medium text-muted"><span class="size-1.5 rounded-full bg-muted"></span>Neutre</span>
+  </div>
+  <p class="mt-4 text-xs text-muted">Toujours un libellé : la couleur seule ne porte pas l'information.</p>
+</section>
+
+<section data-card="Onglets" data-group="Composants" data-slug="tabs" data-width="640">
+  <div class="flex gap-5 border-b border-line text-sm">
+    <span class="-mb-px border-b-2 border-primary pb-2.5 font-medium">Actif <span class="ml-1 font-mono text-xs text-primary">12</span></span>
+    <span class="pb-2.5 text-muted">Inactif <span class="ml-1 font-mono text-xs">4</span></span>
+    <span class="pb-2.5 text-muted">Autre</span>
+  </div>
+  <div class="mt-5 inline-flex gap-1 rounded-control bg-surface-alt p-1 text-sm">
+    <span class="rounded-control bg-surface px-3 py-1 font-medium shadow-card">Segment actif</span><span class="px-3 py-1 text-muted">Autre segment</span>
+  </div>
+</section>
+
+<section data-card="Cartes et listes" data-group="Composants" data-slug="cards" data-width="720">
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class="rounded-card border border-line bg-surface p-4 shadow-card"><p class="font-medium">Objet manipulable</p><p class="mt-1 text-sm text-muted">Une carte pour un objet qu'on ouvre, déplace ou sélectionne.</p></div>
+    <ul class="divide-y divide-line rounded-card border border-line bg-surface text-sm">
+      <li class="flex items-center justify-between px-4 py-2.5">Élément de liste<span class="text-xs text-muted">méta</span></li>
+      <li class="flex items-center justify-between px-4 py-2.5">Élément de liste<span class="text-xs text-muted">méta</span></li>
+    </ul>
+  </div>
+</section>
+
+<section data-card="Tableau" data-group="Composants" data-slug="table" data-width="760">
+  <div class="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+    <table class="w-full border-collapse text-left text-sm">
+      <thead class="bg-surface-alt text-xs text-muted"><tr class="h-10"><th class="pl-4 font-medium">Nom</th><th class="font-medium">État</th><th class="pr-4 text-right font-medium">Mise à jour</th></tr></thead>
+      <tbody class="divide-y divide-line">
+        <tr class="h-row bg-primary-soft/60"><td class="pl-4 font-medium">Ligne sélectionnée</td><td><span class="rounded-full bg-info-soft px-2 py-0.5 text-xs font-medium text-info">En cours</span></td><td class="pr-4 text-right text-muted tabular-nums">il y a 2 min</td></tr>
+        <tr class="h-row"><td class="pl-4">Ligne standard</td><td><span class="rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Terminé</span></td><td class="pr-4 text-right text-muted tabular-nums">hier</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section data-card="Calques : modale, panneau, message" data-group="Composants" data-slug="overlays" data-width="760">
+  <div class="relative h-72 overflow-hidden rounded-card border border-line bg-canvas">
+    <div class="absolute inset-0 bg-ink/30"></div>
+    <div class="absolute inset-y-0 right-0 flex w-64 flex-col gap-2 bg-surface p-4 shadow-overlay"><p class="font-medium">Panneau latéral</p><p class="text-sm text-muted">Détail sans quitter l'écran.</p></div>
+    <div class="absolute top-1/2 left-1/3 w-56 -translate-1/2 rounded-card bg-surface p-4 shadow-overlay"><p class="font-medium">Modale</p><p class="mt-1 text-sm text-muted">Confirmation ou saisie courte.</p></div>
+    <div class="absolute bottom-3 left-4 flex items-center gap-2 rounded-control bg-ink px-3 py-2 text-sm text-surface"><i data-lucide="check" class="size-4"></i>Message de confirmation</div>
+  </div>
+</section>
+
+<section data-card="États vides et erreurs" data-group="Composants" data-slug="states" data-width="720">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="flex flex-col items-center gap-2 rounded-card border border-line bg-surface px-4 py-8 text-center">
+      <span class="grid size-10 place-items-center rounded-full bg-primary-soft text-primary"><i data-lucide="inbox" class="size-5"></i></span>
+      <b class="font-display font-semibold">Rien pour l'instant</b><p class="text-sm text-muted">Dire quoi faire ensuite.</p>
+    </div>
+    <div class="flex items-start gap-2 self-start rounded-control border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger"><i data-lucide="circle-alert" class="size-4 shrink-0"></i><span>Ce qui s'est passé, puis quoi faire. <b class="underline">Réessayer</b></span></div>
+  </div>
+</section>
+
+<section data-card="Assistant à étapes" data-group="Motifs" data-slug="stepper" data-width="720">
+  <ol class="flex flex-wrap items-center gap-2 text-sm">
+    <li class="flex items-center gap-2 text-muted"><span class="grid size-6 place-items-center rounded-full bg-success-soft text-success"><i data-lucide="check" class="size-3.5"></i></span>Étape faite</li>
+    <li class="h-px w-8 bg-line"></li>
+    <li class="flex items-center gap-2 font-medium"><span class="grid size-6 place-items-center rounded-full bg-primary text-xs text-on-primary">2</span>Étape en cours</li>
+    <li class="h-px w-8 bg-line"></li>
+    <li class="flex items-center gap-2 text-muted"><span class="grid size-6 place-items-center rounded-full border border-line-strong text-xs">3</span>À venir</li>
+  </ol>
+</section>
+
+<section data-card="Liste de conditions" data-group="Motifs" data-slug="conditions" data-width="560">
+  <ul class="divide-y divide-line rounded-card border border-line bg-surface text-sm">
+    <li class="flex items-center gap-2 px-3 py-2"><i data-lucide="check" class="size-4 text-success"></i>Condition remplie<span class="ml-auto font-mono text-xs text-muted">valeur</span></li>
+    <li class="flex items-center gap-2 px-3 py-2"><i data-lucide="x" class="size-4 text-danger"></i>Condition non remplie<span class="ml-auto text-xs text-danger">raison</span></li>
+  </ul>
+</section>
+
+<section data-card="Pipeline" data-group="Motifs" data-slug="pipeline" data-width="760">
+  <ol class="grid grid-cols-4 gap-2 text-xs">
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 1</p><p class="text-muted">faite</p><div class="mt-2 h-1 rounded-full bg-success"></div></li>
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 2</p><p class="text-muted">en cours</p><div class="mt-2 h-1 rounded-full bg-info"></div></li>
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 3</p><p class="text-muted">à venir</p><div class="mt-2 h-1 rounded-full bg-line"></div></li>
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 4</p><p class="text-muted">en échec</p><div class="mt-2 h-1 rounded-full bg-danger"></div></li>
+  </ol>
+</section>

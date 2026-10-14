@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="specs-ui-template" content="2.4.0">
+<!-- artifact : (URL claude.ai à reporter ici après la première publication) -->
+<title>Orbe · Specs UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Polices du produit : les mêmes familles que --font-* ci-dessous -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style type="text/tailwindcss">
+  /* ===== 1. Identité du produit : copie exacte de tokens.css ===== */
+  @theme {
+    --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --color-canvas: #f5f6f8;
+    --color-surface: #ffffff;
+    --color-surface-alt: #eef1f4;
+    --color-line: #dde2e8;
+    --color-line-strong: #8a94a0;
+    --color-ink: #17202a;
+    --color-muted: #5a6573;
+    --color-nav: #ffffff;
+    --color-nav-ink: #17202a;
+    --color-nav-muted: #5a6573;
+    --color-nav-active: #e8eefb;
+    --color-primary: #2554c7;
+    --color-primary-hover: #1d4399;
+    --color-primary-soft: #e8eefb;
+    --color-on-primary: #ffffff;
+    --color-success: #1d7348;
+    --color-success-soft: #e2f3e9;
+    --color-warning: #8a5300;
+    --color-warning-soft: #fbefd6;
+    --color-danger: #b42318;
+    --color-danger-soft: #fce8e6;
+    --color-on-danger: #ffffff;
+    --color-info: #1d5ba3;
+    --color-info-soft: #e4effb;
+    --radius-control: 0.375rem;
+    --radius-card: 0.625rem;
+    --spacing-control: 2.5rem;
+    --spacing-row: 3rem;
+    --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06);
+    --shadow-overlay: 0 12px 32px rgb(16 24 40 / 0.18);
+  }
+
+  /* ===== 2. Habillage du document : ne fait pas partie du produit, suit le thème clair/sombre ===== */
+  @theme inline {
+    --color-doc-bg: var(--doc-bg);
+    --color-doc-fg: var(--doc-fg);
+    --color-doc-muted: var(--doc-muted);
+    --color-doc-line: var(--doc-line);
+    --color-doc-card: var(--doc-card);
+    --color-doc-accent: var(--doc-accent);
+    --color-doc-new: var(--doc-new);
+    --color-doc-changed: var(--doc-changed);
+    --color-anno: #fcd34d;
+    --color-anno-ink: #3b2a00;
+    --font-doc: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  :root { --doc-bg: #f4f4f1; --doc-fg: #1c1c1a; --doc-muted: #62625b; --doc-line: #dcdcd5; --doc-card: #ffffff; --doc-accent: #4f46e5; --doc-new: #047857; --doc-changed: #a14c00; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; color-scheme: dark; }
+  /* Corps du document : règle hors couche, pour l'emporter sur le style de base qu'ajoute l'outil Artifact
+     autour de la page principale (police système 14 px, fond et couleur fixes). */
+  html body { margin: 0; background: var(--doc-bg); color: var(--doc-fg); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  @layer components {
+    /* Écran réutilisé en fond d'un panneau ou d'une modale (data-backdrop) : sans pastilles, cibles ni menus ouverts */
+    [data-backdrop] .anno, [data-backdrop] [data-menu] { display: none; }
+    [data-backdrop] .next-step { --tw-ring-shadow: 0 0 #0000; --tw-ring-offset-shadow: 0 0 #0000; }
+    /* Pastille numérotée posée sur un élément de maquette (le parent doit être relative) */
+    .anno { @apply pointer-events-none absolute z-30 grid size-6 place-items-center rounded-full bg-anno font-doc text-xs font-semibold text-anno-ink shadow-[0_0_0_3px_rgb(252_211_77_/_0.35)]; }
+    /* Met en évidence l'action suivante du parcours */
+    .next-step { @apply ring-4 ring-anno ring-offset-1; }
+  }
+</style>
+</head>
+<body>
+<div id="page" class="mx-auto max-w-[1400px] px-4 pt-8 pb-24 sm:px-6">
+
+<!-- ================= EN-TÊTE ================= -->
+<header>
+  <p class="font-mono text-xs font-medium tracking-wider text-doc-accent uppercase">Orbe · Specs UI</p>
+  <h1 class="mt-1 text-3xl font-semibold tracking-tight text-balance">Traitement des demandes clients</h1>
+  <div class="mt-3 flex flex-wrap gap-2 text-sm text-doc-muted">
+    <span class="rounded-full border border-doc-line bg-doc-card px-2.5 py-0.5">Itération 1 · 13 oct. 2026</span>
+    <span class="rounded-full border border-doc-line bg-doc-card px-2.5 py-0.5">Interface : proposition A (disposition « Pilotage », thème « Sobre ») · <a href="#identite" class="text-doc-accent hover:underline">voir l'annexe</a></span>
+  </div>
+  <p class="mt-4 max-w-[75ch] text-doc-muted">L'équipe support traite aujourd'hui les demandes depuis une boîte mail partagée. L'outil centralise les demandes, leur statut et l'historique des échanges. Exemple suivi dans les écrans : la demande <b class="text-doc-fg">#4821</b> d'une cliente qui n'a pas reçu son remboursement.</p>
+
+  <section class="mt-6 max-w-[100ch] rounded-xl border border-doc-line border-l-4 border-l-doc-accent bg-doc-card px-5 py-4">
+    <h2 class="text-base font-semibold">Règles fonctionnelles</h2>
+    <ul class="mt-2 list-disc space-y-1 pl-5 text-[15px]">
+      <li><b>Une demande a un seul statut</b> : à traiter, en cours, en attente client, résolue. Seule une demande résolue peut être rouverte.</li>
+      <li><b>Une réponse part par e-mail au client</b> ; une note interne n'est visible que de l'équipe.</li>
+      <li><b>Toute modification est tracée</b> dans l'historique de la demande (qui, quoi, quand).</li>
+    </ul>
+  </section>
+
+  <div class="mt-6 flex flex-col gap-2 text-[15px]">
+    <div class="flex flex-wrap items-center gap-1.5"><span class="w-40 text-sm text-doc-muted">Traiter une demande</span><a href="#e1" class="rounded-full border border-doc-line bg-doc-card px-2.5 py-0.5 text-sm hover:border-doc-accent">E1 Liste</a><span class="text-doc-muted">→</span><a href="#e2" class="rounded-full border border-doc-line bg-doc-card px-2.5 py-0.5 text-sm hover:border-doc-accent">E2 Détail</a><span class="text-doc-muted">→</span><a href="#e1" class="rounded-full border border-doc-line bg-doc-card px-2.5 py-0.5 text-sm hover:border-doc-accent">E1</a></div>
+  </div>
+</header>
+
+<nav aria-label="Écrans" class="sticky top-[env(safe-area-inset-top,0px)] z-40 -mx-4 mt-6 flex flex-wrap gap-2 bg-doc-bg/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6">
+  <a href="#e1" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">E1 · Liste des demandes</a>
+  <a href="#e2" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">E2 · Détail d'une demande</a>
+  <a href="#ouverts" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">Points ouverts · <span data-count="#ouverts tbody tr"></span></a>
+  <a href="#journal" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">Journal</a>
+  <a href="#identite" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">Identité</a>
+</nav>
+
+<!-- ================= E1 ================= -->
+<section id="e1" class="mt-10 scroll-mt-16">
+  <h2 class="flex flex-wrap items-baseline gap-2.5 text-xl font-semibold"><span class="font-mono text-sm font-medium text-doc-accent">E1</span>Liste des demandes<span class="rounded bg-doc-new/15 px-1.5 py-0.5 font-doc text-xs font-semibold text-doc-new">Nouveau</span></h2>
+  <p class="mt-1 max-w-[80ch] text-[15px] text-doc-muted">Point d'entrée de l'équipe. Les onglets donnent le volume par statut, la liste s'ouvre par défaut sur « À traiter » pour que personne ne commence par une demande déjà prise.</p>
+  <p class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-doc-muted"><span><b class="font-semibold text-doc-fg">Depuis</b> l'entrée « Demandes » de la navigation</span><span><b class="font-semibold text-doc-fg">Ensuite</b> <a href="#e2" class="font-semibold text-doc-accent hover:underline">E2 · Détail</a> au clic sur une ligne</span></p>
+
+  <p class="mt-4 mb-1.5 font-mono text-xs text-doc-muted">Desktop · 1280 × 820</p>
+  <div class="w-fit max-w-full overflow-x-auto rounded-xl border border-doc-line bg-doc-card">
+    <div data-frame="e1-desktop" class="relative h-[820px] w-[1280px] overflow-hidden bg-canvas font-sans text-sm text-ink" data-use="shell-desktop" data-active="demandes" data-slot-title="Demandes">
+      <div class="flex h-full flex-col px-8 pt-6">
+        <div class="flex items-end gap-4">
+          <div><p class="text-xs text-muted">Support · File de l'équipe</p><h1 class="mt-1 font-display text-2xl font-semibold tracking-tight">Demandes</h1></div>
+          <div class="ml-auto flex h-control w-64 items-center gap-2 rounded-control border border-line bg-surface px-3 whitespace-nowrap text-muted"><i data-lucide="search" class="size-4 shrink-0"></i><span class="truncate">Rechercher</span><kbd class="ml-auto rounded border border-line px-1.5 font-mono text-[10px]">/</kbd></div>
+          <button type="button" class="relative inline-flex h-control items-center gap-2 rounded-control bg-primary px-4 font-medium text-on-primary"><span class="anno -top-3 -right-3">4</span><i data-lucide="plus" class="size-4"></i>Nouvelle demande</button>
+        </div>
+        <div class="mt-5 grid grid-cols-4 divide-x divide-line rounded-card border border-line bg-surface shadow-card">
+          <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">À traiter</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">24</span><span class="text-xs font-medium text-danger">+5 depuis hier</span></p></div>
+          <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">Délai de 1re réponse</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">2 h 10</span><span class="text-xs font-medium text-success">objectif 4 h</span></p></div>
+          <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">En attente client</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">9</span><span class="text-xs text-muted">dont 2 depuis 3 j</span></p></div>
+          <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">Résolues sur 7 jours</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">112</span><span class="text-xs font-medium text-success">+12 %</span></p></div>
+        </div>
+        <div class="relative mt-5 flex items-center gap-5 border-b border-line">
+          <span class="relative -mb-px border-b-2 border-primary pb-2.5 font-medium">À traiter <span class="ml-1 font-mono text-xs text-primary">24</span><span class="anno -top-6 left-0">1</span></span>
+          <span class="pb-2.5 text-muted">En cours <span class="ml-1 font-mono text-xs">31</span></span>
+          <span class="pb-2.5 text-muted">En attente client <span class="ml-1 font-mono text-xs">9</span></span>
+          <span class="pb-2.5 text-muted">Résolues</span>
+          <span class="ml-auto flex items-center gap-2 pb-2 text-xs text-muted"><span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2.5">Priorité : toutes<i data-lucide="chevron-down" class="size-3.5"></i></span><span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2.5">Assignée : toutes<i data-lucide="chevron-down" class="size-3.5"></i></span></span>
+        </div>
+        <div class="mt-3 min-h-0 flex-1 overflow-hidden rounded-t-card border border-b-0 border-line bg-surface shadow-card">
+          <table class="w-full border-collapse text-left">
+            <thead class="text-xs text-muted"><tr class="h-9 border-b border-line"><th class="w-11 pl-4 font-medium"></th><th class="w-20 font-medium">Réf.</th><th class="font-medium">Objet</th><th class="w-36 font-medium">Statut</th><th class="w-40 font-medium">Assignée</th><th class="w-28 pr-5 text-right font-medium">Mise à jour</th></tr></thead>
+            <tbody class="divide-y divide-line">
+              <tr class="h-row bg-primary-soft/50"><td class="pl-4"><i data-lucide="arrow-up" class="size-4 text-danger"></i></td><td class="font-mono text-xs text-muted">#4821</td><td class="relative"><span class="font-medium">Remboursement non reçu après retour</span><span class="ml-2 text-muted">Camille Roux</span><span class="anno top-1/2 right-4 -translate-y-1/2">3</span></td><td><span class="relative inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter<span class="anno -top-4 -right-5">2</span></span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">12 min</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="arrow-up" class="size-4 text-danger"></i></td><td class="font-mono text-xs text-muted">#4807</td><td><span class="font-medium">Colis indiqué livré mais jamais reçu</span><span class="ml-2 text-muted">Thomas Girard</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-info-soft text-[10px] font-semibold text-info">IB</span>Inès B.</span></td><td class="pr-5 text-right text-muted tabular-nums">1 h</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="arrow-up" class="size-4 text-danger"></i></td><td class="font-mono text-xs text-muted">#4790</td><td><span class="font-medium">Double prélèvement sur la carte bancaire</span><span class="ml-2 text-muted">Julie Perrin</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">2 h</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="minus" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4819</td><td><span class="font-medium">Impossible de modifier l'adresse de livraison</span><span class="ml-2 text-muted">Hugo Martin</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">40 min</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="minus" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4815</td><td><span class="font-medium">Facture de septembre reçue en double</span><span class="ml-2 text-muted">Société Lavande</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-success-soft text-[10px] font-semibold text-success">KD</span>Karim D.</span></td><td class="pr-5 text-right text-muted tabular-nums">09:12</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="minus" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4802</td><td><span class="font-medium">Demande de suppression de compte</span><span class="ml-2 text-muted">Nora Haddad</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">hier</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="arrow-down" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4810</td><td><span class="font-medium">Code promo refusé au paiement</span><span class="ml-2 text-muted">Léa Fontaine</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-info-soft text-[10px] font-semibold text-info">IB</span>Inès B.</span></td><td class="pr-5 text-right text-muted tabular-nums">hier</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="arrow-down" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4799</td><td><span class="font-medium">Question sur la garantie d'un article</span><span class="ml-2 text-muted">Paul Lefèvre</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">10 oct.</td></tr>
+              <tr class="h-row"><td class="pl-4"><i data-lucide="arrow-down" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4795</td><td><span class="font-medium">Erreur sur le montant de la facture</span><span class="ml-2 text-muted">Martin Leroy</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-success-soft text-[10px] font-semibold text-success">KD</span>Karim D.</span></td><td class="pr-5 text-right text-muted tabular-nums">9 oct.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
+    <div class="min-w-0">
+      <p class="mb-1.5 font-mono text-xs text-doc-muted">Mobile · 390 × 844</p>
+      <div class="overflow-x-auto p-2">
+        <div data-frame="e1-mobile" class="relative h-[844px] w-[390px] overflow-hidden rounded-[2rem] bg-canvas font-sans text-sm text-ink ring-8 ring-zinc-900" data-use="shell-mobile" data-active="demandes" data-slot-title="Demandes">
+          <div class="flex h-full flex-col">
+            <div class="relative flex gap-2 overflow-hidden px-4 py-3">
+              <span class="anno top-1 left-1">1</span>
+              <span class="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 font-medium text-on-primary">À traiter <span class="text-xs opacity-80">24</span></span>
+              <span class="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-muted">En cours <span class="text-xs">31</span></span>
+              <span class="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-muted">En attente <span class="text-xs">9</span></span>
+            </div>
+            <div class="flex flex-col gap-2 px-4">
+              <div class="relative rounded-card border border-primary bg-surface p-3 shadow-card"><span class="anno -right-2 -bottom-2.5">3</span><div class="flex items-center justify-between text-xs text-muted"><span class="font-mono">#4821</span><span>il y a 12 min</span></div><b class="mt-1 block font-medium">Remboursement non reçu après retour</b><span class="text-xs text-muted">Camille Roux</span><div class="mt-2 flex gap-2"><span class="relative inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">À traiter<span class="anno top-1/2 -left-7 -translate-y-1/2">2</span></span><span class="inline-flex items-center gap-1.5 text-xs text-danger"><span class="size-1.5 rounded-full bg-danger"></span>Haute</span></div></div>
+              <div class="rounded-card border border-line bg-surface p-3"><div class="flex items-center justify-between text-xs text-muted"><span class="font-mono">#4819</span><span>il y a 40 min</span></div><b class="mt-1 block font-medium">Impossible de modifier l'adresse de livraison</b><span class="text-xs text-muted">Hugo Martin</span><div class="mt-2 flex gap-2"><span class="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">À traiter</span><span class="text-xs text-muted">Normale</span></div></div>
+              <div class="rounded-card border border-line bg-surface p-3"><div class="flex items-center justify-between text-xs text-muted"><span class="font-mono">#4815</span><span>09:12</span></div><b class="mt-1 block font-medium">Facture de septembre reçue en double</b><span class="text-xs text-muted">Société Lavande · Karim D.</span><div class="mt-2 flex gap-2"><span class="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">À traiter</span><span class="text-xs text-muted">Normale</span></div></div>
+              <div class="rounded-card border border-line bg-surface p-3"><div class="flex items-center justify-between text-xs text-muted"><span class="font-mono">#4810</span><span>hier</span></div><b class="mt-1 block font-medium">Code promo refusé au paiement</b><span class="text-xs text-muted">Léa Fontaine</span><div class="mt-2 flex gap-2"><span class="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">À traiter</span><span class="text-xs text-muted">Basse</span></div></div>
+            </div>
+            <button type="button" class="absolute right-4 bottom-4 grid size-14 place-items-center rounded-full bg-primary text-on-primary shadow-overlay"><span class="anno -top-2 -left-2">4</span><i data-lucide="plus" class="size-6"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ol class="flex flex-col gap-3 text-[15px] text-doc-muted">
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">1</b><span>Un onglet par statut, avec le nombre de demandes. « Résolues » n'affiche pas de compteur : le chiffre grossit sans fin et n'aide pas à prioriser. Sur mobile, les onglets deviennent des puces défilantes.</span></li>
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">2</b><span>Couleur du statut : à traiter en orange, en cours en bleu, en attente client en gris, résolue en vert. Le texte du statut reste toujours affiché, la couleur seule ne porte pas l'information.</span></li>
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">3</b><span>Toute la ligne (ou toute la carte sur mobile) est cliquable et ouvre <a href="#e2" class="text-doc-accent hover:underline">E2</a>. Tri par défaut : priorité, puis ancienneté.</span></li>
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">4</b><span>« Nouvelle demande » sert à saisir une demande reçue par téléphone. <b class="text-doc-fg">Hors périmètre de cette itération</b> : le formulaire sera spécifié dans une itération suivante.</span></li>
+      </ol>
+      <p class="mt-5 text-sm text-doc-muted"><b class="font-semibold text-doc-fg">Mobile</b> : pas de filtres avancés en V1. Le bouton flottant remplace « Nouvelle demande ».</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= E2 ================= -->
+<section id="e2" class="mt-16 scroll-mt-16">
+  <h2 class="flex flex-wrap items-baseline gap-2.5 text-xl font-semibold"><span class="font-mono text-sm font-medium text-doc-accent">E2</span>Détail d'une demande<span class="rounded bg-doc-new/15 px-1.5 py-0.5 font-doc text-xs font-semibold text-doc-new">Nouveau</span></h2>
+  <p class="mt-1 max-w-[80ch] text-[15px] text-doc-muted">La conversation occupe la place principale ; tout ce qui qualifie la demande (statut, priorité, personne assignée, client) reste visible à droite sans quitter l'échange.</p>
+  <p class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-doc-muted"><span><b class="font-semibold text-doc-fg">Depuis</b> <a href="#e1" class="font-semibold text-doc-accent hover:underline">E1</a> au clic sur une ligne</span><span><b class="font-semibold text-doc-fg">Ensuite</b> <a href="#e1" class="font-semibold text-doc-accent hover:underline">E1</a> après « Résoudre » ou le retour</span></p>
+
+  <p class="mt-4 mb-1.5 font-mono text-xs text-doc-muted">Desktop · 1280 × 820</p>
+  <div class="w-fit max-w-full overflow-x-auto rounded-xl border border-doc-line bg-doc-card">
+    <div data-frame="e2-desktop" class="relative h-[820px] w-[1280px] overflow-hidden bg-canvas font-sans text-sm text-ink" data-use="shell-desktop" data-active="demandes" data-slot-title="Demandes">
+      <div class="grid h-full grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-h-0 flex-col">
+          <div class="flex items-start gap-4 border-b border-line bg-surface px-6 py-4">
+            <div class="min-w-0 flex-1">
+              <p class="flex items-center gap-1 text-xs text-muted"><i data-lucide="arrow-left" class="size-3.5"></i>Demandes · <span class="font-mono">#4821</span></p>
+              <h3 class="mt-1 font-display text-lg font-semibold">Remboursement non reçu après retour</h3>
+            </div>
+            <button type="button" class="inline-flex h-control items-center gap-2 rounded-control border border-line-strong bg-surface px-4 font-medium"><i data-lucide="ellipsis" class="size-4"></i></button>
+            <button type="button" class="next-step relative inline-flex h-control items-center gap-2 rounded-control bg-primary px-4 font-medium text-on-primary"><span class="anno -top-3 -right-3">3</span><i data-lucide="check" class="size-4"></i>Résoudre</button>
+          </div>
+          <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-6">
+            <div class="max-w-[620px] rounded-card border border-line bg-surface p-4">
+              <p class="flex items-center gap-2 text-xs text-muted"><b class="font-medium text-ink">Camille Roux</b>par e-mail · 8 oct., 18:04</p>
+              <p class="mt-2 leading-relaxed">Bonjour, j'ai renvoyé la veste commandée le 22 septembre (commande 300-5521) et le colis a été livré chez vous le 30. Je n'ai toujours pas reçu le remboursement. Pouvez-vous vérifier ?</p>
+            </div>
+            <div class="ml-auto max-w-[620px] rounded-card border border-warning/30 bg-warning-soft p-4">
+              <p class="flex items-center gap-2 text-xs text-warning"><i data-lucide="lock" class="size-3.5"></i><b class="font-medium">Note interne</b> · Karim D. · 9 oct., 09:30</p>
+              <p class="mt-2 leading-relaxed">Retour bien réceptionné à l'entrepôt, remboursement bloqué : le motif de retour n'a pas été saisi.</p>
+            </div>
+            <div class="relative mt-auto rounded-card border border-line-strong bg-surface shadow-card">
+              <span class="anno -top-3 -left-3">2</span>
+              <div class="flex gap-4 border-b border-line px-4 text-sm"><span class="border-b-2 border-primary py-2.5 font-medium">Réponse au client</span><span class="py-2.5 text-muted">Note interne</span></div>
+              <p class="h-24 px-4 py-3 text-muted">Écrire une réponse à Camille Roux…</p>
+              <div class="flex items-center gap-2 border-t border-line px-3 py-2"><button type="button" class="inline-flex h-8 items-center gap-2 rounded-control px-2.5 text-muted"><i data-lucide="file-text" class="size-4"></i>Modèles</button><button type="button" class="ml-auto inline-flex h-8 items-center gap-2 rounded-control bg-primary px-3 font-medium text-on-primary opacity-50" aria-disabled="true"><i data-lucide="send" class="size-4"></i>Envoyer</button></div>
+            </div>
+          </div>
+        </div>
+        <aside class="flex min-h-0 flex-col gap-5 overflow-hidden border-l border-line bg-surface p-5">
+          <div class="relative flex flex-col gap-3">
+            <span class="anno -top-1 right-0">1</span>
+            <div><p class="mb-1 text-xs font-medium text-muted">Statut</p><div class="flex h-control items-center justify-between rounded-control border border-line-strong px-3"><span class="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">À traiter</span><i data-lucide="chevron-down" class="size-4 text-muted"></i></div></div>
+            <div><p class="mb-1 text-xs font-medium text-muted">Priorité</p><div class="flex h-control items-center justify-between rounded-control border border-line-strong px-3"><span class="inline-flex items-center gap-1.5 text-danger"><span class="size-1.5 rounded-full bg-danger"></span>Haute</span><i data-lucide="chevron-down" class="size-4 text-muted"></i></div></div>
+            <div><p class="mb-1 flex justify-between text-xs font-medium text-muted">Assignée<span class="text-primary">M'assigner</span></p><div class="flex h-control items-center justify-between rounded-control border border-line-strong px-3 text-muted">Non assignée<i data-lucide="chevron-down" class="size-4"></i></div></div>
+          </div>
+          <div class="rounded-card bg-surface-alt p-3">
+            <p class="text-xs font-medium text-muted">Client</p>
+            <p class="mt-1 font-medium">Camille Roux</p>
+            <p class="text-xs text-muted">camille.roux@exemple.fr · 6 commandes</p>
+          </div>
+          <div class="relative">
+            <span class="anno -top-1 right-0">4</span>
+            <p class="text-xs font-medium text-muted">Historique</p>
+            <ol class="mt-2 flex flex-col gap-2.5 border-l border-line pl-3 text-xs">
+              <li><b class="font-medium">Karim D.</b> a ajouté une note interne<span class="block text-muted">9 oct., 09:30</span></li>
+              <li><b class="font-medium">Système</b> a fixé la priorité à Haute<span class="block text-muted">8 oct., 18:04 · mot-clé « remboursement »</span></li>
+              <li><b class="font-medium">Camille Roux</b> a ouvert la demande<span class="block text-muted">8 oct., 18:04</span></li>
+            </ol>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
+    <div class="min-w-0">
+      <p class="mb-1.5 font-mono text-xs text-doc-muted">Mobile · 390 × 844</p>
+      <div class="overflow-x-auto p-2">
+        <!-- Écran poussé : en-tête avec retour, sans barre de navigation, donc pas de shell -->
+        <div data-frame="e2-mobile" class="relative flex h-[844px] w-[390px] flex-col overflow-hidden rounded-[2rem] bg-canvas font-sans text-sm text-ink ring-8 ring-zinc-900">
+          <header class="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface px-4"><i data-lucide="arrow-left" class="size-5"></i><span class="font-mono text-xs text-muted">#4821</span><span class="ml-auto inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">À traiter</span><i data-lucide="ellipsis-vertical" class="size-5 text-muted"></i></header>
+          <div class="border-b border-line bg-surface px-4 pt-3 pb-3">
+            <h3 class="font-display text-base font-semibold">Remboursement non reçu après retour</h3>
+            <div class="relative mt-3 grid grid-cols-2 rounded-control bg-surface-alt p-1 text-center"><span class="anno -top-2 -right-2">1</span><span class="rounded-control bg-surface py-1.5 font-medium shadow-card">Conversation</span><span class="py-1.5 text-muted">Infos</span></div>
+          </div>
+          <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4">
+            <div class="rounded-card border border-line bg-surface p-3"><p class="text-xs text-muted"><b class="font-medium text-ink">Camille Roux</b> · 8 oct., 18:04</p><p class="mt-1.5 leading-relaxed">Bonjour, j'ai renvoyé la veste commandée le 22 septembre (commande 300-5521) et le colis a été livré chez vous le 30…</p></div>
+            <div class="rounded-card border border-warning/30 bg-warning-soft p-3"><p class="text-xs text-warning"><b class="font-medium">Note interne</b> · Karim D.</p><p class="mt-1.5 leading-relaxed">Retour bien réceptionné, remboursement bloqué : motif de retour non saisi.</p></div>
+          </div>
+          <div class="relative flex items-center gap-2 border-t border-line bg-surface p-3"><span class="anno -top-3 left-2">2</span><span class="flex h-control flex-1 items-center rounded-full border border-line-strong px-4 text-muted">Répondre…</span><span class="grid size-10 place-items-center rounded-full bg-primary text-on-primary"><i data-lucide="send" class="size-4"></i></span></div>
+          <div class="relative bg-surface px-3 pb-4"><span class="anno -top-1 right-2">3</span><button type="button" class="next-step flex h-control w-full items-center justify-center gap-2 rounded-control bg-primary font-medium text-on-primary"><i data-lucide="check" class="size-4"></i>Résoudre</button></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ol class="flex flex-col gap-3 text-[15px] text-doc-muted">
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">1</b><span>Statut, priorité et personne assignée se modifient directement dans le panneau ; chaque changement est enregistré et apparaît dans l'historique (4). Sur mobile, ces champs passent dans l'onglet « Infos ».</span></li>
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">2</b><span>Le champ de saisie bascule entre <b class="text-doc-fg">Réponse au client</b> (envoyée par e-mail) et <b class="text-doc-fg">Note interne</b> (fond jaune, visible de l'équipe seulement) pour éviter d'envoyer une note au client par erreur.</span></li>
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">3</b><span>« Résoudre » passe la demande en Résolue et revient à <a href="#e1" class="text-doc-accent hover:underline">E1</a>. Désactivé tant qu'une réponse est en brouillon. <b class="text-doc-fg">À valider avec le support</b> : faut-il une confirmation ?</span></li>
+        <li class="flex gap-3"><b class="grid size-6 flex-none place-items-center rounded-full bg-anno text-xs font-semibold text-anno-ink">4</b><span>Historique antichronologique : messages, notes et changements de champs, avec l'auteur. Les actions automatiques sont attribuées à « Système » avec leur raison.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ================= POINTS OUVERTS ================= -->
+<section id="ouverts" class="mt-16 scroll-mt-16">
+  <h2 class="text-xl font-semibold">Points ouverts</h2>
+  <div class="mt-3 overflow-x-auto rounded-xl border border-doc-line bg-doc-card">
+    <table class="w-full min-w-[640px] text-left text-[15px]">
+      <thead class="border-b border-doc-line text-sm text-doc-muted"><tr><th class="px-4 py-2 font-medium">Question</th><th class="px-4 py-2 font-medium">À trancher par</th><th class="px-4 py-2 font-medium">Écrans</th></tr></thead>
+      <tbody class="divide-y divide-doc-line">
+        <tr><td class="px-4 py-2.5">Faut-il confirmer avant de résoudre une demande ?</td><td class="px-4 py-2.5 text-doc-muted">Support</td><td class="px-4 py-2.5"><a href="#e2" class="text-doc-accent hover:underline">E2</a></td></tr>
+        <tr><td class="px-4 py-2.5">Les comptes professionnels ont-ils une file de demandes séparée ?</td><td class="px-4 py-2.5 text-doc-muted">Produit</td><td class="px-4 py-2.5"><a href="#e1" class="text-doc-accent hover:underline">E1</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================= JOURNAL ================= -->
+<section id="journal" class="mt-16 scroll-mt-16">
+  <h2 class="text-xl font-semibold">Journal des itérations</h2>
+  <ol class="mt-3 flex flex-col gap-3 text-[15px]">
+    <li class="rounded-xl border border-doc-line bg-doc-card px-4 py-3"><b class="font-semibold">Itération 1</b> <span class="text-doc-muted">· 13 oct. 2026</span><p class="mt-1 text-doc-muted">Première version : <a href="#e1" class="text-doc-accent hover:underline">E1</a> liste des demandes, <a href="#e2" class="text-doc-accent hover:underline">E2</a> détail d'une demande.</p></li>
+  </ol>
+</section>
+
+<!-- ================= IDENTITÉ ================= -->
+<section id="identite" class="mt-16 scroll-mt-16">
+  <h2 class="text-xl font-semibold">Annexe · Identité visuelle</h2>
+  <p class="mt-1 max-w-[80ch] text-[15px] text-doc-muted">Tokens Tailwind du produit (fichier <code class="rounded bg-doc-bg px-1.5 py-0.5 font-mono text-[13px]">tokens.css</code>). Les valeurs affichées sont lues dans la page : elles sont toujours à jour.</p>
+  <div class="mt-4 rounded-xl border border-doc-line bg-doc-card p-5">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+      <!-- Une vignette par token : data-value="--color-…" affiche la valeur réelle -->
+      <div><div class="h-14 rounded-lg border border-doc-line bg-primary"></div><p class="mt-1.5 text-sm font-medium">primary</p><p class="font-mono text-xs text-doc-muted" data-value="--color-primary"></p></div>
+      <div><div class="h-14 rounded-lg border border-doc-line bg-primary-soft"></div><p class="mt-1.5 text-sm font-medium">primary-soft</p><p class="font-mono text-xs text-doc-muted" data-value="--color-primary-soft"></p></div>
+      <div><div class="h-14 rounded-lg border border-doc-line bg-ink"></div><p class="mt-1.5 text-sm font-medium">ink</p><p class="font-mono text-xs text-doc-muted" data-value="--color-ink"></p></div>
+      <div><div class="h-14 rounded-lg border border-doc-line bg-muted"></div><p class="mt-1.5 text-sm font-medium">muted</p><p class="font-mono text-xs text-doc-muted" data-value="--color-muted"></p></div>
+      <div><div class="h-14 rounded-lg border border-doc-line bg-canvas"></div><p class="mt-1.5 text-sm font-medium">canvas</p><p class="font-mono text-xs text-doc-muted" data-value="--color-canvas"></p></div>
+      <div><div class="h-14 rounded-lg border border-doc-line bg-surface-alt"></div><p class="mt-1.5 text-sm font-medium">surface-alt</p><p class="font-mono text-xs text-doc-muted" data-value="--color-surface-alt"></p></div>
+      <div><div class="h-14 rounded-lg border border-doc-line bg-line"></div><p class="mt-1.5 text-sm font-medium">line</p><p class="font-mono text-xs text-doc-muted" data-value="--color-line"></p></div>
+      <div><div class="h-14 rounded-lg border border-doc-line bg-line-strong"></div><p class="mt-1.5 text-sm font-medium">line-strong</p><p class="font-mono text-xs text-doc-muted" data-value="--color-line-strong"></p></div>
+    </div>
+    <div class="mt-5 flex flex-wrap gap-2 font-sans text-sm">
+      <span class="inline-flex items-center rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">success</span>
+      <span class="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">warning</span>
+      <span class="inline-flex items-center rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">danger</span>
+      <span class="inline-flex items-center rounded-full bg-info-soft px-2 py-0.5 text-xs font-medium text-info">info</span>
+    </div>
+    <div class="mt-6 grid gap-6 border-t border-doc-line pt-5 md:grid-cols-2">
+      <div class="text-ink">
+        <p class="text-xs text-doc-muted">Titres · <span class="font-mono" data-value="--font-display"></span></p>
+        <p class="mt-1 font-display text-2xl font-semibold text-doc-fg">Remboursement non reçu</p>
+        <p class="mt-3 text-xs text-doc-muted">Texte · <span class="font-mono" data-value="--font-sans"></span></p>
+        <p class="mt-1 font-sans text-sm text-doc-fg">Retour bien réceptionné à l'entrepôt, remboursement bloqué : le motif n'a pas été saisi.</p>
+        <p class="mt-3 text-xs text-doc-muted">Chiffres et références · <span class="font-mono" data-value="--font-mono"></span></p>
+        <p class="mt-1 font-mono text-sm text-doc-fg tabular-nums">#4821 · 300-5521 · 128,40 €</p>
+      </div>
+      <div class="flex flex-wrap content-start items-center gap-3 rounded-card bg-canvas p-4 font-sans text-sm text-ink">
+        <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-primary px-4 font-medium text-on-primary">Principal</button>
+        <button type="button" class="inline-flex h-control items-center gap-2 rounded-control border border-line-strong bg-surface px-4 font-medium">Secondaire</button>
+        <button type="button" class="inline-flex h-control items-center gap-2 rounded-control px-3 font-medium text-muted">Discret</button>
+        <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-danger px-4 font-medium text-on-danger">Supprimer</button>
+        <div class="flex h-control w-56 items-center rounded-control border border-line-strong bg-surface px-3 text-muted">Champ de saisie</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- ================= BLOCS RÉUTILISABLES ================= -->
+<!-- Coquille desktop : navigation latérale + barre du haut. Les enfants de l'hôte vont dans [data-slot="content"]. -->
+<template id="tpl-shell-desktop">
+  <div class="absolute inset-0 flex">
+    <aside class="flex w-56 shrink-0 flex-col border-r border-line bg-nav px-3 py-4 text-nav-muted">
+      <div class="flex items-center gap-2 px-2 pb-5"><span class="grid size-7 place-items-center rounded-control bg-primary font-display text-sm font-bold text-on-primary">O</span><span class="font-display text-[15px] font-semibold text-nav-ink">Orbe</span><i data-lucide="chevrons-up-down" class="ml-auto size-4"></i></div>
+      <nav class="flex flex-col gap-0.5">
+        <a data-nav="accueil" class="flex h-9 items-center gap-3 rounded-control px-2.5 aria-[current=page]:bg-nav-active aria-[current=page]:font-medium aria-[current=page]:text-nav-ink"><i data-lucide="house" class="size-4"></i>Accueil</a>
+        <a data-nav="demandes" class="flex h-9 items-center gap-3 rounded-control px-2.5 aria-[current=page]:bg-nav-active aria-[current=page]:font-medium aria-[current=page]:text-nav-ink"><i data-lucide="inbox" class="size-4"></i>Demandes<span class="ml-auto font-mono text-xs">24</span></a>
+        <a data-nav="mes-demandes" class="flex h-9 items-center gap-3 rounded-control px-2.5 aria-[current=page]:bg-nav-active aria-[current=page]:font-medium aria-[current=page]:text-nav-ink"><i data-lucide="user-round" class="size-4"></i>Mes demandes<span class="ml-auto font-mono text-xs">6</span></a>
+        <a data-nav="clients" class="flex h-9 items-center gap-3 rounded-control px-2.5 aria-[current=page]:bg-nav-active aria-[current=page]:font-medium aria-[current=page]:text-nav-ink"><i data-lucide="users" class="size-4"></i>Clients</a>
+        <a data-nav="rapports" class="flex h-9 items-center gap-3 rounded-control px-2.5 aria-[current=page]:bg-nav-active aria-[current=page]:font-medium aria-[current=page]:text-nav-ink"><i data-lucide="chart-column" class="size-4"></i>Rapports</a>
+      </nav>
+      <div data-zone="views">
+      <p class="mt-6 px-2.5 text-[11px] font-semibold tracking-wider uppercase">Vues enregistrées</p>
+      <nav class="mt-1.5 flex flex-col gap-0.5">
+        <a class="flex h-8 items-center gap-3 rounded-control px-2.5"><span class="size-2 rounded-full bg-danger"></span>Priorité haute<span class="ml-auto font-mono text-xs">3</span></a>
+        <a class="flex h-8 items-center gap-3 rounded-control px-2.5"><span class="size-2 rounded-full bg-warning"></span>Remboursements<span class="ml-auto font-mono text-xs">7</span></a>
+        <a class="flex h-8 items-center gap-3 rounded-control px-2.5"><span class="size-2 rounded-full bg-info"></span>Comptes pro<span class="ml-auto font-mono text-xs">2</span></a>
+      </nav>
+      </div>
+      <div data-zone="profile" class="mt-auto flex items-center gap-2.5 border-t border-line px-2 pt-3"><span class="grid size-8 place-items-center rounded-full bg-info-soft text-xs font-semibold text-info">IB</span><span class="leading-tight"><span class="block text-sm font-medium text-nav-ink">Inès Bernard</span><span class="text-xs">Conseillère</span></span></div>
+    </aside>
+    <main data-slot="content" class="relative min-w-0 flex-1 overflow-hidden"></main>
+  </div>
+</template>
+
+<!-- Coquille mobile : barre du haut + barre d'onglets en bas -->
+<template id="tpl-shell-mobile">
+  <div class="absolute inset-0 flex flex-col">
+    <header class="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-nav px-4 text-nav-ink"><i data-lucide="menu" class="size-5"></i><h1 data-slot="title" class="font-display text-base font-semibold"></h1><i data-lucide="search" class="ml-auto size-5 text-nav-muted"></i><i data-lucide="bell" class="size-5 text-nav-muted"></i></header>
+    <main data-slot="content" class="relative min-h-0 flex-1 overflow-hidden"></main>
+    <nav class="grid h-16 shrink-0 grid-cols-4 border-t border-line bg-nav text-[11px] text-nav-muted">
+      <a data-nav="accueil" class="flex flex-col items-center justify-center gap-1 aria-[current=page]:font-medium aria-[current=page]:text-primary"><i data-lucide="house" class="size-5"></i>Accueil</a>
+      <a data-nav="demandes" class="flex flex-col items-center justify-center gap-1 aria-[current=page]:font-medium aria-[current=page]:text-primary"><i data-lucide="inbox" class="size-5"></i>Demandes</a>
+      <a data-nav="clients" class="flex flex-col items-center justify-center gap-1 aria-[current=page]:font-medium aria-[current=page]:text-primary"><i data-lucide="users" class="size-5"></i>Clients</a>
+      <a data-nav="reglages" class="flex flex-col items-center justify-center gap-1 aria-[current=page]:font-medium aria-[current=page]:text-primary"><i data-lucide="settings" class="size-5"></i>Réglages</a>
+    </nav>
+  </div>
+</template>
+
+<script>
+/*
+ * Assemble les blocs réutilisables, dessine les icônes, puis lance les contrôles lus par capture.mjs.
+ * <div data-use="x"> reçoit le contenu de <template id="tpl-x"> ; ses enfants vont dans [data-slot="content"].
+ * data-slot-<nom>="texte" remplit [data-slot="<nom>"] ; data-active="<id>" marque [data-nav="<id>"] comme page courante.
+ * data-omit="views profile" retire ces zones ([data-zone]) de la coquille ; data-anno-<zone>="2" y pose la pastille 2.
+ * Une zone marquée data-optional n'apparaît que si l'hôte la demande : data-include="admin".
+ * data-active accepte plusieurs identifiants séparés par des espaces (onglet et projet actifs).
+ */
+function assemble() {
+  let hosts;
+  while ((hosts = document.querySelectorAll('[data-use]')).length) {
+    hosts.forEach((host) => {
+      const name = host.dataset.use;
+      host.removeAttribute('data-use');
+      const tpl = document.getElementById('tpl-' + name);
+      if (!tpl) return console.warn('Template not found: tpl-' + name);
+      const fragment = tpl.content.cloneNode(true);
+      const slot = fragment.querySelector('[data-slot="content"]');
+      if (slot) slot.append(...host.childNodes);
+      for (const { name: attr, value } of [...host.attributes]) {
+        if (attr.startsWith('data-slot-')) fragment.querySelectorAll(`[data-slot="${attr.slice(10)}"]`).forEach((el) => (el.textContent = value));
+        if (attr.startsWith('data-anno-')) {
+          fragment.querySelectorAll(`[data-zone="${attr.slice(10)}"]`).forEach((el) => {
+            el.classList.add('relative');
+            el.insertAdjacentHTML('beforeend', `<span class="anno -top-2 -right-2">${value}</span>`);
+          });
+        }
+      }
+      (host.dataset.active || '').split(/\s+/).filter(Boolean).forEach((id) => fragment.querySelectorAll(`[data-nav="${id}"]`).forEach((el) => el.setAttribute('aria-current', 'page')));
+      (host.dataset.omit || '').split(/\s+/).filter(Boolean).forEach((zone) => fragment.querySelectorAll(`[data-zone="${zone}"]`).forEach((el) => el.remove()));
+      const included = (host.dataset.include || '').split(/\s+/);
+      fragment.querySelectorAll('[data-optional]').forEach((el) => { if (!included.includes(el.dataset.zone)) el.remove(); });
+      host.append(fragment);
+    });
+  }
+}
+// Affiche la valeur réelle des tokens ([data-value="--color-primary"]) et les compteurs ([data-count="<sélecteur>"]) une fois Tailwind compilé.
+function renderValues(attempt = 0) {
+  const ready = getComputedStyle(document.documentElement).getPropertyValue('--doc-bg').trim();
+  if (!ready && attempt < 100) return setTimeout(() => renderValues(attempt + 1), 50);
+  document.querySelectorAll('[data-value]').forEach((el) => {
+    const value = getComputedStyle(el).getPropertyValue(el.dataset.value).trim();
+    el.textContent = el.dataset.value.includes('font') ? value.split(',')[0].replace(/"/g, '') : value;
+  });
+  document.querySelectorAll('[data-count]').forEach((el) => (el.textContent = document.querySelectorAll(el.dataset.count).length));
+  document.fonts.ready.then(checkFrames);
+  // Les ancres (…#e3) sont rejouées une fois la page mise en forme par Tailwind.
+  if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ behavior: 'instant' });
+}
+// Contrôles lus par capture.mjs : contenu coupé (data-clipped), pastilles sur du texte (data-overlap) ou coupées par un bord (data-anno-cut).
+function checkFrames() {
+  document.querySelectorAll('[data-frame]').forEach((frame) => {
+    // data-clip-ok marque une coupe voulue (aperçu tronqué, liste qui continue) : elle n'est pas signalée
+    const clipped = [frame, ...frame.querySelectorAll('*')].filter((el) => !el.closest('[data-clip-ok]') && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 4 && getComputedStyle(el).overflowY === 'hidden');
+    if (clipped.length) frame.dataset.clipped = String(clipped.length); else delete frame.dataset.clipped;
+    const texts = [];
+    // Le texte d'un écran de fond (data-backdrop) est sous un calque : ignoré.
+    const walker = document.createTreeWalker(frame, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent.trim() && !n.parentElement.closest('.anno, [data-backdrop]') ? 1 : 2) });
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const rect of range.getClientRects()) texts.push({ rect, text: n.textContent.trim().slice(0, 40) });
+    }
+    let issues = 0;
+    frame.querySelectorAll('.anno').forEach((anno) => {
+      if (!anno.getClientRects().length || anno.closest('[data-backdrop]')) return;
+      const box = anno.getBoundingClientRect();
+      const hit = texts.find(({ rect: r }) => r.left < box.right - 2 && r.right > box.left + 2 && r.top < box.bottom - 2 && r.bottom > box.top + 2);
+      if (hit) { issues++; anno.dataset.overlap = hit.text; }
+      // Pastille coupée : elle dépasse d'un ancêtre qui masque le débordement
+      for (let el = anno.parentElement; el && el !== frame.parentElement; el = el.parentElement) {
+        const style = getComputedStyle(el);
+        if (style.overflow === 'visible' && style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+        const r = el.getBoundingClientRect();
+        if (box.left < r.left - 1 || box.right > r.right + 1 || box.top < r.top - 1 || box.bottom > r.bottom + 1) { issues++; anno.dataset.annoCut = `${el.tagName.toLowerCase()}.${[...el.classList].slice(0, 4).join('.')}`; break; }
+      }
+    });
+    if (issues) frame.dataset.annoIssues = String(issues); else delete frame.dataset.annoIssues;
+  });
+}
+const params = new URLSearchParams(location.search);
+// ?themes=c,a,b : thème de chaque proposition, dans l'ordre (sert à capturer les combinaisons)
+params.get('themes')?.split(',').forEach((theme, i) => { const section = document.querySelectorAll('section[data-product-theme]')[i]; if (section && theme) section.dataset.productTheme = theme; });
+// ?only=<id> n'affiche que cette section ; ?frame=<nom> n'affiche qu'un cadre de maquette (capture.mjs)
+const only = params.get('only');
+if (only) document.querySelectorAll('#page > header, #page > nav, #page > section').forEach((el) => { if (el.id !== only) el.hidden = true; });
+assemble();
+lucide.createIcons();
+const frameName = params.get('frame');
+if (frameName) {
+  const el = document.querySelector(`[data-frame="${frameName}"]`);
+  if (el) {
+    const wrapper = document.createElement('div');
+    const theme = el.closest('[data-product-theme]')?.dataset.productTheme;
+    if (theme) wrapper.dataset.productTheme = theme;
+    wrapper.append(el);
+    document.body.replaceChildren(wrapper);
+    document.body.dataset.frameIsolated = frameName;
+  }
+}
+renderValues();
+</script>
+</body>
+</html>

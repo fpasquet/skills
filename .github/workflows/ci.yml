@@ -1,0 +1,73 @@
+# Validation du dépôt à chaque push sur main et à chaque PR.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  NODE_VERSION: 24
+
+jobs:
+  # Structure, frontmatter, nommage, versions, syntaxe des scripts.
+  validate:
+    name: Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Validate skills structure
+        run: node scripts/validate-skills.mjs
+
+  # Le seul contrôle qui prouve que le dépôt est réellement consommable par un agent.
+  # Le CLI ignore SILENCIEUSEMENT un skill dont le frontmatter ne parse pas : sans cette
+  # comparaison de comptes, un skill peut disparaître sans que rien n'échoue.
+  discovery:
+    name: Découverte par le CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify that the CLI discovers all skills
+        run: |
+          set -euo pipefail
+
+          expected=$(find skills -name SKILL.md -type f | wc -l | tr -d ' ')
+          output=$(npx -y skills@1 add . --list 2>&1 \
+            | sed -e 's/\x1b\[[0-9;?]*[a-zA-Z]//g')
+          found=$(grep -oE 'Found [0-9]+ skill' <<<"$output" | grep -oE '[0-9]+' | head -1 || true)
+          found=${found:-0}
+
+          echo "$output"
+          echo "SKILL.md dans le dépôt : $expected — découverts par le CLI : $found"
+
+          if [ "$expected" -ne "$found" ]; then
+            echo "::error::$((expected - found)) skill(s) non découvert(s) par le CLI. Cause la plus probable : frontmatter YAML invalide (un ': ' dans un scalaire non quoté)."
+            exit 1
+          fi
+
+  lint:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: markdownlint
+        run: npm run lint:md

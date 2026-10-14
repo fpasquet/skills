@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="specs-ui-template" content="2.4.0">
+<!-- artifact : (URL claude.ai à reporter ici après la première publication) -->
+<title>Orbe · Propositions d'interface</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Toutes les familles utilisées par les trois thèmes -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style type="text/tailwindcss">
+  /*
+   * Une proposition = une DISPOSITION (balisage propre : navigation, organisation, parcours)
+   *                 + un THÈME (jeu de tokens --t-* posé par [data-product-theme]).
+   * Les dispositions n'utilisent que les tokens : n'importe quel thème s'applique à n'importe quelle disposition,
+   * ce que les boutons « Thème » de chaque proposition permettent d'essayer.
+   * Une fois le thème choisi, recopier ses valeurs --t-* dans tokens.css (bloc @theme classique).
+   */
+  @theme inline {
+    --font-sans: var(--t-font-sans);
+    --font-display: var(--t-font-display);
+    --font-mono: var(--t-font-mono);
+    --color-canvas: var(--t-canvas);
+    --color-surface: var(--t-surface);
+    --color-surface-alt: var(--t-surface-alt);
+    --color-line: var(--t-line);
+    --color-line-strong: var(--t-line-strong);
+    --color-ink: var(--t-ink);
+    --color-muted: var(--t-muted);
+    --color-nav: var(--t-nav);
+    --color-nav-ink: var(--t-nav-ink);
+    --color-nav-muted: var(--t-nav-muted);
+    --color-nav-active: var(--t-nav-active);
+    --color-primary: var(--t-primary);
+    --color-primary-hover: var(--t-primary-hover);
+    --color-primary-soft: var(--t-primary-soft);
+    --color-on-primary: var(--t-on-primary);
+    --color-success: var(--t-success);
+    --color-success-soft: var(--t-success-soft);
+    --color-warning: var(--t-warning);
+    --color-warning-soft: var(--t-warning-soft);
+    --color-danger: var(--t-danger);
+    --color-danger-soft: var(--t-danger-soft);
+    --color-on-danger: var(--t-on-danger);
+    --color-info: var(--t-info);
+    --color-info-soft: var(--t-info-soft);
+    --radius-control: var(--t-radius-control);
+    --radius-card: var(--t-radius-card);
+    --spacing-control: var(--t-control);
+    --spacing-row: var(--t-row);
+    --shadow-card: var(--t-shadow-card);
+    --shadow-overlay: var(--t-shadow-overlay);
+  }
+
+  /* ----- Thème A : Sobre ----- */
+  :root, [data-product-theme="a"] {
+    --t-font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    --t-font-display: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    --t-font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --t-canvas: #f5f6f8; --t-surface: #ffffff; --t-surface-alt: #eef1f4; --t-line: #dde2e8; --t-line-strong: #8a94a0;
+    --t-ink: #17202a; --t-muted: #5a6573;
+    --t-nav: #ffffff; --t-nav-ink: #17202a; --t-nav-muted: #5a6573; --t-nav-active: #e8eefb;
+    --t-primary: #2554c7; --t-primary-hover: #1d4399; --t-primary-soft: #e8eefb; --t-on-primary: #ffffff;
+    --t-success: #1d7348; --t-success-soft: #e2f3e9; --t-warning: #8a5300; --t-warning-soft: #fbefd6;
+    --t-danger: #b42318; --t-danger-soft: #fce8e6; --t-on-danger: #ffffff; --t-info: #1d5ba3; --t-info-soft: #e4effb;
+    --t-radius-control: 0.375rem; --t-radius-card: 0.625rem; --t-control: 2.5rem; --t-row: 3rem;
+    --t-shadow-card: 0 1px 2px rgb(16 24 40 / 0.06); --t-shadow-overlay: 0 12px 32px rgb(16 24 40 / 0.18);
+  }
+  /* ----- Thème B : Accueillant ----- */
+  [data-product-theme="b"] {
+    --t-font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --t-font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --t-font-mono: "DM Mono", ui-monospace, monospace;
+    --t-canvas: #f6f5f2; --t-surface: #ffffff; --t-surface-alt: #eeece7; --t-line: #e3e0d9; --t-line-strong: #948e83;
+    --t-ink: #22211e; --t-muted: #66625a;
+    --t-nav: #ffffff; --t-nav-ink: #22211e; --t-nav-muted: #66625a; --t-nav-active: #e0f0f1;
+    --t-primary: #146b72; --t-primary-hover: #0e5359; --t-primary-soft: #e0f0f1; --t-on-primary: #ffffff;
+    --t-success: #2c7a3f; --t-success-soft: #e3f2e6; --t-warning: #8a5200; --t-warning-soft: #faefd6;
+    --t-danger: #b3261e; --t-danger-soft: #fbe5e3; --t-on-danger: #ffffff; --t-info: #2a5aa8; --t-info-soft: #e4ecfa;
+    --t-radius-control: 9999px; --t-radius-card: 1.125rem; --t-control: 2.75rem; --t-row: 3.5rem;
+    --t-shadow-card: 0 2px 10px rgb(34 33 30 / 0.06); --t-shadow-overlay: 0 16px 40px rgb(34 33 30 / 0.14);
+  }
+  /* ----- Thème C : Sombre technique ----- */
+  [data-product-theme="c"] {
+    --t-font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --t-font-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --t-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    --t-canvas: #101217; --t-surface: #171a21; --t-surface-alt: #1f232c; --t-line: #2a2f3a; --t-line-strong: #636b7e;
+    --t-ink: #e7e9ee; --t-muted: #9ba2b2;
+    --t-nav: #0b0d11; --t-nav-ink: #e7e9ee; --t-nav-muted: #8e95a6; --t-nav-active: #232835;
+    --t-primary: #9d8cfa; --t-primary-hover: #b3a6fb; --t-primary-soft: #2a2548; --t-on-primary: #14102b;
+    --t-success: #5fd08a; --t-success-soft: #14301f; --t-warning: #f2b45a; --t-warning-soft: #352710;
+    --t-danger: #f78a8a; --t-danger-soft: #3a1a1c; --t-on-danger: #2a0b0c; --t-info: #79b1f7; --t-info-soft: #14263d;
+    --t-radius-control: 0.25rem; --t-radius-card: 0.375rem; --t-control: 2rem; --t-row: 2.25rem;
+    --t-shadow-card: 0 0 #0000; --t-shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.5);
+  }
+
+  /* ===== Habillage du document : ne fait pas partie du produit, suit le thème clair/sombre ===== */
+  @theme inline {
+    --color-doc-bg: var(--doc-bg);
+    --color-doc-fg: var(--doc-fg);
+    --color-doc-muted: var(--doc-muted);
+    --color-doc-line: var(--doc-line);
+    --color-doc-card: var(--doc-card);
+    --color-doc-accent: var(--doc-accent);
+    --color-doc-new: var(--doc-new);
+    --color-doc-changed: var(--doc-changed);
+    --font-doc: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  :root { --doc-bg: #f4f4f1; --doc-fg: #1c1c1a; --doc-muted: #62625b; --doc-line: #dcdcd5; --doc-card: #ffffff; --doc-accent: #4f46e5; --doc-new: #047857; --doc-changed: #a14c00; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --doc-bg: #151514; --doc-fg: #ececea; --doc-muted: #a3a39c; --doc-line: #33332f; --doc-card: #1e1e1c; --doc-accent: #a5b4fc; --doc-new: #6ee7b7; --doc-changed: #fbbf77; color-scheme: dark; }
+  @layer components {
+    [data-backdrop] .anno, [data-backdrop] [data-menu] { display: none; }
+    [data-backdrop] .next-step { --tw-ring-shadow: 0 0 #0000; --tw-ring-offset-shadow: 0 0 #0000; }
+  }
+  /* Corps du document : règle hors couche, pour l'emporter sur le style de base qu'ajoute l'outil Artifact
+     autour de la page principale (police système 14 px, fond et couleur fixes). */
+  html body { margin: 0; background: var(--doc-bg); color: var(--doc-fg); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div id="page" class="mx-auto max-w-[1400px] px-4 pt-8 pb-24 sm:px-6">
+
+<header>
+  <p class="font-mono text-xs font-medium tracking-wider text-doc-accent uppercase">Orbe · Propositions d'interface</p>
+  <h1 class="mt-1 text-3xl font-semibold tracking-tight text-balance">Trois façons d'organiser la file des demandes</h1>
+  <p class="mt-4 max-w-[75ch] text-doc-muted">Chaque proposition associe une <b class="text-doc-fg">disposition</b> (navigation, organisation de l'écran, manière de travailler) et un <b class="text-doc-fg">thème</b> (couleurs, typographie, formes). Le contenu est le même partout. Les boutons « Thème » de chaque proposition appliquent n'importe quel thème à n'importe quelle disposition.</p>
+  <div class="mt-6 grid items-start gap-4 md:grid-cols-2">
+    <section class="rounded-xl border border-doc-line bg-doc-card px-5 py-4">
+      <h2 class="text-base font-semibold">Ce qui a guidé les propositions</h2>
+      <ul class="mt-2 list-disc space-y-1 pl-5 text-[15px] text-doc-muted">
+        <li>Une équipe support de 12 personnes, l'outil reste ouvert toute la journée.</li>
+        <li>Deux façons de travailler coexistent : piloter la file (responsables) et enchaîner les réponses (conseillers).</li>
+        <li>Aucune charte imposée ; le logo actuel est bleu, sans obligation de le garder.</li>
+      </ul>
+    </section>
+    <section class="rounded-xl border border-doc-line border-l-4 border-l-doc-accent bg-doc-card px-5 py-4">
+      <h2 class="text-base font-semibold">Pour choisir</h2>
+      <p class="mt-2 text-[15px] text-doc-muted">Répondez « A », « B » ou « C », ou combinez : « disposition C avec le thème A ». Vous pouvez aussi garder une disposition et demander des retouches (« B, mais avec le détail à droite »). La disposition choisie devient la coquille de toutes les maquettes ; le thème devient <code class="rounded bg-doc-bg px-1.5 py-0.5 font-mono text-[13px]">tokens.css</code>.</p>
+    </section>
+  </div>
+</header>
+
+<nav aria-label="Propositions" class="sticky top-[env(safe-area-inset-top,0px)] z-40 -mx-4 mt-6 flex flex-wrap gap-2 bg-doc-bg/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6">
+  <a href="#a" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">A · Pilotage</a>
+  <a href="#b" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">B · File guidée</a>
+  <a href="#c" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">C · Liste et détail</a>
+  <a href="#comparatif" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">Comparatif</a>
+  <a href="#a-valider" class="rounded-full border border-doc-accent bg-doc-card px-3 py-1 text-sm font-semibold text-doc-accent">À valider · <span data-count="#a-valider ol > li"></span></a>
+</nav>
+
+<!-- ================= PROPOSITION A ================= -->
+<section id="a" data-product-theme="a" class="mt-10 scroll-mt-16">
+  <h2 class="flex items-baseline gap-2.5 text-2xl font-semibold"><span class="font-mono text-sm font-medium text-doc-accent">A</span>Pilotage : barre latérale, indicateurs et tableau</h2>
+  <div class="mt-2 grid max-w-[110ch] gap-x-8 gap-y-1 text-[15px] text-doc-muted md:grid-cols-2">
+    <p><b class="text-doc-fg">Disposition</b> : navigation latérale avec vues enregistrées, indicateurs du jour en tête, tableau triable. On voit l'état de la file avant d'ouvrir une demande.</p>
+    <p><b class="text-doc-fg">Thème</b> : neutres froids, bleu franc réservé aux actions, Public Sans, bordures fines. <b class="text-doc-fg">À choisir si</b> l'outil sert aussi à piloter l'activité.</p>
+  </div>
+  <div class="mt-4" data-use="theme-picker"></div>
+  <div class="mt-4 grid gap-4 lg:grid-cols-2" data-use="identity"></div>
+  <p class="mt-6 mb-1.5 font-mono text-xs text-doc-muted">Desktop · 1280 × 820</p>
+  <div class="w-fit max-w-full overflow-x-auto rounded-xl border border-doc-line bg-doc-card"><div class="relative h-[820px] w-[1280px] overflow-hidden bg-canvas font-sans text-sm text-ink" data-use="desktop-a" data-frame="a-desktop"></div></div>
+  <div class="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
+    <div class="min-w-0"><p class="mb-1.5 font-mono text-xs text-doc-muted">Mobile · 390 × 844</p><div class="overflow-x-auto p-2"><div class="relative h-[844px] w-[390px] overflow-hidden rounded-[2rem] bg-canvas font-sans text-sm text-ink ring-8 ring-zinc-900" data-use="mobile-a" data-frame="a-mobile"></div></div></div>
+    <div class="grid content-start gap-5 text-[15px] text-doc-muted sm:grid-cols-2">
+      <div><h3 class="font-semibold text-doc-fg">Points forts</h3><ul class="mt-1 list-disc space-y-1 pl-5"><li>Les indicateurs répondent à « où en est-on ? » sans requête.</li><li>Les vues enregistrées évitent de refaire les mêmes filtres.</li><li>Le tableau se trie et se compare ligne à ligne.</li></ul></div>
+      <div><h3 class="font-semibold text-doc-fg">Points de vigilance</h3><ul class="mt-1 list-disc space-y-1 pl-5"><li>Un aller-retour liste ↔ détail pour chaque demande traitée.</li><li>Thème peu distinctif, proche de nombreux outils.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PROPOSITION B ================= -->
+<section id="b" data-product-theme="b" class="mt-16 scroll-mt-16">
+  <h2 class="flex items-baseline gap-2.5 text-2xl font-semibold"><span class="font-mono text-sm font-medium text-doc-accent">B</span>File guidée : navigation haute, une colonne centrée</h2>
+  <div class="mt-2 grid max-w-[110ch] gap-x-8 gap-y-1 text-[15px] text-doc-muted md:grid-cols-2">
+    <p><b class="text-doc-fg">Disposition</b> : navigation en haut, contenu centré, la page dit d'abord combien il reste à faire, puis présente les demandes comme des cartes lisibles avec un extrait du message.</p>
+    <p><b class="text-doc-fg">Thème</b> : neutres chauds, bleu pétrole, Manrope, boutons en pilule, beaucoup d'air. <b class="text-doc-fg">À choisir si</b> l'équipe compte des conseillers occasionnels ou récemment arrivés.</p>
+  </div>
+  <div class="mt-4" data-use="theme-picker"></div>
+  <div class="mt-4 grid gap-4 lg:grid-cols-2" data-use="identity"></div>
+  <p class="mt-6 mb-1.5 font-mono text-xs text-doc-muted">Desktop · 1280 × 820</p>
+  <div class="w-fit max-w-full overflow-x-auto rounded-xl border border-doc-line bg-doc-card"><div class="relative h-[820px] w-[1280px] overflow-hidden bg-canvas font-sans text-sm text-ink" data-use="desktop-b" data-frame="b-desktop"></div></div>
+  <div class="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
+    <div class="min-w-0"><p class="mb-1.5 font-mono text-xs text-doc-muted">Mobile · 390 × 844</p><div class="overflow-x-auto p-2"><div class="relative h-[844px] w-[390px] overflow-hidden rounded-[2rem] bg-canvas font-sans text-sm text-ink ring-8 ring-zinc-900" data-use="mobile-b" data-frame="b-mobile"></div></div></div>
+    <div class="grid content-start gap-5 text-[15px] text-doc-muted sm:grid-cols-2">
+      <div><h3 class="font-semibold text-doc-fg">Points forts</h3><ul class="mt-1 list-disc space-y-1 pl-5"><li>L'extrait du message permet de prioriser sans ouvrir la demande.</li><li>Très lisible, rassurant pour un public peu technique.</li><li>Le même modèle de carte sert sur desktop et mobile.</li></ul></div>
+      <div><h3 class="font-semibold text-doc-fg">Points de vigilance</h3><ul class="mt-1 list-disc space-y-1 pl-5"><li>6 demandes visibles contre 9 en A et 18 en C.</li><li>Pas de place pour des indicateurs détaillés.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PROPOSITION C ================= -->
+<section id="c" data-product-theme="c" class="mt-16 scroll-mt-16">
+  <h2 class="flex items-baseline gap-2.5 text-2xl font-semibold"><span class="font-mono text-sm font-medium text-doc-accent">C</span>Liste et détail : rail d'icônes, file à gauche, demande à droite</h2>
+  <div class="mt-2 grid max-w-[110ch] gap-x-8 gap-y-1 text-[15px] text-doc-muted md:grid-cols-2">
+    <p><b class="text-doc-fg">Disposition</b> : rail d'icônes, file compacte à gauche, demande ouverte à droite avec la réponse déjà prête. On enchaîne les demandes au clavier sans changer d'écran.</p>
+    <p><b class="text-doc-fg">Thème</b> : sombre, violet clair, IBM Plex, angles presque droits, aucune ombre. <b class="text-doc-fg">À choisir si</b> les conseillers traitent un gros volume et vivent dans l'outil.</p>
+  </div>
+  <div class="mt-4" data-use="theme-picker"></div>
+  <div class="mt-4 grid gap-4 lg:grid-cols-2" data-use="identity"></div>
+  <p class="mt-6 mb-1.5 font-mono text-xs text-doc-muted">Desktop · 1280 × 820</p>
+  <div class="w-fit max-w-full overflow-x-auto rounded-xl border border-doc-line bg-doc-card"><div class="relative h-[820px] w-[1280px] overflow-hidden bg-canvas font-sans text-sm text-ink" data-use="desktop-c" data-frame="c-desktop"></div></div>
+  <div class="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
+    <div class="min-w-0"><p class="mb-1.5 font-mono text-xs text-doc-muted">Mobile · 390 × 844</p><div class="overflow-x-auto p-2"><div class="relative h-[844px] w-[390px] overflow-hidden rounded-[2rem] bg-canvas font-sans text-sm text-ink ring-8 ring-zinc-900" data-use="mobile-c" data-frame="c-mobile"></div></div></div>
+    <div class="grid content-start gap-5 text-[15px] text-doc-muted sm:grid-cols-2">
+      <div><h3 class="font-semibold text-doc-fg">Points forts</h3><ul class="mt-1 list-disc space-y-1 pl-5"><li>Aucun changement d'écran entre deux demandes.</li><li>Raccourcis clavier affichés : prise en main rapide pour les experts.</li><li>18 demandes visibles d'un coup.</li></ul></div>
+      <div><h3 class="font-semibold text-doc-fg">Points de vigilance</h3><ul class="mt-1 list-disc space-y-1 pl-5"><li>Dense et sombre : déroutant pour un utilisateur occasionnel.</li><li>Sur mobile, la liste et le détail deviennent deux écrans.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMPARATIF ================= -->
+<section id="comparatif" class="mt-16 scroll-mt-16">
+  <h2 class="text-xl font-semibold">Comparatif</h2>
+  <div class="mt-3 overflow-x-auto rounded-xl border border-doc-line bg-doc-card">
+    <table class="w-full min-w-[760px] text-left text-[15px]">
+      <thead class="border-b border-doc-line text-sm text-doc-muted"><tr><th class="px-4 py-2 font-medium"></th><th class="px-4 py-2 font-medium">A · Pilotage</th><th class="px-4 py-2 font-medium">B · File guidée</th><th class="px-4 py-2 font-medium">C · Liste et détail</th></tr></thead>
+      <tbody class="divide-y divide-doc-line">
+        <tr><th colspan="4" class="bg-doc-bg/60 px-4 py-1.5 text-xs font-semibold tracking-wide text-doc-muted uppercase">Disposition</th></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Navigation</th><td class="px-4 py-2.5">Barre latérale + vues enregistrées</td><td class="px-4 py-2.5">Barre haute</td><td class="px-4 py-2.5">Rail d'icônes</td></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Organisation</th><td class="px-4 py-2.5">Indicateurs + tableau</td><td class="px-4 py-2.5">Colonne centrée de cartes</td><td class="px-4 py-2.5">Liste et détail côte à côte</td></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Demandes visibles</th><td class="px-4 py-2.5">9</td><td class="px-4 py-2.5">6, avec extrait</td><td class="px-4 py-2.5">18 + la demande ouverte</td></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Usage favorisé</th><td class="px-4 py-2.5">Piloter, répartir</td><td class="px-4 py-2.5">Comprendre, être guidé</td><td class="px-4 py-2.5">Enchaîner vite</td></tr>
+        <tr><th colspan="4" class="bg-doc-bg/60 px-4 py-1.5 text-xs font-semibold tracking-wide text-doc-muted uppercase">Thème</th></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Palette</th><td class="px-4 py-2.5">Clair froid, bleu</td><td class="px-4 py-2.5">Clair chaud, bleu pétrole</td><td class="px-4 py-2.5">Sombre, violet clair</td></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Typographie</th><td class="px-4 py-2.5">Public Sans + JetBrains Mono</td><td class="px-4 py-2.5">Manrope + DM Mono</td><td class="px-4 py-2.5">IBM Plex Sans + Plex Mono</td></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Formes, densité</th><td class="px-4 py-2.5">Rayons 6 / 10 px, lignes 48 px</td><td class="px-4 py-2.5">Pilules, cartes 18 px, lignes 56 px</td><td class="px-4 py-2.5">Rayons 4 / 6 px, lignes 36 px</td></tr>
+        <tr><th class="px-4 py-2.5 font-medium">Relief</th><td class="px-4 py-2.5">Bordures + ombre légère</td><td class="px-4 py-2.5">Ombres douces, sans bordure</td><td class="px-4 py-2.5">Bordures seules</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================= À VALIDER : tout ce qui attend une réponse, visible depuis le lien ================= -->
+<section id="a-valider" class="mt-16 scroll-mt-16">
+  <h2 class="flex items-baseline gap-2.5 text-xl font-semibold">À valider<span class="rounded-full bg-doc-accent px-2 py-0.5 text-xs font-semibold text-doc-card"><span data-count="#a-valider ol > li"></span> décisions</span></h2>
+  <p class="mt-1 max-w-[80ch] text-[15px] text-doc-muted">Une réponse suffit pour tout : la proposition retenue, l'inventaire des écrans et les questions ci-dessous.</p>
+  <div class="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div class="overflow-x-auto rounded-xl border border-doc-line bg-doc-card">
+      <table class="w-full min-w-[560px] text-left text-[15px]">
+        <thead class="border-b border-doc-line text-sm text-doc-muted"><tr><th class="px-4 py-2 font-medium">ID</th><th class="px-4 py-2 font-medium">Écran</th><th class="px-4 py-2 font-medium">Objectif</th><th class="px-4 py-2 font-medium">États distincts</th></tr></thead>
+        <tbody class="divide-y divide-doc-line">
+          <tr><td class="px-4 py-2.5 font-mono text-sm">E1</td><td class="px-4 py-2.5">Liste des demandes</td><td class="px-4 py-2.5 text-doc-muted">Prioriser la file du jour</td><td class="px-4 py-2.5 text-doc-muted">vide (E1a), standard (E1b)</td></tr>
+          <tr><td class="px-4 py-2.5 font-mono text-sm">E2</td><td class="px-4 py-2.5">Détail d'une demande</td><td class="px-4 py-2.5 text-doc-muted">Répondre et qualifier</td><td class="px-4 py-2.5 text-doc-muted">standard, brouillon</td></tr>
+          <tr><td class="px-4 py-2.5 font-mono text-sm">E3</td><td class="px-4 py-2.5">Nouvelle demande (téléphone)</td><td class="px-4 py-2.5 text-doc-muted">Saisir un appel</td><td class="px-4 py-2.5 text-doc-muted">formulaire, erreurs</td></tr>
+        </tbody>
+      </table>
+      <p class="border-t border-doc-line px-4 py-2.5 text-sm text-doc-muted"><b class="text-doc-fg">Parcours</b> : traiter une demande E1 → E2 → E1 · saisir un appel E1 → E3 → E2</p>
+    </div>
+    <ol class="flex flex-col gap-3 text-[15px]">
+      <li class="rounded-xl border border-doc-line bg-doc-card px-4 py-3"><b class="font-semibold">1. Quelle proposition ?</b><p class="mt-1 text-doc-muted">A, B, C, ou une combinaison (« disposition C, thème A »).</p></li>
+      <li class="rounded-xl border border-doc-line bg-doc-card px-4 py-3"><b class="font-semibold">2. Les demandes par téléphone</b><p class="mt-1 text-doc-muted">Faut-il un écran de saisie (E3) dès la première version ? Hypothèse retenue : oui.</p></li>
+      <li class="rounded-xl border border-doc-line bg-doc-card px-4 py-3"><b class="font-semibold">3. Comptes professionnels</b><p class="mt-1 text-doc-muted">Ont-ils une file séparée ? Hypothèse retenue : non, une vue enregistrée suffit.</p></li>
+    </ol>
+  </div>
+</section>
+
+</div>
+
+<!-- ================= BLOCS DU DOCUMENT ================= -->
+<!-- Sélecteur de thème : applique un thème à la disposition de cette proposition -->
+<template id="tpl-theme-picker">
+  <div class="flex flex-wrap items-center gap-2 text-sm">
+    <span class="text-doc-muted">Essayer cette disposition avec le thème :</span>
+    <button type="button" data-choice="a" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 aria-pressed:border-doc-accent aria-pressed:font-semibold aria-pressed:text-doc-accent">A · Sobre</button>
+    <button type="button" data-choice="b" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 aria-pressed:border-doc-accent aria-pressed:font-semibold aria-pressed:text-doc-accent">B · Accueillant</button>
+    <button type="button" data-choice="c" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 aria-pressed:border-doc-accent aria-pressed:font-semibold aria-pressed:text-doc-accent">C · Sombre</button>
+  </div>
+</template>
+
+<!-- Palette, typographie et composants du thème actif -->
+<template id="tpl-identity">
+  <div class="rounded-xl border border-doc-line bg-doc-card p-5">
+    <p class="text-sm font-medium text-doc-muted">Palette</p>
+    <div class="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-8">
+      <div><div class="h-12 rounded-lg border border-doc-line bg-primary"></div><p class="mt-1 text-xs font-medium">primary</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-primary"></p></div>
+      <div><div class="h-12 rounded-lg border border-doc-line bg-primary-soft"></div><p class="mt-1 text-xs font-medium">soft</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-primary-soft"></p></div>
+      <div><div class="h-12 rounded-lg border border-doc-line bg-ink"></div><p class="mt-1 text-xs font-medium">ink</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-ink"></p></div>
+      <div><div class="h-12 rounded-lg border border-doc-line bg-muted"></div><p class="mt-1 text-xs font-medium">muted</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-muted"></p></div>
+      <div><div class="h-12 rounded-lg border border-doc-line bg-canvas"></div><p class="mt-1 text-xs font-medium">canvas</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-canvas"></p></div>
+      <div><div class="h-12 rounded-lg border border-doc-line bg-surface"></div><p class="mt-1 text-xs font-medium">surface</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-surface"></p></div>
+      <div><div class="h-12 rounded-lg border border-doc-line bg-nav"></div><p class="mt-1 text-xs font-medium">nav</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-nav"></p></div>
+      <div><div class="h-12 rounded-lg border border-doc-line bg-line-strong"></div><p class="mt-1 text-xs font-medium">line</p><p class="font-mono text-[11px] text-doc-muted" data-value="--t-line-strong"></p></div>
+    </div>
+    <div class="mt-3 grid grid-cols-4 gap-3">
+      <div class="flex items-center gap-2"><span class="size-5 rounded-full border border-doc-line bg-success"></span><span class="font-mono text-[11px] text-doc-muted" data-value="--t-success"></span></div>
+      <div class="flex items-center gap-2"><span class="size-5 rounded-full border border-doc-line bg-warning"></span><span class="font-mono text-[11px] text-doc-muted" data-value="--t-warning"></span></div>
+      <div class="flex items-center gap-2"><span class="size-5 rounded-full border border-doc-line bg-danger"></span><span class="font-mono text-[11px] text-doc-muted" data-value="--t-danger"></span></div>
+      <div class="flex items-center gap-2"><span class="size-5 rounded-full border border-doc-line bg-info"></span><span class="font-mono text-[11px] text-doc-muted" data-value="--t-info"></span></div>
+    </div>
+    <p class="mt-5 text-xs text-doc-muted">Titres et texte · <span class="font-mono" data-value="--t-font-sans"></span> — Références · <span class="font-mono" data-value="--t-font-mono"></span></p>
+    <p class="mt-1 font-display text-2xl font-semibold">Remboursement non reçu</p>
+    <p class="mt-1 font-sans text-sm">Retour bien réceptionné à l'entrepôt, remboursement bloqué : le motif n'a pas été saisi.</p>
+    <p class="mt-1 font-mono text-sm tabular-nums text-doc-muted">#4821 · 300-5521 · 128,40 €</p>
+  </div>
+  <div class="flex flex-col gap-4 rounded-xl border border-doc-line bg-canvas p-5 font-sans text-sm text-ink">
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-primary px-4 font-medium text-on-primary"><i data-lucide="check" class="size-4"></i>Résoudre</button>
+      <button type="button" class="inline-flex h-control items-center gap-2 rounded-control border border-line-strong bg-surface px-4 font-medium">Secondaire</button>
+      <button type="button" class="inline-flex h-control items-center gap-2 rounded-control px-3 font-medium text-muted">Discret</button>
+      <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-danger px-4 font-medium text-on-danger">Supprimer</button>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div><p class="mb-1 text-xs font-medium text-muted">Objet</p><div class="flex h-control items-center rounded-control border border-line-strong bg-surface px-3">Code promo refusé</div></div>
+      <div><p class="mb-1 text-xs font-medium text-muted">Statut</p><div class="flex h-control items-center justify-between rounded-control border border-line-strong bg-surface px-3">En cours<i data-lucide="chevron-down" class="size-4 text-muted"></i></div></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-2 py-0.5 text-xs font-medium text-info"><span class="size-1.5 rounded-full bg-info"></span>En cours</span>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-alt px-2 py-0.5 text-xs font-medium text-muted"><span class="size-1.5 rounded-full bg-muted"></span>En attente</span>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success"><span class="size-1.5 rounded-full bg-success"></span>Résolue</span>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger"><span class="size-1.5 rounded-full bg-danger"></span>Échec d'envoi</span>
+    </div>
+  </div>
+</template>
+
+<!-- ================= DISPOSITION A : barre latérale, indicateurs, tableau ================= -->
+<template id="tpl-desktop-a">
+  <div class="absolute inset-0 flex">
+    <aside class="flex w-56 shrink-0 flex-col border-r border-line bg-nav px-3 py-4 text-nav-muted">
+      <div class="flex items-center gap-2 px-2 pb-5"><span class="grid size-7 place-items-center rounded-control bg-primary font-display text-sm font-bold text-on-primary">O</span><span class="font-display text-[15px] font-semibold text-nav-ink">Orbe</span><i data-lucide="chevrons-up-down" class="ml-auto size-4"></i></div>
+      <nav class="flex flex-col gap-0.5">
+        <a class="flex h-9 items-center gap-3 rounded-control px-2.5"><i data-lucide="house" class="size-4"></i>Accueil</a>
+        <a class="flex h-9 items-center gap-3 rounded-control bg-nav-active px-2.5 font-medium text-nav-ink"><i data-lucide="inbox" class="size-4"></i>Demandes<span class="ml-auto font-mono text-xs">24</span></a>
+        <a class="flex h-9 items-center gap-3 rounded-control px-2.5"><i data-lucide="user-round" class="size-4"></i>Mes demandes<span class="ml-auto font-mono text-xs">6</span></a>
+        <a class="flex h-9 items-center gap-3 rounded-control px-2.5"><i data-lucide="users" class="size-4"></i>Clients</a>
+        <a class="flex h-9 items-center gap-3 rounded-control px-2.5"><i data-lucide="chart-column" class="size-4"></i>Rapports</a>
+      </nav>
+      <p class="mt-6 px-2.5 text-[11px] font-semibold tracking-wider uppercase">Vues enregistrées</p>
+      <nav class="mt-1.5 flex flex-col gap-0.5">
+        <a class="flex h-8 items-center gap-3 rounded-control px-2.5"><span class="size-2 rounded-full bg-danger"></span>Priorité haute<span class="ml-auto font-mono text-xs">3</span></a>
+        <a class="flex h-8 items-center gap-3 rounded-control px-2.5"><span class="size-2 rounded-full bg-warning"></span>Remboursements<span class="ml-auto font-mono text-xs">7</span></a>
+        <a class="flex h-8 items-center gap-3 rounded-control px-2.5"><span class="size-2 rounded-full bg-info"></span>Comptes pro<span class="ml-auto font-mono text-xs">2</span></a>
+      </nav>
+      <div class="mt-auto flex items-center gap-2.5 border-t border-line px-2 pt-3"><span class="grid size-8 place-items-center rounded-full bg-info-soft text-xs font-semibold text-info">IB</span><span class="leading-tight"><span class="block text-sm font-medium text-nav-ink">Inès Bernard</span><span class="text-xs">Conseillère</span></span></div>
+    </aside>
+    <main class="flex min-w-0 flex-1 flex-col px-8 pt-6">
+      <div class="flex items-end gap-4">
+        <div><p class="text-xs text-muted">Support · File de l'équipe</p><h1 class="mt-1 font-display text-2xl font-semibold tracking-tight">Demandes</h1></div>
+        <div class="ml-auto flex h-control w-64 items-center gap-2 rounded-control border border-line bg-surface px-3 whitespace-nowrap text-muted"><i data-lucide="search" class="size-4 shrink-0"></i><span class="truncate">Rechercher</span><kbd class="ml-auto rounded border border-line px-1.5 font-mono text-[10px]">/</kbd></div>
+        <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-primary px-4 font-medium text-on-primary"><i data-lucide="plus" class="size-4"></i>Nouvelle demande</button>
+      </div>
+      <div class="mt-5 grid grid-cols-4 divide-x divide-line rounded-card border border-line bg-surface shadow-card">
+        <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">À traiter</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">24</span><span class="text-xs font-medium text-danger">+5 depuis hier</span></p></div>
+        <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">Délai de 1re réponse</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">2 h 10</span><span class="text-xs font-medium text-success">objectif 4 h</span></p></div>
+        <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">En attente client</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">9</span><span class="text-xs text-muted">dont 2 depuis 3 j</span></p></div>
+        <div class="px-5 py-3.5"><p class="text-xs font-medium text-muted">Résolues sur 7 jours</p><p class="mt-1 flex items-baseline gap-2"><span class="font-display text-2xl font-semibold tabular-nums">112</span><span class="text-xs font-medium text-success">+12 %</span></p></div>
+      </div>
+      <div class="mt-5 flex items-center gap-5 border-b border-line">
+        <span class="-mb-px border-b-2 border-primary pb-2.5 font-medium">À traiter <span class="ml-1 font-mono text-xs text-primary">24</span></span>
+        <span class="pb-2.5 text-muted">En cours <span class="ml-1 font-mono text-xs">31</span></span>
+        <span class="pb-2.5 text-muted">En attente client <span class="ml-1 font-mono text-xs">9</span></span>
+        <span class="pb-2.5 text-muted">Résolues</span>
+        <span class="ml-auto flex items-center gap-2 pb-2 text-xs text-muted"><span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2.5">Priorité : toutes<i data-lucide="chevron-down" class="size-3.5"></i></span><span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2.5">Assignée : toutes<i data-lucide="chevron-down" class="size-3.5"></i></span><span class="inline-flex h-7 items-center gap-1.5 px-1"><i data-lucide="arrow-down-wide-narrow" class="size-3.5"></i>Priorité</span></span>
+      </div>
+      <div class="mt-3 min-h-0 flex-1 overflow-hidden rounded-t-card border border-b-0 border-line bg-surface shadow-card">
+        <table class="w-full border-collapse text-left">
+          <thead class="text-xs text-muted"><tr class="h-9 border-b border-line"><th class="w-10 pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></th><th class="w-8 font-medium"></th><th class="w-20 font-medium">Réf.</th><th class="font-medium">Objet</th><th class="w-36 font-medium">Statut</th><th class="w-40 font-medium">Assignée</th><th class="w-32 pr-5 text-right font-medium">Mise à jour</th></tr></thead>
+          <tbody class="divide-y divide-line">
+            <tr class="h-row bg-primary-soft/50"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong bg-surface"></span></td><td><i data-lucide="arrow-up" class="size-4 text-danger"></i></td><td class="font-mono text-xs text-muted">#4821</td><td><span class="font-medium">Remboursement non reçu après retour</span><span class="ml-2 text-muted">Camille Roux</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">12 min</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="arrow-up" class="size-4 text-danger"></i></td><td class="font-mono text-xs text-muted">#4807</td><td><span class="font-medium">Colis indiqué livré mais jamais reçu</span><span class="ml-2 text-muted">Thomas Girard</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-info-soft text-[10px] font-semibold text-info">IB</span>Inès B.</span></td><td class="pr-5 text-right text-muted tabular-nums">1 h</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="arrow-up" class="size-4 text-danger"></i></td><td class="font-mono text-xs text-muted">#4790</td><td><span class="font-medium">Double prélèvement sur la carte bancaire</span><span class="ml-2 text-muted">Julie Perrin</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">2 h</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="minus" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4819</td><td><span class="font-medium">Impossible de modifier l'adresse de livraison</span><span class="ml-2 text-muted">Hugo Martin</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">40 min</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="minus" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4815</td><td><span class="font-medium">Facture de septembre reçue en double</span><span class="ml-2 text-muted">Société Lavande</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-success-soft text-[10px] font-semibold text-success">KD</span>Karim D.</span></td><td class="pr-5 text-right text-muted tabular-nums">09:12</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="minus" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4802</td><td><span class="font-medium">Demande de suppression de compte</span><span class="ml-2 text-muted">Nora Haddad</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">hier</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="arrow-down" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4810</td><td><span class="font-medium">Code promo refusé au paiement</span><span class="ml-2 text-muted">Léa Fontaine</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-info-soft text-[10px] font-semibold text-info">IB</span>Inès B.</span></td><td class="pr-5 text-right text-muted tabular-nums">hier</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="arrow-down" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4799</td><td><span class="font-medium">Question sur la garantie d'un article</span><span class="ml-2 text-muted">Paul Lefèvre</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2 text-muted"><span class="size-6 rounded-full border border-dashed border-line-strong"></span>Non assignée</span></td><td class="pr-5 text-right text-muted tabular-nums">10 oct.</td></tr>
+            <tr class="h-row"><td class="pl-4"><span class="block size-4 rounded-[3px] border border-line-strong"></span></td><td><i data-lucide="arrow-down" class="size-4 text-muted"></i></td><td class="font-mono text-xs text-muted">#4795</td><td><span class="font-medium">Erreur sur le montant de la facture</span><span class="ml-2 text-muted">Martin Leroy</span></td><td><span class="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span></td><td><span class="flex items-center gap-2"><span class="grid size-6 place-items-center rounded-full bg-success-soft text-[10px] font-semibold text-success">KD</span>Karim D.</span></td><td class="pr-5 text-right text-muted tabular-nums">9 oct.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</template>
+
+<template id="tpl-mobile-a">
+  <div class="absolute inset-0 flex flex-col">
+    <header class="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-nav px-4 text-nav-ink"><i data-lucide="menu" class="size-5"></i><span class="font-display text-base font-semibold">Demandes</span><i data-lucide="search" class="ml-auto size-5 text-nav-muted"></i><i data-lucide="sliders-horizontal" class="size-5 text-nav-muted"></i></header>
+    <div class="grid grid-cols-3 divide-x divide-line border-b border-line bg-surface text-center">
+      <div class="py-2.5"><p class="font-display text-lg font-semibold tabular-nums">24</p><p class="text-[11px] text-muted">À traiter</p></div>
+      <div class="py-2.5"><p class="font-display text-lg font-semibold tabular-nums">2 h 10</p><p class="text-[11px] text-muted">1re réponse</p></div>
+      <div class="py-2.5"><p class="font-display text-lg font-semibold tabular-nums">9</p><p class="text-[11px] text-muted">En attente</p></div>
+    </div>
+    <div class="flex gap-5 border-b border-line bg-surface px-4 text-sm"><span class="-mb-px border-b-2 border-primary py-2.5 font-medium">À traiter</span><span class="py-2.5 text-muted">En cours</span><span class="py-2.5 text-muted">En attente</span></div>
+    <div class="min-h-0 flex-1 divide-y divide-line overflow-hidden bg-surface">
+      <div class="flex gap-3 px-4 py-3 bg-primary-soft/50"><i data-lucide="arrow-up" class="mt-0.5 size-4 shrink-0 text-danger"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Remboursement non reçu après retour</p><p class="text-xs text-muted"><span class="font-mono">#4821</span> · Camille Roux · non assignée</p></div><span class="text-xs text-muted">12 min</span></div>
+      <div class="flex gap-3 px-4 py-3"><i data-lucide="arrow-up" class="mt-0.5 size-4 shrink-0 text-danger"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Colis indiqué livré mais jamais reçu</p><p class="text-xs text-muted"><span class="font-mono">#4807</span> · Thomas Girard · Inès B.</p></div><span class="text-xs text-muted">1 h</span></div>
+      <div class="flex gap-3 px-4 py-3"><i data-lucide="arrow-up" class="mt-0.5 size-4 shrink-0 text-danger"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Double prélèvement sur la carte bancaire</p><p class="text-xs text-muted"><span class="font-mono">#4790</span> · Julie Perrin · non assignée</p></div><span class="text-xs text-muted">2 h</span></div>
+      <div class="flex gap-3 px-4 py-3"><i data-lucide="minus" class="mt-0.5 size-4 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Impossible de modifier l'adresse de livraison</p><p class="text-xs text-muted"><span class="font-mono">#4819</span> · Hugo Martin · non assignée</p></div><span class="text-xs text-muted">40 min</span></div>
+      <div class="flex gap-3 px-4 py-3"><i data-lucide="minus" class="mt-0.5 size-4 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Facture de septembre reçue en double</p><p class="text-xs text-muted"><span class="font-mono">#4815</span> · Société Lavande · Karim D.</p></div><span class="text-xs text-muted">09:12</span></div>
+      <div class="flex gap-3 px-4 py-3"><i data-lucide="minus" class="mt-0.5 size-4 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Demande de suppression de compte</p><p class="text-xs text-muted"><span class="font-mono">#4802</span> · Nora Haddad · non assignée</p></div><span class="text-xs text-muted">hier</span></div>
+      <div class="flex gap-3 px-4 py-3"><i data-lucide="arrow-down" class="mt-0.5 size-4 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Code promo refusé au paiement</p><p class="text-xs text-muted"><span class="font-mono">#4810</span> · Léa Fontaine · Inès B.</p></div><span class="text-xs text-muted">hier</span></div>
+    </div>
+    <nav class="grid h-16 shrink-0 grid-cols-4 border-t border-line bg-nav text-[11px] text-nav-muted">
+      <a class="flex flex-col items-center justify-center gap-1"><i data-lucide="house" class="size-5"></i>Accueil</a>
+      <a class="flex flex-col items-center justify-center gap-1 font-medium text-primary"><i data-lucide="inbox" class="size-5"></i>Demandes</a>
+      <a class="flex flex-col items-center justify-center gap-1"><i data-lucide="users" class="size-5"></i>Clients</a>
+      <a class="flex flex-col items-center justify-center gap-1"><i data-lucide="chart-column" class="size-5"></i>Rapports</a>
+    </nav>
+  </div>
+</template>
+
+<!-- ================= DISPOSITION B : navigation haute, colonne centrée de cartes ================= -->
+<template id="tpl-desktop-b">
+  <div class="absolute inset-0 flex flex-col">
+    <header class="flex h-16 shrink-0 items-center gap-8 border-b border-line bg-nav px-8 text-nav-muted">
+      <span class="flex items-center gap-2"><span class="grid size-8 place-items-center rounded-full bg-primary font-display text-sm font-bold text-on-primary">O</span><span class="font-display text-base font-bold text-nav-ink">Orbe</span></span>
+      <nav class="flex items-center gap-1">
+        <a class="rounded-full px-3.5 py-1.5">Accueil</a>
+        <a class="rounded-full bg-nav-active px-3.5 py-1.5 font-semibold text-nav-ink">Demandes</a>
+        <a class="rounded-full px-3.5 py-1.5">Clients</a>
+        <a class="rounded-full px-3.5 py-1.5">Rapports</a>
+      </nav>
+      <div class="ml-auto flex h-10 w-72 items-center gap-2 rounded-full bg-canvas px-4 whitespace-nowrap"><i data-lucide="search" class="size-4 shrink-0"></i><span class="truncate">Rechercher une demande, un client…</span></div>
+      <i data-lucide="bell" class="size-5"></i>
+      <span class="grid size-9 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary">IB</span>
+    </header>
+    <main class="min-h-0 flex-1 overflow-hidden">
+      <div class="mx-auto flex h-full max-w-[980px] flex-col px-8 pt-10">
+        <div class="flex items-end justify-between gap-6">
+          <div>
+            <p class="text-muted">Bonjour Inès, voici la file du jour</p>
+            <h1 class="mt-1 font-display text-[34px] leading-tight font-extrabold tracking-tight">24 demandes à traiter</h1>
+            <p class="mt-1.5 text-muted">dont <b class="font-semibold text-danger">3 en priorité haute</b> · premier délai de réponse moyen : 2 h 10</p>
+          </div>
+          <button type="button" class="inline-flex h-control items-center gap-2 rounded-control bg-primary px-5 font-semibold text-on-primary shadow-card"><i data-lucide="plus" class="size-4"></i>Nouvelle demande</button>
+        </div>
+        <div class="mt-7 flex flex-wrap gap-2">
+          <span class="inline-flex h-9 items-center gap-2 rounded-full bg-ink px-4 font-semibold text-surface">À traiter <span class="text-xs opacity-75">24</span></span>
+          <span class="inline-flex h-9 items-center gap-2 rounded-full bg-surface px-4 text-muted shadow-card">Priorité haute <span class="text-xs">3</span></span>
+          <span class="inline-flex h-9 items-center gap-2 rounded-full bg-surface px-4 text-muted shadow-card">Non assignées <span class="text-xs">11</span></span>
+          <span class="inline-flex h-9 items-center gap-2 rounded-full bg-surface px-4 text-muted shadow-card">En attente client <span class="text-xs">9</span></span>
+        </div>
+        <div class="mt-5 flex flex-col gap-2.5">
+          <div class="flex items-center gap-4 rounded-card bg-surface p-4 shadow-card ring-2 ring-primary">
+            <span class="grid size-11 shrink-0 place-items-center rounded-full bg-warning-soft font-bold text-warning">CR</span>
+            <div class="min-w-0 flex-1"><p class="flex items-center gap-2"><b class="font-semibold">Remboursement non reçu après retour</b><span class="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger">Haute</span></p><p class="mt-0.5 truncate text-muted">Camille Roux · « J'ai renvoyé la veste commandée le 22 septembre et je n'ai toujours rien reçu… »</p></div>
+            <div class="text-right"><span class="text-xs text-muted">il y a 12 min</span><p class="mt-1 text-xs font-semibold text-primary">Non assignée</p></div>
+          </div>
+          <div class="flex items-center gap-4 rounded-card bg-surface p-4 shadow-card">
+            <span class="grid size-11 shrink-0 place-items-center rounded-full bg-info-soft font-bold text-info">TG</span>
+            <div class="min-w-0 flex-1"><p class="flex items-center gap-2"><b class="font-semibold">Colis indiqué livré mais jamais reçu</b><span class="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger">Haute</span></p><p class="mt-0.5 truncate text-muted">Thomas Girard · « Le suivi indique livré mardi, mais personne n'a rien déposé chez moi. »</p></div>
+            <div class="text-right"><span class="text-xs text-muted">il y a 1 h</span><p class="mt-1 text-xs text-muted">Inès B.</p></div>
+          </div>
+          <div class="flex items-center gap-4 rounded-card bg-surface p-4 shadow-card">
+            <span class="grid size-11 shrink-0 place-items-center rounded-full bg-success-soft font-bold text-success">JP</span>
+            <div class="min-w-0 flex-1"><p class="flex items-center gap-2"><b class="font-semibold">Double prélèvement sur la carte bancaire</b><span class="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger">Haute</span></p><p class="mt-0.5 truncate text-muted">Julie Perrin · « J'ai été débitée deux fois de 128,40 € pour la même commande. »</p></div>
+            <div class="text-right"><span class="text-xs text-muted">il y a 2 h</span><p class="mt-1 text-xs font-semibold text-primary">Non assignée</p></div>
+          </div>
+          <div class="flex items-center gap-4 rounded-card bg-surface p-4 shadow-card">
+            <span class="grid size-11 shrink-0 place-items-center rounded-full bg-primary-soft font-bold text-primary">HM</span>
+            <div class="min-w-0 flex-1"><p class="font-semibold">Impossible de modifier l'adresse de livraison</p><p class="mt-0.5 truncate text-muted">Hugo Martin · « Je déménage samedi, le champ adresse reste grisé dans mon compte. »</p></div>
+            <div class="text-right"><span class="text-xs text-muted">il y a 40 min</span><p class="mt-1 text-xs font-semibold text-primary">Non assignée</p></div>
+          </div>
+          <div class="flex items-center gap-4 rounded-card bg-surface p-4 shadow-card">
+            <span class="grid size-11 shrink-0 place-items-center rounded-full bg-surface-alt font-bold text-muted">SL</span>
+            <div class="min-w-0 flex-1"><p class="font-semibold">Facture de septembre reçue en double</p><p class="mt-0.5 truncate text-muted">Société Lavande · « Nous avons reçu deux factures n° F-2209 pour le même montant. »</p></div>
+            <div class="text-right"><span class="text-xs text-muted">09:12</span><p class="mt-1 text-xs text-muted">Karim D.</p></div>
+          </div>
+          <div class="flex items-center gap-4 rounded-card bg-surface p-4 shadow-card">
+            <span class="grid size-11 shrink-0 place-items-center rounded-full bg-info-soft font-bold text-info">NH</span>
+            <div class="min-w-0 flex-1"><p class="font-semibold">Demande de suppression de compte</p><p class="mt-0.5 truncate text-muted">Nora Haddad · « Merci de supprimer mon compte et mes données personnelles. »</p></div>
+            <div class="text-right"><span class="text-xs text-muted">hier</span><p class="mt-1 text-xs font-semibold text-primary">Non assignée</p></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</template>
+
+<template id="tpl-mobile-b">
+  <div class="absolute inset-0 flex flex-col">
+    <div class="flex items-center gap-3 px-5 pt-5"><span class="grid size-9 place-items-center rounded-full bg-primary font-display text-sm font-bold text-on-primary">O</span><i data-lucide="search" class="ml-auto size-5 text-muted"></i><span class="grid size-9 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary">IB</span></div>
+    <div class="px-5 pt-5"><p class="text-muted">Bonjour Inès</p><h1 class="mt-0.5 font-display text-[26px] leading-tight font-extrabold tracking-tight">24 demandes à traiter</h1><p class="mt-1 text-sm text-muted">dont <b class="font-semibold text-danger">3 en priorité haute</b></p></div>
+    <div class="flex gap-2 overflow-hidden px-5 pt-4"><span class="inline-flex h-9 shrink-0 items-center rounded-full bg-ink px-4 font-semibold text-surface">À traiter</span><span class="inline-flex h-9 shrink-0 items-center rounded-full bg-surface px-4 text-muted shadow-card">Haute</span><span class="inline-flex h-9 shrink-0 items-center rounded-full bg-surface px-4 text-muted shadow-card">Non assignées</span></div>
+    <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-5 pt-4">
+      <div class="rounded-card bg-surface p-4 shadow-card ring-2 ring-primary"><div class="flex items-center gap-3"><span class="grid size-10 place-items-center rounded-full bg-warning-soft font-bold text-warning">CR</span><div class="min-w-0 flex-1"><b class="block font-semibold">Remboursement non reçu</b><span class="text-xs text-muted">Camille Roux · 12 min</span></div><span class="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger">Haute</span></div><p class="mt-2.5 line-clamp-2 text-muted">« J'ai renvoyé la veste commandée le 22 septembre et je n'ai toujours rien reçu… »</p></div>
+      <div class="rounded-card bg-surface p-4 shadow-card"><div class="flex items-center gap-3"><span class="grid size-10 place-items-center rounded-full bg-info-soft font-bold text-info">TG</span><div class="min-w-0 flex-1"><b class="block font-semibold">Colis livré mais non reçu</b><span class="text-xs text-muted">Thomas Girard · 1 h</span></div><span class="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger">Haute</span></div><p class="mt-2.5 line-clamp-2 text-muted">« Le suivi indique livré mardi, mais personne n'a rien déposé chez moi. »</p></div>
+      <div class="rounded-card bg-surface p-4 shadow-card"><div class="flex items-center gap-3"><span class="grid size-10 place-items-center rounded-full bg-success-soft font-bold text-success">JP</span><div class="min-w-0 flex-1"><b class="block font-semibold">Double prélèvement</b><span class="text-xs text-muted">Julie Perrin · 2 h</span></div><span class="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger">Haute</span></div><p class="mt-2.5 line-clamp-2 text-muted">« J'ai été débitée deux fois de 128,40 € pour la même commande. »</p></div>
+    </div>
+    <nav class="m-4 mt-2 grid h-14 shrink-0 grid-cols-4 rounded-full bg-ink text-[11px] text-surface/70">
+      <a class="grid place-items-center"><i data-lucide="house" class="size-5"></i></a>
+      <a class="grid place-items-center"><span class="grid size-10 place-items-center rounded-full bg-surface text-ink"><i data-lucide="inbox" class="size-5"></i></span></a>
+      <a class="grid place-items-center"><i data-lucide="users" class="size-5"></i></a>
+      <a class="grid place-items-center"><i data-lucide="chart-column" class="size-5"></i></a>
+    </nav>
+  </div>
+</template>
+
+<!-- ================= DISPOSITION C : rail, liste compacte, détail ================= -->
+<template id="tpl-desktop-c">
+  <div class="absolute inset-0 flex">
+    <nav class="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-line bg-nav py-3 text-nav-muted">
+      <span class="mb-3 grid size-8 place-items-center rounded-control bg-primary font-display text-sm font-bold text-on-primary">O</span>
+      <span class="grid size-9 place-items-center rounded-control bg-nav-active text-nav-ink"><i data-lucide="inbox" class="size-[18px]"></i></span>
+      <span class="grid size-9 place-items-center rounded-control"><i data-lucide="user-round" class="size-[18px]"></i></span>
+      <span class="grid size-9 place-items-center rounded-control"><i data-lucide="users" class="size-[18px]"></i></span>
+      <span class="grid size-9 place-items-center rounded-control"><i data-lucide="chart-column" class="size-[18px]"></i></span>
+      <span class="mt-auto grid size-9 place-items-center rounded-control"><i data-lucide="settings" class="size-[18px]"></i></span>
+      <span class="mt-1 grid size-8 place-items-center rounded-full bg-info-soft text-[11px] font-semibold text-info">IB</span>
+    </nav>
+    <section class="flex w-[430px] shrink-0 flex-col border-r border-line bg-surface">
+      <div class="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4"><b class="font-semibold">À traiter</b><span class="font-mono text-xs text-muted">24</span><span class="ml-auto flex items-center gap-1 text-muted"><i data-lucide="list-filter" class="size-4"></i><kbd class="rounded-[3px] border border-line-strong px-1 font-mono text-[10px]">F</kbd></span></div>
+      <div class="flex h-9 shrink-0 items-center gap-4 border-b border-line px-4 text-xs text-muted"><span class="font-medium text-ink">Toutes</span><span>Haute · 3</span><span>Non assignées · 11</span><span>Mes demandes · 6</span></div>
+      <div class="min-h-0 flex-1 overflow-hidden text-[13px]">
+        <div class="flex h-row items-center gap-3 border-b border-line bg-primary-soft px-4 shadow-[inset_2px_0_0_var(--color-primary)]"><i data-lucide="arrow-up" class="size-3.5 shrink-0 text-danger"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4821</span><span class="truncate font-medium">Remboursement non reçu après retour</span><span class="ml-auto shrink-0 font-mono text-[11px] text-muted">12m</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-up" class="size-3.5 shrink-0 text-danger"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4807</span><span class="truncate">Colis indiqué livré mais jamais reçu</span><span class="ml-auto grid size-5 shrink-0 place-items-center rounded-full bg-info-soft text-[9px] font-semibold text-info">IB</span><span class="w-7 shrink-0 text-right font-mono text-[11px] text-muted">1h</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-up" class="size-3.5 shrink-0 text-danger"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4790</span><span class="truncate">Double prélèvement sur la carte bancaire</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">2h</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4819</span><span class="truncate">Impossible de modifier l'adresse de livraison</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">40m</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4815</span><span class="truncate">Facture de septembre reçue en double</span><span class="ml-auto grid size-5 shrink-0 place-items-center rounded-full bg-success-soft text-[9px] font-semibold text-success">KD</span><span class="w-7 shrink-0 text-right font-mono text-[11px] text-muted">9:12</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4802</span><span class="truncate">Demande de suppression de compte</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">1j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4798</span><span class="truncate">Article reçu abîmé, demande d'échange</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">1j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4797</span><span class="truncate">Point de retrait introuvable à Nantes</span><span class="ml-auto grid size-5 shrink-0 place-items-center rounded-full bg-info-soft text-[9px] font-semibold text-info">IB</span><span class="w-7 shrink-0 text-right font-mono text-[11px] text-muted">1j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4810</span><span class="truncate">Code promo refusé au paiement</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">1j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4799</span><span class="truncate">Question sur la garantie d'un article</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">3j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4795</span><span class="truncate">Erreur sur le montant de la facture</span><span class="ml-auto grid size-5 shrink-0 place-items-center rounded-full bg-success-soft text-[9px] font-semibold text-success">KD</span><span class="w-7 shrink-0 text-right font-mono text-[11px] text-muted">4j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4793</span><span class="truncate">Changement de taille avant expédition</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">4j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4791</span><span class="truncate">Facture au nom de l'entreprise</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">5j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4788</span><span class="truncate">Newsletter reçue malgré le désabonnement</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">5j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4786</span><span class="truncate">Programme de fidélité : points manquants</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">6j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4784</span><span class="truncate">Délai de livraison vers la Belgique</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">6j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4781</span><span class="truncate">Carte cadeau non reçue par e-mail</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">7j</span></div>
+        <div class="flex h-row items-center gap-3 border-b border-line px-4"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><span class="w-11 shrink-0 font-mono text-[11px] text-muted">4779</span><span class="truncate">Modifier le mode de paiement enregistré</span><span class="ml-auto w-7 shrink-0 text-right font-mono text-[11px] text-muted">7j</span></div>
+      </div>
+    </section>
+    <section class="flex min-w-0 flex-1 flex-col bg-canvas">
+      <div class="flex h-12 shrink-0 items-center gap-3 border-b border-line px-6 text-xs text-muted"><span class="font-mono">#4821</span><span>·</span><span>ouverte il y a 12 min par e-mail</span><span class="ml-auto flex items-center gap-1.5"><kbd class="rounded-[3px] border border-line-strong px-1 font-mono text-[10px]">A</kbd>M'assigner</span><span class="flex items-center gap-1.5"><kbd class="rounded-[3px] border border-line-strong px-1 font-mono text-[10px]">J</kbd><kbd class="rounded-[3px] border border-line-strong px-1 font-mono text-[10px]">K</kbd>Naviguer</span><button type="button" class="inline-flex h-control items-center gap-1.5 rounded-control bg-primary px-3 font-medium text-on-primary"><i data-lucide="check" class="size-4"></i>Résoudre</button></div>
+      <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden px-6 py-5">
+        <div>
+          <h2 class="font-display text-xl font-semibold">Remboursement non reçu après retour</h2>
+          <div class="mt-3 flex flex-wrap gap-2 text-xs">
+            <span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2"><span class="size-1.5 rounded-full bg-warning"></span>À traiter</span>
+            <span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2 text-danger"><i data-lucide="arrow-up" class="size-3.5"></i>Haute</span>
+            <span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-dashed border-line-strong px-2 text-muted"><i data-lucide="user-round-plus" class="size-3.5"></i>Non assignée</span>
+            <span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2 text-muted"><i data-lucide="user-round" class="size-3.5"></i>Camille Roux · 6 commandes</span>
+            <span class="inline-flex h-7 items-center gap-1.5 rounded-control border border-line bg-surface px-2 font-mono text-muted">cmd 300-5521</span>
+          </div>
+        </div>
+        <div class="border-l-2 border-line-strong pl-4">
+          <p class="text-xs text-muted"><b class="font-medium text-ink">Camille Roux</b> · 8 oct., 18:04</p>
+          <p class="mt-1.5 max-w-[60ch] leading-relaxed">Bonjour, j'ai renvoyé la veste commandée le 22 septembre (commande 300-5521) et le colis a été livré chez vous le 30. Je n'ai toujours pas reçu le remboursement. Pouvez-vous vérifier ?</p>
+        </div>
+        <div class="rounded-card border border-warning/40 bg-warning-soft px-4 py-3">
+          <p class="flex items-center gap-1.5 text-xs font-medium text-warning"><i data-lucide="lock" class="size-3.5"></i>Note interne · Karim D. · 9 oct., 09:30</p>
+          <p class="mt-1 max-w-[60ch] leading-relaxed">Retour réceptionné à l'entrepôt, remboursement bloqué : le motif de retour n'a pas été saisi.</p>
+        </div>
+        <div class="mt-auto rounded-card border border-line-strong bg-surface">
+          <div class="flex gap-4 border-b border-line px-4 text-xs"><span class="-mb-px border-b-2 border-primary py-2 font-medium">Réponse</span><span class="py-2 text-muted">Note interne</span><span class="ml-auto py-2 text-muted">Modèle : Remboursement débloqué</span></div>
+          <p class="px-4 py-3 leading-relaxed">Bonjour Camille, merci pour votre patience. Votre retour a bien été reçu le 30 septembre ; le remboursement de 128,40 € vient d'être déclenché et apparaîtra sous 3 à 5 jours ouvrés.</p>
+          <div class="flex items-center gap-3 border-t border-line px-4 py-2 text-xs text-muted"><i data-lucide="paperclip" class="size-4"></i><span class="ml-auto flex items-center gap-1.5"><kbd class="rounded-[3px] border border-line-strong px-1 font-mono text-[10px]">⌘</kbd><kbd class="rounded-[3px] border border-line-strong px-1 font-mono text-[10px]">↵</kbd>Envoyer</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<template id="tpl-mobile-c">
+  <div class="absolute inset-0 flex flex-col">
+    <header class="flex h-12 shrink-0 items-center gap-2 border-b border-line bg-nav px-4 text-nav-ink"><b class="font-semibold">À traiter</b><span class="font-mono text-xs text-nav-muted">24</span><i data-lucide="list-filter" class="ml-auto size-5 text-nav-muted"></i><i data-lucide="search" class="size-5 text-nav-muted"></i></header>
+    <div class="flex h-9 shrink-0 items-center gap-4 border-b border-line bg-surface px-4 text-xs text-muted"><span class="font-medium text-ink">Toutes</span><span>Haute · 3</span><span>Non assignées · 11</span></div>
+    <div class="min-h-0 flex-1 overflow-hidden bg-surface text-[13px]">
+      <div class="flex items-center gap-3 border-b border-line bg-primary-soft px-4 py-2.5 shadow-[inset_2px_0_0_var(--color-primary)]"><i data-lucide="arrow-up" class="size-3.5 shrink-0 text-danger"></i><div class="min-w-0 flex-1"><p class="truncate font-medium">Remboursement non reçu après retour</p><p class="font-mono text-[11px] text-muted">4821 · Camille Roux</p></div><span class="font-mono text-[11px] text-muted">12m</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="arrow-up" class="size-3.5 shrink-0 text-danger"></i><div class="min-w-0 flex-1"><p class="truncate">Colis indiqué livré mais jamais reçu</p><p class="font-mono text-[11px] text-muted">4807 · Thomas Girard</p></div><span class="font-mono text-[11px] text-muted">1h</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="arrow-up" class="size-3.5 shrink-0 text-danger"></i><div class="min-w-0 flex-1"><p class="truncate">Double prélèvement sur la carte bancaire</p><p class="font-mono text-[11px] text-muted">4790 · Julie Perrin</p></div><span class="font-mono text-[11px] text-muted">2h</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Impossible de modifier l'adresse de livraison</p><p class="font-mono text-[11px] text-muted">4819 · Hugo Martin</p></div><span class="font-mono text-[11px] text-muted">40m</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Facture de septembre reçue en double</p><p class="font-mono text-[11px] text-muted">4815 · Société Lavande</p></div><span class="font-mono text-[11px] text-muted">9:12</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Demande de suppression de compte</p><p class="font-mono text-[11px] text-muted">4802 · Nora Haddad</p></div><span class="font-mono text-[11px] text-muted">1j</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Article reçu abîmé, demande d'échange</p><p class="font-mono text-[11px] text-muted">4798 · Lucas Moreau</p></div><span class="font-mono text-[11px] text-muted">1j</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="minus" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Point de retrait introuvable à Nantes</p><p class="font-mono text-[11px] text-muted">4797 · Emma Petit</p></div><span class="font-mono text-[11px] text-muted">1j</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Code promo refusé au paiement</p><p class="font-mono text-[11px] text-muted">4810 · Léa Fontaine</p></div><span class="font-mono text-[11px] text-muted">1j</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Question sur la garantie d'un article</p><p class="font-mono text-[11px] text-muted">4799 · Paul Lefèvre</p></div><span class="font-mono text-[11px] text-muted">3j</span></div>
+      <div class="flex items-center gap-3 border-b border-line px-4 py-2.5"><i data-lucide="arrow-down" class="size-3.5 shrink-0 text-muted"></i><div class="min-w-0 flex-1"><p class="truncate">Erreur sur le montant de la facture</p><p class="font-mono text-[11px] text-muted">4795 · Martin Leroy</p></div><span class="font-mono text-[11px] text-muted">4j</span></div>
+    </div>
+    <div class="flex h-14 shrink-0 items-center justify-around border-t border-line bg-nav text-nav-muted"><i data-lucide="inbox" class="size-5 text-primary"></i><i data-lucide="user-round" class="size-5"></i><i data-lucide="users" class="size-5"></i><i data-lucide="chart-column" class="size-5"></i></div>
+  </div>
+</template>
+
+<script>
+/*
+ * Assemble les blocs réutilisables, dessine les icônes, puis lance les contrôles lus par capture.mjs.
+ * <div data-use="x"> reçoit le contenu de <template id="tpl-x"> ; ses enfants vont dans [data-slot="content"].
+ * data-slot-<nom>="texte" remplit [data-slot="<nom>"] ; data-active="<id>" marque [data-nav="<id>"] comme page courante.
+ * data-omit="views profile" retire ces zones ([data-zone]) de la coquille ; data-anno-<zone>="2" y pose la pastille 2.
+ * Une zone marquée data-optional n'apparaît que si l'hôte la demande : data-include="admin".
+ * data-active accepte plusieurs identifiants séparés par des espaces (onglet et projet actifs).
+ */
+function assemble() {
+  let hosts;
+  while ((hosts = document.querySelectorAll('[data-use]')).length) {
+    hosts.forEach((host) => {
+      const name = host.dataset.use;
+      host.removeAttribute('data-use');
+      const tpl = document.getElementById('tpl-' + name);
+      if (!tpl) return console.warn('Template not found: tpl-' + name);
+      const fragment = tpl.content.cloneNode(true);
+      const slot = fragment.querySelector('[data-slot="content"]');
+      if (slot) slot.append(...host.childNodes);
+      for (const { name: attr, value } of [...host.attributes]) {
+        if (attr.startsWith('data-slot-')) fragment.querySelectorAll(`[data-slot="${attr.slice(10)}"]`).forEach((el) => (el.textContent = value));
+        if (attr.startsWith('data-anno-')) {
+          fragment.querySelectorAll(`[data-zone="${attr.slice(10)}"]`).forEach((el) => {
+            el.classList.add('relative');
+            el.insertAdjacentHTML('beforeend', `<span class="anno -top-2 -right-2">${value}</span>`);
+          });
+        }
+      }
+      (host.dataset.active || '').split(/\s+/).filter(Boolean).forEach((id) => fragment.querySelectorAll(`[data-nav="${id}"]`).forEach((el) => el.setAttribute('aria-current', 'page')));
+      (host.dataset.omit || '').split(/\s+/).filter(Boolean).forEach((zone) => fragment.querySelectorAll(`[data-zone="${zone}"]`).forEach((el) => el.remove()));
+      const included = (host.dataset.include || '').split(/\s+/);
+      fragment.querySelectorAll('[data-optional]').forEach((el) => { if (!included.includes(el.dataset.zone)) el.remove(); });
+      host.append(fragment);
+    });
+  }
+}
+// Affiche la valeur réelle des tokens ([data-value="--color-primary"]) et les compteurs ([data-count="<sélecteur>"]) une fois Tailwind compilé.
+function renderValues(attempt = 0) {
+  const ready = getComputedStyle(document.documentElement).getPropertyValue('--doc-bg').trim();
+  if (!ready && attempt < 100) return setTimeout(() => renderValues(attempt + 1), 50);
+  document.querySelectorAll('[data-value]').forEach((el) => {
+    const value = getComputedStyle(el).getPropertyValue(el.dataset.value).trim();
+    el.textContent = el.dataset.value.includes('font') ? value.split(',')[0].replace(/"/g, '') : value;
+  });
+  document.querySelectorAll('[data-count]').forEach((el) => (el.textContent = document.querySelectorAll(el.dataset.count).length));
+  document.fonts.ready.then(checkFrames);
+  // Les ancres (…#e3) sont rejouées une fois la page mise en forme par Tailwind.
+  if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ behavior: 'instant' });
+}
+// Contrôles lus par capture.mjs : contenu coupé (data-clipped), pastilles sur du texte (data-overlap) ou coupées par un bord (data-anno-cut).
+function checkFrames() {
+  document.querySelectorAll('[data-frame]').forEach((frame) => {
+    // data-clip-ok marque une coupe voulue (aperçu tronqué, liste qui continue) : elle n'est pas signalée
+    const clipped = [frame, ...frame.querySelectorAll('*')].filter((el) => !el.closest('[data-clip-ok]') && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 4 && getComputedStyle(el).overflowY === 'hidden');
+    if (clipped.length) frame.dataset.clipped = String(clipped.length); else delete frame.dataset.clipped;
+    const texts = [];
+    // Le texte d'un écran de fond (data-backdrop) est sous un calque : ignoré.
+    const walker = document.createTreeWalker(frame, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent.trim() && !n.parentElement.closest('.anno, [data-backdrop]') ? 1 : 2) });
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const rect of range.getClientRects()) texts.push({ rect, text: n.textContent.trim().slice(0, 40) });
+    }
+    let issues = 0;
+    frame.querySelectorAll('.anno').forEach((anno) => {
+      if (!anno.getClientRects().length || anno.closest('[data-backdrop]')) return;
+      const box = anno.getBoundingClientRect();
+      const hit = texts.find(({ rect: r }) => r.left < box.right - 2 && r.right > box.left + 2 && r.top < box.bottom - 2 && r.bottom > box.top + 2);
+      if (hit) { issues++; anno.dataset.overlap = hit.text; }
+      // Pastille coupée : elle dépasse d'un ancêtre qui masque le débordement
+      for (let el = anno.parentElement; el && el !== frame.parentElement; el = el.parentElement) {
+        const style = getComputedStyle(el);
+        if (style.overflow === 'visible' && style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+        const r = el.getBoundingClientRect();
+        if (box.left < r.left - 1 || box.right > r.right + 1 || box.top < r.top - 1 || box.bottom > r.bottom + 1) { issues++; anno.dataset.annoCut = `${el.tagName.toLowerCase()}.${[...el.classList].slice(0, 4).join('.')}`; break; }
+      }
+    });
+    if (issues) frame.dataset.annoIssues = String(issues); else delete frame.dataset.annoIssues;
+  });
+}
+// Boutons « Thème » : changent le thème de la proposition, la disposition reste la même.
+function bindThemePicker() {
+  document.querySelectorAll('section[data-product-theme]').forEach((section) => {
+    const updateButtons = () => section.querySelectorAll('[data-choice]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.choice === section.dataset.productTheme)));
+    section.querySelectorAll('[data-choice]').forEach((b) => b.addEventListener('click', () => {
+      section.dataset.productTheme = b.dataset.choice;
+      updateButtons();
+      renderValues();
+    }));
+    updateButtons();
+  });
+}
+const params = new URLSearchParams(location.search);
+// ?themes=c,a,b : thème de chaque proposition, dans l'ordre (sert à capturer les combinaisons)
+params.get('themes')?.split(',').forEach((theme, i) => { const section = document.querySelectorAll('section[data-product-theme]')[i]; if (section && theme) section.dataset.productTheme = theme; });
+// ?only=<id> n'affiche que cette section ; ?frame=<nom> n'affiche qu'un cadre de maquette (capture.mjs)
+const only = params.get('only');
+if (only) document.querySelectorAll('#page > header, #page > nav, #page > section').forEach((el) => { if (el.id !== only) el.hidden = true; });
+assemble();
+lucide.createIcons();
+const frameName = params.get('frame');
+if (frameName) {
+  const el = document.querySelector(`[data-frame="${frameName}"]`);
+  if (el) {
+    const wrapper = document.createElement('div');
+    const theme = el.closest('[data-product-theme]')?.dataset.productTheme;
+    if (theme) wrapper.dataset.productTheme = theme;
+    wrapper.append(el);
+    document.body.replaceChildren(wrapper);
+    document.body.dataset.frameIsolated = frameName;
+  }
+}
+bindThemePicker();
+renderValues();
+</script>
+</body>
+</html>

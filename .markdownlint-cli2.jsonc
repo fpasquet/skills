@@ -1,0 +1,19 @@
+{
+  "config": {
+    // Pas de retour à la ligne forcé : les outils et les sites replient tout seuls.
+    "MD013": false,
+    // Les SKILL.md et les références réutilisent des titres identiques d'une section à l'autre.
+    "MD024": { "siblings_only": true },
+    // Les SKILL.md citent surtout des blocs qui ne sont pas du code : commandes, dialogues,
+    // arborescences, gabarits de réponse. Les étiqueter n'apporte rien.
+    "MD040": false,
+    // Les skills de maquettes citent du HTML en ligne dans leurs explications.
+    "MD033": false,
+    // L'alignement des barres verticales des tableaux n'est que du bruit dans les diffs.
+    "MD060": false
+  },
+  "globs": ["**/*.md"],
+  // Les gabarits (templates/) sont des fragments remplis par les scripts, pas des documents.
+  // CLAUDE.md est un lien symbolique vers AGENTS.md : il serait signalé deux fois.
+  "ignores": ["node_modules/**", "skills/*/templates/**", "CLAUDE.md"]
+}

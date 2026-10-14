@@ -1,0 +1,231 @@
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  /* Document de travail : sommaire latéral fixe, colonne de lecture, pastilles d'identifiants.
+     Tokens repris de l'identité du produit (thème clair), déclinés en sombre. */
+  :root {
+    --bg: #fafafb; --surface: #ffffff; --surface-alt: #f1f2f4; --line: #e3e4e8; --line-strong: #c9ccd3;
+    --fg: #16181d; --muted: #5b616c; --primary: #23252b; --on-primary: #ffffff; --focus: #1f5fae;
+    --rf: #1f5fae; --rf-soft: #e6eefb; --ca: #18794a; --ca-soft: #e3f4ea; --nf: #6b4fa8; --nf-soft: #efeafb;
+    --dt: #8f5200; --dt-soft: #fdf0d9; --rq: #c0261c; --rq-soft: #fde9e7; --mark: #fdf0d9;
+    --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --header: 56px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111216; --surface: #17191e; --surface-alt: #1f2127; --line: #2a2d35; --line-strong: #3b3f49;
+      --fg: #e7e8eb; --muted: #9ba1ab; --primary: #e7e8eb; --on-primary: #111216; --focus: #7aa7ea;
+      --rf: #8fb6f0; --rf-soft: #1a2638; --ca: #6fcf9b; --ca-soft: #15291f; --nf: #b9a3ea; --nf-soft: #241d36;
+      --dt: #e8b25e; --dt-soft: #2e2413; --rq: #f08a80; --rq-soft: #351a18; --mark: #3a2f14; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111216; --surface: #17191e; --surface-alt: #1f2127; --line: #2a2d35; --line-strong: #3b3f49;
+    --fg: #e7e8eb; --muted: #9ba1ab; --primary: #e7e8eb; --on-primary: #111216; --focus: #7aa7ea;
+    --rf: #8fb6f0; --rf-soft: #1a2638; --ca: #6fcf9b; --ca-soft: #15291f; --nf: #b9a3ea; --nf-soft: #241d36;
+    --dt: #e8b25e; --dt-soft: #2e2413; --rq: #f08a80; --rq-soft: #351a18; --mark: #3a2f14; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: calc(var(--header) + 16px); }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-sans); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+  /* En-tête */
+  .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; display: flex; align-items: center; gap: 12px; height: var(--header); padding-inline: 16px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .logo { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 6px; background: var(--primary); color: var(--on-primary); font-weight: 600; font-size: 14px; }
+  .brand-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-kind { color: var(--muted); white-space: nowrap; }
+  .actions { margin-left: auto; display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); font: 500 13px/1 var(--font-sans); cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: var(--surface-alt); }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  .btn-primary:hover { background: var(--primary); opacity: 0.9; }
+  .btn-small { height: 26px; padding: 0 8px; font-size: 12px; }
+
+  /* Mise en page */
+  .layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 40px; max-width: 1280px; margin: 0 auto; padding-inline: 16px; }
+  .sidebar { position: sticky; top: calc(var(--header) + env(safe-area-inset-top, 0px)); align-self: start; height: calc(100dvh - var(--header)); overflow-y: auto; padding-block: 24px; }
+  .search { width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--fg); font: 13px var(--font-sans); }
+  .search-hint { margin: 6px 2px 14px; color: var(--muted); font-size: 12px; }
+  .toc { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+  .toc a { display: block; padding: 4px 8px; border-radius: 5px; color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--fg); background: var(--surface-alt); }
+  .toc > li > a { color: var(--fg); font-weight: 500; margin-top: 6px; }
+  .toc ul { list-style: none; margin: 0 0 4px 8px; padding: 0 0 0 8px; border-left: 1px solid var(--line); display: none; }
+  .toc li.open > ul { display: block; }
+  .toc a.active { color: var(--fg); background: var(--surface-alt); }
+  .toc-mobile { display: none; }
+
+  main { min-width: 0; padding-block: 32px 96px; }
+  .doc { max-width: 860px; }
+  .doc > *:first-child { margin-top: 0; }
+  h1, h2, h3, h4, h5 { line-height: 1.25; text-wrap: balance; }
+  h1 { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 16px; }
+  .part { padding-top: 8px; margin-top: 48px; border-top: 1px solid var(--line); }
+  .part-head { display: flex; align-items: flex-start; gap: 12px; }
+  .part-head h2 { flex: 1; min-width: 0; }
+  h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 20px 0 12px; }
+  .part-head .btn { margin-top: 20px; }
+  h3 { font-size: 18px; font-weight: 600; margin: 32px 0 10px; }
+  h4 { font-size: 16px; font-weight: 600; margin: 28px 0 8px; padding-top: 14px; border-top: 1px dashed var(--line); }
+  h5 { font-size: 14.5px; font-weight: 600; margin: 22px 0 6px; color: var(--fg); }
+  h5 .anchor + *, h5 { font-variant-numeric: tabular-nums; }
+  p, li { max-width: 72ch; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  li > ul, li > ol { margin: 4px 0; }
+  strong { font-weight: 600; }
+  code { font-family: var(--font-mono); font-size: 0.88em; padding: 1px 5px; border-radius: 4px; background: var(--surface-alt); border: 1px solid var(--line); }
+  pre.code { overflow-x: auto; padding: 14px 16px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; line-height: 1.5; }
+  pre.code code { padding: 0; border: 0; background: none; }
+  blockquote { margin: 0 0 14px; padding: 8px 14px; border-left: 3px solid var(--line-strong); color: var(--muted); }
+
+  /* Pastilles d'identifiants */
+  .id { display: inline-block; padding: 0 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.82em; font-weight: 500; line-height: 1.7; white-space: nowrap; vertical-align: 1px; }
+  .id-rf { color: var(--rf); background: var(--rf-soft); }
+  .id-ca { color: var(--ca); background: var(--ca-soft); }
+  .id-nf { color: var(--nf); background: var(--nf-soft); }
+  .id-dt { color: var(--dt); background: var(--dt-soft); }
+  .id-rq { color: var(--rq); background: var(--rq-soft); }
+  a.ref { font-family: var(--font-mono); font-size: 0.86em; white-space: nowrap; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 28px; color: var(--muted); font-size: 13px; }
+
+  /* Tableaux et diagrammes */
+  .table { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { background: var(--surface-alt); color: var(--muted); font-weight: 500; font-size: 12.5px; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td { min-width: 90px; }
+  .diagram { overflow-x: auto; margin: 0 0 18px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  .diagram pre.mermaid { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: pre; }
+  .flash { animation: flash 1.6s ease-out; }
+  @keyframes flash { from { background: var(--mark); } to { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .flash { animation: none; outline: 2px solid var(--focus); } }
+
+  /* Copie de secours (presse-papiers refusé) */
+  .copy-panel { position: fixed; inset: auto 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px; z-index: 20; max-width: 720px; margin: 0 auto; padding: 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); box-shadow: 0 12px 32px rgb(0 0 0 / 0.18); }
+  .copy-panel textarea { width: 100%; height: 160px; margin: 8px 0; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: 12px/1.5 var(--font-mono); }
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 30; transform: translateX(-50%); padding: 9px 14px; border-radius: 6px; background: var(--primary); color: var(--on-primary); font-size: 13px; }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .sidebar { display: none; }
+    .toc-mobile { display: block; margin: 0 0 24px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .toc-mobile summary { padding: 10px 14px; cursor: pointer; font-weight: 500; }
+    .toc-mobile .toc { padding: 0 8px 10px; max-height: 60vh; overflow-y: auto; }
+    .toc-mobile .toc ul { display: block; }
+    .brand-kind { display: none; }
+    h1 { font-size: 26px; }
+    .part-head { flex-direction: column; gap: 0; }
+    .part-head .btn { margin-top: 0; }
+  }
+  @media (max-width: 520px) { .btn .long { display: none; } }
+</style>
+
+<header class="topbar">
+  <div class="brand"><span class="logo">{{INITIAL}}</span><span class="brand-name">{{PRODUCT}}</span><span class="brand-kind">· Cahier des charges</span></div>
+  <div class="actions"><button type="button" class="btn btn-primary" id="copy-all">Copier le Markdown<span class="long">&nbsp;complet</span></button></div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Sommaire">
+    <input class="search" id="search" type="search" placeholder="Aller à : CA-SESS-12, E13a, NF-04…" autocomplete="off">
+    <p class="search-hint">Identifiant, écran ou mot d'un titre, puis Entrée.</p>
+    <nav><ul class="toc">{{NAV}}</ul></nav>
+  </aside>
+  <main>
+    <details class="toc-mobile"><summary>Sommaire</summary><ul class="toc">{{NAV}}</ul></details>
+    <article class="doc">
+{{CONTENT}}
+    </article>
+  </main>
+</div>
+
+<script type="application/json" id="cdc-data">{{DATA}}</script>
+<script>
+  (function () {
+    const data = JSON.parse(document.getElementById('cdc-data').textContent);
+    const toast = (text) => {
+      const el = Object.assign(document.createElement('div'), { className: 'toast', textContent: text });
+      document.body.append(el);
+      setTimeout(() => el.remove(), 2200);
+    };
+    // Copie : presse-papiers, sinon texte sélectionné dans un panneau
+    function copy(text, label) {
+      const fallback = () => {
+        document.querySelector('.copy-panel')?.remove();
+        const panel = document.createElement('div');
+        panel.className = 'copy-panel';
+        panel.innerHTML = '<strong></strong><textarea readonly id="copy-fallback"></textarea><button type="button" class="btn btn-small">Fermer</button>';
+        panel.querySelector('strong').textContent = label + ' : sélection prête, copiez avec Ctrl+C ou ⌘C';
+        panel.querySelector('textarea').value = text;
+        panel.querySelector('button').onclick = () => panel.remove();
+        document.body.append(panel);
+        panel.querySelector('textarea').select();
+      };
+      try {
+        navigator.clipboard.writeText(text).then(() => toast(label + ' copié'), fallback);
+      } catch {
+        fallback();
+      }
+    }
+    document.getElementById('copy-all').addEventListener('click', () => copy(data.markdown, 'Markdown complet'));
+    document.querySelectorAll('[data-copy-part]').forEach((btn) =>
+      btn.addEventListener('click', () => copy(data.parts[Number(btn.dataset.copyPart)], 'Partie')),
+    );
+
+    // Sommaire : partie et sous-partie en cours de lecture
+    const links = [...document.querySelectorAll('.sidebar .toc a')];
+    const byId = new Map(links.map((a) => [a.getAttribute('href').slice(1), a]));
+    const headings = [...document.querySelectorAll('.doc h2[id], .doc h3[id]')];
+    let current = null;
+    function setActive(id) {
+      if (id === current) return;
+      current = id;
+      links.forEach((a) => a.classList.remove('active'));
+      document.querySelectorAll('.sidebar .toc li.open').forEach((li) => li.classList.remove('open'));
+      const link = byId.get(id);
+      if (!link) return;
+      link.classList.add('active');
+      link.closest('.toc > li')?.classList.add('open');
+      link.scrollIntoView({ block: 'nearest' });
+    }
+    const onScroll = () => {
+      let id = headings[0]?.id;
+      for (const h of headings) {
+        if (h.getBoundingClientRect().top < 120) id = h.id;
+        else break;
+      }
+      setActive(id);
+    };
+    document.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    // Recherche : identifiant (RF-, CA-, NF-, DT-, RQ-), écran (E13a) ou mot d'un titre
+    const search = document.getElementById('search');
+    search.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const q = search.value.trim();
+      if (!q) return;
+      const lower = q.toLowerCase();
+      const target =
+        document.getElementById(lower) ||
+        [...document.querySelectorAll('.doc strong.id')].find((s) => s.textContent.toLowerCase() === lower) ||
+        [...document.querySelectorAll('.doc h2, .doc h3, .doc h4, .doc h5')].find((h) => h.textContent.toLowerCase().includes(lower));
+      if (!target) return toast('Rien trouvé pour « ' + q + ' »');
+      const block = target.closest('li, tr, h2, h3, h4, h5, p') || target;
+      block.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      block.classList.remove('flash');
+      void block.offsetWidth;
+      block.classList.add('flash');
+    });
+  })();
+</script>

@@ -1,0 +1,16 @@
+# Éditeurs et système
+.idea/
+.vscode/
+.DS_Store
+
+# Outillage de lint
+node_modules/
+
+# Artefacts des projets consommateurs, générés par `npx skills add` en portée projet
+skills-lock.json
+.claude/skills/
+.agents/skills/
+
+# Espaces de travail produits par les skills (specs, prototype, CDC…) ou par leurs évaluations :
+# ils vivent dans le dossier du projet concerné, jamais dans ce dépôt
+*-workspace/

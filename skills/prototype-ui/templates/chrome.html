@@ -1,0 +1,105 @@
+<!--
+  Habillage du prototype (pas le produit) : panneau « Scénarios » et message de confirmation.
+  Injecté par build.mjs dans chaque page. Couleurs zinc volontairement neutres, pour ne jamais se
+  confondre avec l'interface du produit. Onglet vertical au milieu du bord droit : les coins, et surtout
+  le coin bas droit (boutons « Continuer », « Enregistrer »), appartiennent au produit.
+  Scénario en cours : déroulé guidé, étape courante, Précédent / Suivant ; les étapes passées sont cochées.
+-->
+<div x-data="protoScenarios" x-show="!hidden" x-cloak data-proto-chrome class="fixed top-1/2 right-0 z-[1000] -translate-y-1/2 font-sans text-sm text-zinc-900" style="font-family: ui-sans-serif, system-ui, sans-serif">
+  <div x-show="open" class="absolute top-1/2 right-full mr-2 max-h-[85dvh] w-[min(22rem,calc(100vw-3.5rem))] -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-4 shadow-2xl ring-1 ring-zinc-200">
+    <template x-if="scenario">
+      <div>
+        <div class="flex items-start gap-2">
+          <div class="min-w-0">
+            <p class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Scénario en cours</p>
+            <p class="mt-1 font-semibold" x-text="scenario.title"></p>
+          </div>
+          <button type="button" class="ml-auto -mt-1 -mr-1 rounded-md px-2 py-1 text-zinc-500 hover:bg-zinc-100" @click="setOpen(false)" title="Réduire">×</button>
+        </div>
+        <p class="mt-1 text-xs text-zinc-500" x-show="scenario.persona" x-text="'Vous êtes ' + scenario.persona"></p>
+        <p class="mt-2 text-zinc-700" x-text="scenario.goal"></p>
+
+        <!-- Étape courante -->
+        <div class="mt-3 rounded-lg bg-zinc-50 p-3 ring-1 ring-zinc-200">
+          <template x-if="!finished">
+            <div>
+              <p class="text-xs font-medium text-zinc-500" x-text="'Étape ' + (current.step + 1) + ' sur ' + total"></p>
+              <p class="mt-1 font-medium" x-text="stepText(current.step)"></p>
+              <a x-show="!onStepPage(current.step)" :href="stepPage(current.step)" class="mt-2 inline-block text-xs text-zinc-600 underline">Aller à l'écran</a>
+            </div>
+          </template>
+          <template x-if="finished">
+            <div>
+              <p class="font-medium">Scénario terminé</p>
+              <p class="mt-1 text-xs text-zinc-500" x-text="total + ' étapes sur ' + total"></p>
+            </div>
+          </template>
+          <div class="mt-3 h-1 overflow-hidden rounded-full bg-zinc-200"><div class="h-full rounded-full bg-zinc-900 transition-all" :style="'width:' + Math.round((Math.min(current.step, total) / total) * 100) + '%'"></div></div>
+        </div>
+
+        <!-- Toutes les étapes : cochées quand elles sont passées, cliquables pour y revenir -->
+        <ol class="mt-3 flex flex-col gap-0.5">
+          <template x-for="(step, i) in scenario.steps" :key="i">
+            <li>
+              <button type="button" class="flex w-full items-start gap-2 rounded-md px-1.5 py-1 text-left hover:bg-zinc-100" :class="i === current.step && 'bg-zinc-100 font-medium'" @click="goTo(i)">
+                <input type="checkbox" tabindex="-1" class="pointer-events-none mt-0.5 accent-zinc-900" :checked="i < current.step">
+                <span :class="i < current.step && 'text-zinc-400 line-through'" x-text="stepText(i)"></span>
+              </button>
+            </li>
+          </template>
+        </ol>
+
+        <div class="mt-3 flex items-center gap-2">
+          <button type="button" class="h-9 rounded-lg px-3 font-medium ring-1 ring-zinc-300 hover:bg-zinc-50 disabled:opacity-40" :disabled="current.step === 0" @click="previous()">Précédent</button>
+          <button type="button" class="ml-auto h-9 rounded-lg bg-zinc-900 px-4 font-medium text-white hover:bg-zinc-700" @click="next()" x-text="finished ? 'Recommencer' : current.step === total - 1 ? 'Terminer' : 'Suivant'"></button>
+        </div>
+        <button type="button" class="mt-3 text-xs text-zinc-500 underline" @click="stop()">Quitter le scénario</button>
+        <hr class="my-3 border-zinc-200">
+      </div>
+    </template>
+    <template x-if="!scenario">
+      <div>
+        <p class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Scénarios</p>
+        <ul class="mt-2 flex flex-col gap-1">
+          <template x-for="s in scenarios" :key="s.id">
+            <li><button type="button" class="w-full rounded-lg px-2 py-1.5 text-left hover:bg-zinc-100" @click="start(s.id)"><span class="font-medium" x-text="s.title"></span> <span class="text-xs text-zinc-500" x-text="s.persona ? '· ' + s.persona.split(',')[0] : ''"></span></button></li>
+          </template>
+        </ul>
+      </div>
+    </template>
+    <!-- Observations de test -->
+    <div class="mt-3 border-t border-zinc-200 pt-3">
+      <button type="button" x-show="!noting" class="text-xs font-medium text-zinc-700 underline" @click="noting = true; $nextTick(() => $refs.note.focus())">Noter une observation</button>
+      <div x-show="noting">
+        <textarea x-ref="note" x-model="draft" rows="3" class="w-full resize-y rounded-lg p-2 text-sm ring-1 ring-zinc-300 focus:ring-2 focus:ring-zinc-900 focus:outline-none" placeholder="Ce que la personne fait, dit ou cherche…" @keydown.stop @keydown.meta.enter.prevent="addNote()" @keydown.ctrl.enter.prevent="addNote()" @keydown.escape.prevent="noting = false; draft = ''"></textarea>
+        <p class="mt-1 text-xs text-zinc-500" x-text="scenario && !finished ? 'Rattachée à l’étape ' + (current.step + 1) + ' et à cet écran' : 'Rattachée à cet écran'"></p>
+        <div class="mt-2 flex items-center gap-2">
+          <button type="button" class="h-8 rounded-lg bg-zinc-900 px-3 text-xs font-medium text-white disabled:opacity-40" :disabled="!draft.trim()" @click="addNote()">Enregistrer</button>
+          <button type="button" class="text-xs text-zinc-500 underline" @click="noting = false; draft = ''">Annuler</button>
+        </div>
+      </div>
+      <div x-show="notes.length" class="mt-2 flex items-center gap-3 text-xs">
+        <span class="text-zinc-500" x-text="notes.length + (notes.length > 1 ? ' observations' : ' observation')"></span>
+        <button type="button" class="ml-auto font-medium text-zinc-700 underline" @click="exporting = !exporting" x-text="exporting ? 'Fermer' : 'Exporter'"></button>
+      </div>
+      <div x-show="exporting && notes.length" class="mt-2">
+        <textarea x-ref="exportArea" readonly rows="7" class="w-full rounded-lg bg-zinc-50 p-2 font-mono text-[11px] ring-1 ring-zinc-200" x-text="exportText" @keydown.stop></textarea>
+        <div class="mt-2 flex items-center gap-3 text-xs">
+          <button type="button" class="h-8 rounded-lg bg-zinc-900 px-3 font-medium text-white" @click="copyNotes()">Copier</button>
+          <button type="button" class="font-medium text-zinc-700 underline" @click="downloadNotes()">Télécharger (.md)</button>
+          <button type="button" class="ml-auto text-zinc-500 underline" @click="clearNotes()">Effacer</button>
+        </div>
+      </div>
+    </div>
+    <div class="mt-3 flex items-center gap-3 border-t border-zinc-200 pt-3 text-xs text-zinc-500">
+      <button type="button" class="underline" @click="$store.app.reset()">Réinitialiser les données</button>
+      <a class="underline" :href="window.PROTO_CONFIG.home || 'index.html'">Accueil du prototype</a>
+      <button type="button" class="ml-auto underline" @click="hide()" title="Touche « . » pour le rouvrir">Masquer</button>
+    </div>
+  </div>
+  <button type="button" @click="setOpen(!open)" class="flex items-center rounded-l-lg bg-zinc-900 px-1.5 py-3 text-xs font-medium text-white shadow-lg [writing-mode:vertical-rl]" title="Scénarios de test">
+    <span x-text="scenario ? (finished ? 'Terminé' : 'Étape ' + (current.step + 1) + ' / ' + total) : 'Scénarios'"></span>
+  </button>
+</div>
+
+<div x-show="$store.app.toast" x-transition x-cloak class="fixed bottom-6 left-1/2 z-[999] -translate-x-1/2 rounded-control bg-ink px-4 py-2.5 text-sm text-surface shadow-overlay" x-text="$store.app.toast"></div>
