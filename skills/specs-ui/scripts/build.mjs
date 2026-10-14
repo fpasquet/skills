@@ -133,7 +133,11 @@ for (const lot of lots) {
     if (s.screen && anchorPage.has(s.id)) duplicates.add(`${s.id} (${lot.name} and ${anchorPage.get(s.id).split('/')[0]})`);
     if (s.screen || !anchorPage.has(s.id)) anchorPage.set(s.id, s.screen ? `${lot.name}/${s.screen}.html` : lot.indexPath);
   }
+  // Renvoi vers un écran entier (« #e9 ») : sa page, quand aucun état ne porte déjà cet identifiant
+  for (const p of lot.pages) if (!anchorPage.has(p.screen)) anchorPage.set(p.screen, p.path);
 }
+// Ancre d'écran ou d'état (« #e13 », « #e13b ») : un lien vers un écran qui n'existe pas (retiré, renuméroté) est signalé
+const screenAnchor = (anchor) => /^#e\d+[a-z]?$/i.test(anchor ?? '');
 const hasPropositions = existsSync(join(root, 'propositions.html'));
 const relativeTo = (from, to) => posix.relative(posix.dirname(from), to) || posix.basename(to);
 const unresolved = new Set();
@@ -143,7 +147,10 @@ function rewriteLinks(html, pagePath) {
     if (file === 'propositions.html' && hasPropositions) return `href="${relativeTo(pagePath, 'propositions.html')}${anchor ?? ''}"`;
     let target;
     if (anchor && anchorPage.has(anchor.slice(1)) && (!file || lotPage.has(file))) target = anchorPage.get(anchor.slice(1));
-    else if (file && lotPage.has(file)) target = lotPage.get(file);
+    else if (screenAnchor(anchor)) {
+      unresolved.add(`${file ?? ''}${anchor} (in ${pagePath}, unknown screen)`);
+      return link;
+    } else if (file && lotPage.has(file)) target = lotPage.get(file);
     else if (file) {
       unresolved.add(`${file}${anchor ?? ''} (in ${pagePath})`);
       return link;
@@ -286,4 +293,4 @@ console.log(changed.length ? `Changed pages (${changed.length}): ${changed.join(
 if (duplicates.size) console.log(`WARNING: screen ids used in several lots (links will be wrong): ${[...duplicates].join(', ')}`);
 if (removed.length) console.log(`Removed pages without source: ${removed.join(', ')}`);
 if (invalidStatuses.size) console.log(`WARNING: unknown implementation status (todo, doing, done, gap): ${[...invalidStatuses].join(', ')}`);
-if (unresolved.size) console.log(`WARNING: unresolved links: ${[...unresolved].slice(0, 10).join(', ')}`);
+if (unresolved.size) console.log(`WARNING: unresolved links (${unresolved.size}): ${[...unresolved].slice(0, 15).join(', ')}${unresolved.size > 15 ? ', …' : ''}`);

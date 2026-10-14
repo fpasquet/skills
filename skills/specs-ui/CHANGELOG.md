@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1 · 14 oct. 2026
+
+- `build.mjs` signale les liens vers un écran ou un état inexistant (`#e9a`, `marketplace.html#e20`), par exemple après le retrait d'un écran. Ces liens restaient muets. Un renvoi vers un écran entier (`#e9`) mène désormais à sa page.
+
 ## 3.1.0 · 14 oct. 2026
 
 - `prepare-publish.mjs --all` liste toutes les pages, pour publier un nouvel artifact (première publication, ou artifact d'un autre compte claude.ai devenu inaccessible). Procédure de remplacement d'un artifact dans l'étape 4.
