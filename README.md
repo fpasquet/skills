@@ -25,10 +25,36 @@ npx skills update
 
 | Portée | Option     | Emplacement                                                      |
 | ------ | ---------- | ---------------------------------------------------------------- |
-| Projet | _(défaut)_ | `./<agent>/skills/`, commité avec le projet, partagé avec l'équipe |
+| Projet | _(défaut)_ | `./<agent>/skills/`, à ignorer dans git : réinstallé depuis `skills-lock.json` |
 | Global | `-g`       | `~/<agent>/skills/`, disponible dans tous vos projets             |
 
-Une installation en portée projet écrit un `skills-lock.json` à la racine du projet : le committer pour que toute l'équipe ait les mêmes skills. Pour figer une version, ajouter une ref git à la source : `npx skills add <compte>/skills#<tag> --skill specs-ui`.
+Une installation en portée projet écrit un `skills-lock.json` à la racine du projet. C'est lui qu'on commite, et non les copies : toute l'équipe et la CI réinstallent les mêmes versions. Pour figer une version, épingler un commit ou un tag dans la source ; le lock garde alors une `ref` par skill :
+
+```bash
+npx skills add <compte>/skills#<commit> --skill specs-ui prototype-ui requirements-doc -a claude-code -y --copy
+```
+
+Pour réinstaller depuis le lock (clone neuf, CI), `npx skills experimental_install` ne remplit que `.agents/skills/`. Un agent qui lit son propre dossier, comme Claude Code (`.claude/skills/`), passe par un petit script du projet qui relance `add` pour chaque source épinglée :
+
+```js
+// scripts/install-skills.mjs : skills de skills-lock.json, aux versions épinglées, dans .claude/skills/
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+const { skills } = JSON.parse(readFileSync('skills-lock.json', 'utf8'));
+const groups = new Map();
+for (const [name, { source, ref }] of Object.entries(skills)) {
+  if (!ref) throw new Error(`${name} : pas de ref dans skills-lock.json, épingler un commit`);
+  const key = `${source}#${ref}`;
+  groups.set(key, [...(groups.get(key) ?? []), name]);
+}
+for (const [source, names] of groups) {
+  const args = ['-y', 'skills', 'add', source, '--skill', ...names, '-a', 'claude-code', '-y', '--copy'];
+  execFileSync('npx', args, { stdio: 'inherit' });
+}
+```
+
+Le lancer avant toute commande qui appelle un script de skill (par exemple en tête de `npm run specs:build`), et ignorer `.claude/skills/` et `.agents/` dans git. Pour ne pas recloner à chaque appel, noter l'empreinte (`computedHash`) des skills installés et ne réinstaller que lorsqu'elle diffère du lock.
 
 ## 📦 Skills disponibles
 
