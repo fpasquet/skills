@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.2.1 · 15 oct. 2026
+
+- `prepare-publish.mjs` s'arrête avec un message clair quand le site n'est pas construit (pas d'`index.html`), au lieu d'une erreur de fichier introuvable. `--confirm` aurait aussi remplacé `.published.json` par un état vide, et perdu la trace des pages publiées.
+
 ## 3.2.0 · 14 oct. 2026
 
 - **Points ouverts à quatre colonnes** : question, réponse recommandée, qui tranche, écrans. Gabarit et consigne de rédaction mis à jour ; plus de colonne de numéro. Le cahier des charges (requirements-doc 2.1.0) reprend la recommandation.

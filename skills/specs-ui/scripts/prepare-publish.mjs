@@ -44,6 +44,11 @@ if (statSync(input).isDirectory()) {
   const hash = (path) => createHash('sha1').update(readFileSync(join(siteDir, path))).digest('hex');
   const statePath = join(siteDir, '.published.json');
   const published = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : {};
+  // Site non construit (clone neuf quand le site n'est pas versionné) : --confirm effacerait l'état publié
+  if (!pages.includes('index.html')) {
+    console.error(`${input}: site not built (no index.html). Run build.mjs first.`);
+    process.exit(2);
+  }
 
   if (second === '--confirm') {
     writeFileSync(statePath, JSON.stringify(Object.fromEntries(pages.map((p) => [p, hash(p)])), null, 2) + '\n');

@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.2.0"
+  version: "3.2.1"
 ---
 
 # Specs UI maquettées en Tailwind
