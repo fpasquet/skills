@@ -13,7 +13,7 @@ Skill pour agents IA (Claude Code…) qui produit des **spécifications UI maque
 5. **Itère** sur les retours, sans toucher aux écrans déjà validés.
 6. **Publie** le site comme un seul artifact claude.ai multi-pages ; une mise à jour ne republie que les pages modifiées.
 7. **Prépare la suite**, en option : Design System pour Claude Design, prototype cliquable (skill `prototype-ui`), cahier des charges (skill `requirements-doc`).
-8. **Suit l'implémentation** : les specs vivent dans le dépôt de l'application (`specs/ui/`, site HTML commité), chaque écran porte son statut (À développer, En cours, Livré, Écart), et un écart constaté pendant le développement se reporte dans les specs, puis dans le prototype et le cahier des charges.
+8. **Suit l'implémentation** : les specs vivent dans le dépôt de l'application (`specs/ui/`, sources versionnées, site HTML reconstruit à la demande), chaque écran porte son statut (À développer, En cours, Livré, Écart), et un écart constaté pendant le développement se reporte dans les specs, puis dans le prototype et le cahier des charges.
 
 La mémoire du projet, `specs/ui/CONTEXTE.md`, permet de reprendre le travail sans relire les specs : les agents lisent et modifient de petits fichiers plutôt que des documents de 300 Ko.
 

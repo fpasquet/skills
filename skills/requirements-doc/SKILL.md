@@ -13,7 +13,7 @@ description: >
   lots, même sans prononcer le mot « cahier des charges ».
 metadata:
   author: fpasquet
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # Cahier des charges à partir des specs
@@ -125,7 +125,7 @@ Relancer `extract.mjs specs/requirements` (la partie fonctionnelle suit seule), 
 
 ## Maintenir pendant les développements
 
-Le cahier des charges vit dans le dépôt de l'application (`specs/requirements/`), avec ses sources, le document construit (`.md`, `.html`) et `.published.json`. Il suit les specs, qui suivent l'implémentation (skill `specs-ui`, étape 7).
+Le cahier des charges vit dans le dépôt de l'application (`specs/requirements/`), avec ses sources, le Markdown construit (`requirements.md`, `sources/generated/`, que l'équipe et les agents lisent sans rien construire) et `.published.json`. La page HTML (`requirements.html`) se reconstruit et reste hors du dépôt, comme `publish/` : l'ajouter au `.gitignore` du projet. Il suit les specs, qui suivent l'implémentation (skill `specs-ui`, étape 7).
 
 **Identifiants stables.** Le code et les tests citent les identifiants **CA-…**, **RF-…** et **NF-…** : un identifiant ne change jamais de sens et n'est jamais réutilisé.
 
@@ -141,4 +141,4 @@ node <skill>/scripts/trace.mjs specs/requirements [--code apps,packages] [--writ
 
 `trace.mjs` donne, par lot, les critères **testés**, seulement **référencés** dans le code, ou **non couverts**. Il signale les identifiants cités dans le code mais définis nulle part (critère retiré, faute de frappe) et les écrans « Livré » dans les specs dont des critères ne sont pas testés. Les dossiers à analyser se règlent dans `requirements.json` → `code` (par défaut, tout le dépôt sauf `specs/`). `--write` produit `sources/generated/couverture.md`, à inclure dans une annexe (`<!-- include: generated/couverture.md -->`) quand on veut publier l'avancement ; `--strict` sert à la CI.
 
-**À chaque évolution** : réextraire, mettre à jour les critères touchés, `build`, `check`, `trace`, monter la version dans `00-titre.md`, publier, et commiter avec les specs dans le même changement.
+**À chaque évolution** : réextraire, mettre à jour les critères touchés, `build`, `check`, `trace`, monter la version dans `00-titre.md`, publier, et commiter les sources, le Markdown construit et `.published.json` avec les specs, dans le même changement.

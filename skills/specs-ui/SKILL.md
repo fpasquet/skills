@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.2.1"
+  version: "3.3.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -90,7 +90,7 @@ specs/ui/
 
 Les captures de vérification vont dans un dossier temporaire (le scratchpad de la session s'il existe), jamais dans le projet.
 
-**Dans un dépôt git**, on commite les sources **et** le site construit (le build est déterministe : une page ne change que si son contenu change), ainsi que `site/.published.json` : toute l'équipe lit les specs en HTML sans rien construire, et sait ce qui est publié. Les captures et les dossiers de publication restent hors du dépôt.
+**Dans un dépôt git**, on commite les sources et `site/.published.json`, qui dit ce qui est publié, mais **pas le site construit** : le build est déterministe et prend quelques secondes, et l'équipe lit les specs dans l'artifact publié. Dans le `.gitignore` du projet : `specs/ui/site/*`, puis `!specs/ui/site/.published.json`. Sur un clone neuf, lancer `build.mjs` avant `prepare-publish.mjs`. Ne versionner le site que si l'équipe doit lire le HTML sans rien construire ni ouvrir l'artifact. Les captures et les dossiers de publication restent hors du dépôt.
 
 ## Ressources du skill
 
@@ -278,7 +278,7 @@ Puis, dans l'ordre :
 - reporter l'écart dans le prototype s'il câble l'écran (skill `prototype-ui`, « Suivre les specs ») ;
 - réextraire le cahier des charges et ajuster les critères touchés (skill `requirements-doc`, « Maintenir ») ;
 - publier les artifacts concernés (`prepare-publish.mjs … --check` dit lesquels sont en retard) ;
-- commiter sources, sites et `.published.json` ensemble.
+- commiter les sources et les `.published.json` ensemble (et les sites construits, s'ils sont versionnés).
 
 **Numérotation stable.** Une règle fonctionnelle garde son numéro : une nouvelle règle va à la fin de la liste, une règle abandonnée reste avec la mention « Retirée ». Un écran ou un état retiré garde son identifiant réservé. Les identifiants RF du cahier des charges viennent de ces numéros.
 

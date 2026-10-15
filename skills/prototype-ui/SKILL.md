@@ -10,7 +10,7 @@ description: >
   sans prononcer le mot « prototype ».
 metadata:
   author: fpasquet
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # Prototype UI à partir des specs
@@ -137,7 +137,7 @@ Publier avec l'outil Artifact :
 
 Puis lancer `prepare-publish.mjs specs/prototype --confirm` et noter l'URL dans `PROTOTYPE.md` et dans `prototype.json` → `artifact`. Chaque visiteur a ses propres données, gardées dans son navigateur. `prepare-publish.mjs specs/prototype --check` dit, sans rien préparer, si l'artifact est en retard sur le site local.
 
-Dans un dépôt git, commiter `src/`, `fiches/`, `PROTOTYPE.md`, le site construit, `site/.published.json` et `src/specs-sync.json` ; `node_modules/`, `.check/` et `.build-tmp/` restent hors du dépôt.
+Dans un dépôt git, commiter `src/`, `fiches/`, `PROTOTYPE.md`, `site/.published.json` et `src/specs-sync.json`. Le site construit se reconstruit avec `build.mjs` et reste hors du dépôt, avec `node_modules/`, `.check/` et `.build-tmp/` : le `.gitignore` créé par `scaffold.mjs` ignore `site/*` sauf `site/.published.json`. Un projet plus ancien ajoute ces deux lignes à son `.gitignore`.
 
 ## Suivre les specs
 
@@ -150,4 +150,4 @@ Quand l'application se construit, le prototype garde son rôle de **support de t
 - **Pages câblées** : à chaque évolution des specs qui les touche (`drift.mjs`), reporter le changement comme ci-dessus, dans le même changement que les specs quand c'est possible.
 - **Pages non câblées** : les régénérer (`scaffold.mjs --pages eN --force`), puis `--mark`.
 - **Parcours dépassé** : quand l'application livrée couvre un parcours (statut « Livré » dans les specs), les tests utilisateurs se font sur l'application. Noter le parcours « figé » dans `PROTOTYPE.md` plutôt que de continuer à le maintenir.
-- Reconstruire, contrôler, republier les fichiers modifiés, et commiter avec les specs.
+- Reconstruire, contrôler, republier les fichiers modifiés, et commiter les sources et `site/.published.json` avec les specs.

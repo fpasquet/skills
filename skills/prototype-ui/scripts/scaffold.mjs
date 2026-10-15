@@ -205,7 +205,7 @@ writeIfMissing(
   JSON.stringify({ name: `${slug}-prototype`, private: true, description: 'Outils du build du prototype : Tailwind compilé, Alpine.js et Lucide servis localement (npm install une fois)', devDependencies: { '@tailwindcss/cli': '4.1.13', tailwindcss: '4.1.13', alpinejs: '3.14.1', lucide: '0.469.0' } }, null, 2) + '\n',
   'package.json (npm install once: Tailwind compiled, Alpine and Lucide served locally)',
 );
-writeIfMissing(join(outDir, '.gitignore'), 'node_modules/\n.check/\n.build-tmp/\n', '.gitignore');
+writeIfMissing(join(outDir, '.gitignore'), 'node_modules/\n.check/\n.build-tmp/\n# Site construit par build.mjs ; on garde ce qui est publié\nsite/*\n!site/.published.json\n', '.gitignore');
 writeIfMissing(join(outDir, 'PROTOTYPE.md'), read(join(skillDir, 'templates', 'prototype.md')).replaceAll('{{Produit}}', site.title ?? 'Produit'), 'PROTOTYPE.md (prototype memory)');
 
 console.log(`Scaffolded ${outDir}:`);

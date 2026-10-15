@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.2.0 · 15/10/2026
+
+- **Page HTML hors du dépôt par défaut** : on versionne les sources, le Markdown construit (`requirements.md`, `sources/generated/`) et `.published.json`, plus `requirements.html`, qui se reconstruit et se lit dans l'artifact publié.
+
 ## 2.1.0 · 14/10/2026
 
 - **`extract.mjs`** lit les colonnes des points ouverts par leur en-tête (Question, Recommandé, À trancher par, Écrans ; une colonne « # » est ignorée) au lieu de prendre les trois premières cellules : un tableau avec une colonne de plus décalait toutes les valeurs. `generated/points-ouverts.md` gagne la colonne « Recommandé ». Sans en-tête, l'ancien ordre est gardé.

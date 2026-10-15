@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.3.0 · 15 oct. 2026
+
+- **Site construit hors du dépôt par défaut** : on versionne les sources et `site/.published.json`, plus le HTML construit. Il se reconstruit en quelques secondes et se lit dans l'artifact publié ; le `.gitignore` du projet garde `.published.json` (`specs/ui/site/*` puis `!specs/ui/site/.published.json`). Versionner le site reste possible quand l'équipe doit le lire sans rien construire.
+
 ## 3.2.1 · 15 oct. 2026
 
 - `prepare-publish.mjs` s'arrête avec un message clair quand le site n'est pas construit (pas d'`index.html`), au lieu d'une erreur de fichier introuvable. `--confirm` aurait aussi remplacé `.published.json` par un état vide, et perdu la trace des pages publiées.

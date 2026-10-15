@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.3.0 · 15/10/2026
+
+- **Site construit hors du dépôt par défaut** : on versionne les sources, les fiches et `site/.published.json`, plus le site construit, qui se reconstruit avec `build.mjs`. Le `.gitignore` créé par `scaffold.mjs` ignore `site/*` sauf `site/.published.json` ; un projet existant ajoute ces deux lignes.
+
 ## 2.2.0 · 14/10/2026
 
 - `scaffold.mjs` réécrit les liens des maquettes vers un écran ou un état (`#e19c`, `projets.html#e6d`) en liens vers la page du prototype qui le montre (`e19.html?state=e19c`, `e6.html?state=e6d`), dans les pages comme dans `shells.html`. Ces liens menaient à des pages des specs absentes du prototype, et `check.mjs` les signalait.

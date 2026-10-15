@@ -34,9 +34,9 @@ Une installation en portée projet écrit un `skills-lock.json` à la racine du 
 
 | Skill                                                      | Version | Description                                                                                     |
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| [`specs-ui`](skills/specs-ui/README.md)                     | 3.2.1   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
-| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.2.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
-| [`requirements-doc`](skills/requirements-doc/README.md) | 2.1.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
+| [`specs-ui`](skills/specs-ui/README.md)                     | 3.3.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
+| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.3.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
+| [`requirements-doc`](skills/requirements-doc/README.md) | 2.2.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
 
 Chaque skill publie son résultat comme un artifact claude.ai partageable, et garde une copie locale.
 
@@ -66,9 +66,19 @@ mon-projet/
 
 Les trois livrables vivent dans le dépôt de l'application et suivent l'implémentation :
 
-- **sources et HTML commités** : les builds sont déterministes, le HTML ne change que si son contenu change, et toute l'équipe lit les specs sans rien construire ;
+- **sources commitées, HTML reconstruit** : les builds sont déterministes et prennent quelques secondes ; on versionne les sources, le Markdown du cahier des charges et les `.published.json`, et on lit le HTML dans les artifacts publiés. Le `.gitignore` du projet :
+
+  ```gitignore
+  specs/ui/site/*
+  !specs/ui/site/.published.json
+  specs/prototype/site/*
+  !specs/prototype/site/.published.json
+  specs/requirements/requirements.html
+  specs/requirements/publish/
+  ```
+
 - **statut par écran** dans les specs (À développer, En cours, Livré, Écart), repris dans le cahier des charges ;
-- **fraîcheur** : rebuild puis `git diff` pour le HTML, `prepare-publish.mjs --check` pour les artifacts, `drift.mjs` pour le prototype ;
+- **fraîcheur** : rebuild puis `git diff` pour le Markdown du cahier des charges, `prepare-publish.mjs --check` pour les artifacts, `drift.mjs` pour le prototype ;
 - **traçabilité** : les tests citent les critères d'acceptation (`CA-CONN-27`), et `trace.mjs` donne la couverture par lot ;
 - **un écart** se reporte dans les specs, puis dans le prototype et le cahier des charges, dans le même changement que le code.
 
