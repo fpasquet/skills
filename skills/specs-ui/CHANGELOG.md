@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.1 · 16 oct. 2026
+
+- **Lot sans écran** : un lot fait seulement de sections (revue des points ouverts, décisions à prendre) n'affiche plus de liste « Écrans du lot » vide ; sur l'accueil du site, sa carte montre `lot.json` → `"summary"` à la place de la liste des écrans.
+
 ## 3.5.0 · 16 oct. 2026
 
 - **Images du produit dans les maquettes** : les sources citent une image par `assets/<chemin>`. Le dossier vient de `sources/site.json` → `"assets"` (par exemple le dossier public de l'application, pour reprendre ses vraies images sans les copier) ou, par défaut, `specs/ui/assets/`. `build.mjs` réécrit le chemin selon la page, copie dans `site/assets/` les seules images citées, retire celles qui ne le sont plus et signale celles qui manquent ; `prepare-publish.mjs` publie les images modifiées avec les pages. Consignes dans `SKILL.md` (« Images du produit ») et `tailwind.md` §7.
