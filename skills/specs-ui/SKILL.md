@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.3.0"
+  version: "3.4.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -203,7 +203,7 @@ node <skill>/scripts/prepare-publish.mjs specs/ui/site <tmp>/publish    # page p
 - Après une publication réussie : `prepare-publish.mjs specs/ui/site --confirm`. Noter l'URL dans `sources/site.json` (`artifact`) et dans `CONTEXTE.md`.
 - Respecter les règles de l'outil Artifact pour la publication ; titre de deux à quatre mots.
 
-Terminer par le chemin, le lien, un résumé court et les décisions attendues. Mettre `CONTEXTE.md` à jour.
+Terminer par le chemin, le lien, un résumé court et les décisions attendues, et rappeler comment faire des retours : bouton « Retours » sur chaque page, puis coller l'export (voir « Retours de relecture » à l'étape 5). Mettre `CONTEXTE.md` à jour.
 
 ## Étape 5 · Itérer
 
@@ -219,6 +219,20 @@ Selon le type de changement :
 - **coquille** : se fait dans `shells.html`, puis reconstruire (c'est une maintenance, pas une itération) ;
 - **disposition d'un écran qui fait débat** : maquetter des variantes `E5-A` / `E5-B` côte à côte ;
 - **évolution transverse** : analyse d'impact, décisions, inventaire révisé dans `CONTEXTE.md` et les propositions, puis production en commençant par le lot qui la porte.
+
+### Retours de relecture
+
+Chaque page du site porte un bouton **« Retours »** (habillage du document, absent des captures et de l'impression). La personne qui relit passe en mode « Annoter », clique sur l'endroit d'une maquette ou d'un texte (règle, annotation, point ouvert) et écrit une **correction à faire** ou une **question**. Chaque retour est repéré à l'endroit cliqué (R1, R2…), gardé dans son navigateur seulement, puis exporté en Markdown et collé dans la conversation : « Copier l'export », « Afficher l'export » (grande fenêtre de lecture, avec copie et sélection du texte quand le presse-papiers est refusé) et, hors artifact, « Télécharger » (une page publiée dans un artifact ne peut pas déclencher de téléchargement). L'export regroupe les retours par état d'écran et cite pour chacun le fichier source (`sources/<lot>/NNN-<id>.html`, inscrit par `build.mjs` dans chaque section), le cadre (`e4c-desktop`), la position dans le cadre et le texte visé.
+
+Pour traiter un export :
+
+1. **Ne lire que l'export**, puis les seuls fichiers sources qu'il cite. Repérer l'élément par le texte cité, le cadre et la position (en % de la largeur et de la hauteur du cadre) ; jamais de relecture des pages construites.
+2. **Correction** claire et compatible avec les règles et décisions : l'appliquer dans la source. Correction ambiguë, qui contredit une règle, une décision de `CONTEXTE.md` ou un autre écran : la poser à la personne (outil de questions, choix fermés) plutôt que d'improviser.
+3. **Question** : y répondre dans la conversation ; si elle appelle une décision, l'ajouter aux points ouverts du lot (et à `CONTEXTE.md`) avec une recommandation.
+4. Une itération par série de retours : journal du lot qui cite les retours traités (« R1, R3 : … »), reconstruire, capturer les écrans touchés (`--ids`), republier les pages modifiées.
+5. **Répondre par un tableau** `Retour | Suite donnée | Écran` (corrigé, question posée, point ouvert, non retenu et pourquoi). La personne marque ensuite les retours « traités » dans le panneau, ou les efface.
+
+Les retours restent dans le navigateur de chaque personne : plusieurs relecteurs exportent chacun les leurs (le nom saisi les signe). Un retour sur un écran déjà livré (statut d'implémentation) suit la boucle de l'étape 7 : il change aussi le code, ou devient un écart.
 
 ## Option · Design System Claude Design
 

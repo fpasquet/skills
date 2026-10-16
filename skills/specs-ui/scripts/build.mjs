@@ -88,14 +88,19 @@ function progress(pages) {
   return Object.entries(counts).filter(([, n]) => n).map(([k, n]) => `${statusDot(STATUSES[k])} ${n} ${STATUSES[k].label.toLowerCase()}`).join(' · ');
 }
 
+// Ajoute data-source="<lot>/<fichier>" à la première balise <section> ou <header> d'une source
+const withSource = (html, source) => html.replace(/<(section|header)\b(?![^>]*\bdata-source=)/, `<$1 data-source="${source}"`);
+
 // ---------- Lecture des lots ----------
 const lots = site.lots.map((name) => {
   const dir = join(root, 'sources', name);
   const lot = { name, ...JSON.parse(read(join(dir, 'lot.json'), '{}')) };
   const files = readdirSync(dir).filter((f) => /^\d+-.*\.html$/.test(f)).sort((a, b) => parseInt(a, 10) - parseInt(b, 10) || a.localeCompare(b));
-  lot.header = read(join(dir, files.find((f) => /^0+-/.test(f)) ?? '__none__')).trim();
+  const headerFile = files.find((f) => /^0+-/.test(f));
+  lot.header = headerFile ? withSource(read(join(dir, headerFile)).trim(), `${name}/${headerFile}`) : '';
   lot.sections = files.filter((f) => !/^0+-/.test(f)).map((f) => {
-    const html = read(join(dir, f)).trim();
+    // La source de chaque section est inscrite dans la page (data-source) : un retour de relecture la cite.
+    const html = withSource(read(join(dir, f)).trim(), `${name}/${f}`);
     const id = html.match(/^<section\b[^>]*\bid="([^"]+)"/)?.[1] ?? f.replace(/^\d+-|\.html$/g, '');
     const screen = id.match(/^e(\d+)/i)?.[0].toLowerCase() ?? null;
     return { file: f, id, screen, html };
@@ -190,6 +195,7 @@ function renderPage({ title, fonts, lotStyle = '', templates = [], body }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="specs-ui-template" content="${version}">
+<meta name="specs-ui-site" content="${(site.title ?? '').replace(/"/g, '&quot;')}">
 <!-- Page construite par build.mjs (skill specs-ui) depuis les sources : modifier les sources, pas ce fichier. -->
 <title>${title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">

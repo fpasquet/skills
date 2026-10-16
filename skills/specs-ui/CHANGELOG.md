@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.0 · 16 oct. 2026
+
+- **Retours de relecture** sur les pages du site : bouton « Retours », mode « Annoter » (clic sur un point d'une maquette ou sur un texte), correction ou question, repères R1, R2… posés à l'endroit cliqué, gardés dans le navigateur. Les effacements se confirment par un second clic sur le bouton, car un artifact n'affiche pas les fenêtres de confirmation du navigateur. Export Markdown (copie, lecture dans une grande fenêtre avant de copier, ou fichier hors artifact, où le téléchargement est interdit) regroupé par état d'écran, qui cite le cadre, la position, le texte visé et le fichier source ; l'étape 5 dit comment l'agent le traite. Absent des captures et de l'impression.
+- `build.mjs` inscrit la source de chaque section (`data-source="<lot>/<fichier>"`) et le nom du site (`meta specs-ui-site`) dans les pages.
+- Template des specs en 3.1.0 : toutes les pages changent à la prochaine construction, une seule fois (republier avec `prepare-publish.mjs`, qui les liste). `capture.mjs` lit les versions attendues dans les templates (`specs.html`, `propositions.html`) au lieu d'une constante.
+
 ## 3.3.0 · 15 oct. 2026
 
 - **Site construit hors du dépôt par défaut** : on versionne les sources et `site/.published.json`, plus le HTML construit. Il se reconstruit en quelques secondes et se lit dans l'artifact publié ; le `.gitignore` du projet garde `.published.json` (`specs/ui/site/*` puis `!specs/ui/site/.published.json`). Versionner le site reste possible quand l'équipe doit le lire sans rien construire.
