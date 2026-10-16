@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.3.1 · 16/10/2026
+
+- Les messages de confirmation (`$store.app.notify`) s'affichent : l'élément du message, ajouté hors de toute page Alpine, n'était pas initialisé et restait vide.
+
 ## 2.3.0 · 15/10/2026
 
 - **Site construit hors du dépôt par défaut** : on versionne les sources, les fiches et `site/.published.json`, plus le site construit, qui se reconstruit avec `build.mjs`. Le `.gitignore` créé par `scaffold.mjs` ignore `site/*` sauf `site/.published.json` ; un projet existant ajoute ces deux lignes.
