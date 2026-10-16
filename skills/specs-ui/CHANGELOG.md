@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.0 · 16 oct. 2026
+
+- **Images du produit dans les maquettes** : les sources citent une image par `assets/<chemin>`. Le dossier vient de `sources/site.json` → `"assets"` (par exemple le dossier public de l'application, pour reprendre ses vraies images sans les copier) ou, par défaut, `specs/ui/assets/`. `build.mjs` réécrit le chemin selon la page, copie dans `site/assets/` les seules images citées, retire celles qui ne le sont plus et signale celles qui manquent ; `prepare-publish.mjs` publie les images modifiées avec les pages. Consignes dans `SKILL.md` (« Images du produit ») et `tailwind.md` §7.
+
 ## 3.4.0 · 16 oct. 2026
 
 - **Retours de relecture** sur les pages du site : bouton « Retours », mode « Annoter » (clic sur un point d'une maquette ou sur un texte), correction ou question, repères R1, R2… posés à l'endroit cliqué, gardés dans le navigateur. Les effacements se confirment par un second clic sur le bouton, car un artifact n'affiche pas les fenêtres de confirmation du navigateur. Export Markdown (copie, lecture dans une grande fenêtre avant de copier, ou fichier hors artifact, où le téléchargement est interdit) regroupé par état d'écran, qui cite le cadre, la position, le texte visé et le fichier source ; l'étape 5 dit comment l'agent le traite. Absent des captures et de l'impression.

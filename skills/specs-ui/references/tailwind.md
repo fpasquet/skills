@@ -10,7 +10,7 @@ Les maquettes sont écrites en Tailwind CSS v4, chargé dans le navigateur. Le b
 4. Blocs réutilisables (`data-use`)
 5. Annotations et action suivante
 6. Catalogue de composants
-7. Icônes
+7. Icônes et images
 8. Pièges connus
 
 ## 1. Chargement
@@ -272,7 +272,7 @@ Marquer `data-menu` les menus déroulants ouverts, pour qu'ils disparaissent qua
 <!-- Erreur : bandeau rounded-control border border-danger/30 bg-danger-soft px-4 py-3 text-danger + action « Réessayer » -->
 ```
 
-## 7. Icônes
+## 7. Icônes et images
 
 Lucide, aussi disponible pour le code (`lucide-react`, `lucide-vue-next`…) :
 
@@ -281,6 +281,19 @@ Lucide, aussi disponible pour le code (`lucide-react`, `lucide-vue-next`…) :
 ```
 
 Le script final appelle `lucide.createIcons()`. Noms au format kebab-case du site lucide.dev (`circle-alert`, `chart-column`, `ellipsis-vertical`…). Un nom inconnu n'affiche rien : `scripts/capture.mjs` liste les icônes non rendues, inutile de fouiller la bibliothèque. Si le produit a sa propre bibliothèque d'icônes, garder Lucide pour la maquette et noter l'équivalence dans les points ouverts.
+
+**Images du produit** (logo, mascotte, illustration, insigne, avatar de démonstration) : la maquette montre la vraie image, à la taille, la forme et la place que l'interface lui donne, avec les classes du futur code. Les sources la citent par `assets/<chemin>`, quelle que soit la profondeur de la page ; `build.mjs` réécrit le chemin et copie l'image dans le site (`SKILL.md`, « Images du produit ») :
+
+```html
+<span class="block size-20 overflow-hidden rounded-full ring-2 ring-primary/70">
+  <img src="assets/teams/mascot.webp" alt="" class="size-full object-cover">
+</span>
+```
+
+- `alt=""` quand le nom est écrit à côté (décor) ; un texte alternatif seulement si l'image dit quelque chose que rien d'autre ne dit, et l'annoter.
+- Le repli d'un élément sans image (initiales, cercle de l'accent) se maquette dans un état à part, s'il existe dans le produit.
+- Sans image disponible, un bloc de la bonne taille marqué « Illustration » plutôt qu'une forme qui imite le contenu, et un point ouvert pour l'obtenir.
+- Une image lourde (plus de 300 Ko) se réduit avant d'être citée : chaque image citée est publiée avec l'artifact.
 
 ## 8. Pièges connus
 
