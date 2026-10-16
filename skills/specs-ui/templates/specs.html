@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="specs-ui-template" content="3.0.0">
+<meta name="specs-ui-template" content="3.1.0">
 <!-- artifact : (URL claude.ai à reporter ici après la première publication) -->
 <title>Orbe · Specs UI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -84,6 +84,28 @@
     .anno { @apply pointer-events-none absolute z-30 grid size-6 place-items-center rounded-full bg-anno font-doc text-xs font-semibold text-anno-ink shadow-[0_0_0_3px_rgb(252_211_77_/_0.35)]; }
     /* Met en évidence l'action suivante du parcours */
     .next-step { @apply ring-4 ring-anno ring-offset-1; }
+
+    /* Retours de relecture (bouton « Retours », panneau, fenêtre de saisie, repères R1, R2…) : habillage, hors produit */
+    .retours-ui { @apply font-doc text-sm text-doc-fg; }
+    .retours-toggle { @apply fixed right-4 bottom-4 z-[60] inline-flex h-10 items-center gap-2 rounded-full border border-doc-line bg-doc-card px-4 font-medium shadow-lg hover:border-doc-accent; }
+    .retours-toggle[aria-pressed="true"] { @apply border-doc-accent bg-doc-accent text-doc-bg; }
+    .retours-panel { @apply fixed right-4 bottom-16 z-[60] flex max-h-[70vh] w-[min(24rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto rounded-xl border border-doc-line bg-doc-card p-4 shadow-xl; }
+    .retours-popover { @apply fixed z-[70] flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2.5 rounded-xl border border-doc-accent bg-doc-card p-3.5 shadow-xl; }
+    .retours-field { @apply w-full rounded-lg border border-doc-line bg-doc-bg px-2.5 py-1.5 text-sm text-doc-fg focus:border-doc-accent focus:outline-none; }
+    .retours-btn { @apply inline-flex h-8 items-center gap-1.5 rounded-lg border border-doc-line bg-doc-card px-3 text-xs font-medium hover:border-doc-accent disabled:opacity-40; }
+    .retours-btn-primary { @apply border-doc-accent bg-doc-accent text-doc-bg; }
+    .retours-link { @apply text-xs text-doc-muted underline underline-offset-2 hover:text-doc-accent; }
+    .retours-export { @apply fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-3 sm:p-6; }
+    .retours-export-dialog { @apply flex h-[min(88vh,56rem)] w-[min(60rem,100%)] flex-col overflow-hidden rounded-xl border border-doc-line bg-doc-card shadow-2xl; }
+    .retours-export-text { @apply min-h-0 w-full flex-1 resize-none bg-doc-bg px-5 py-4 font-mono text-[13px] leading-relaxed text-doc-fg focus:outline-none; tab-size: 2; }
+    .retours-btn[data-armed], .retours-link[data-armed] { @apply border-doc-gap font-semibold text-doc-gap; }
+    .retour-pin { @apply absolute z-40 grid h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-doc-accent px-1.5 font-doc text-[11px] font-bold text-doc-bg ring-2 ring-doc-bg; }
+    .retour-pin[data-done] { @apply opacity-45; }
+    .retour-pin[data-kind="question"] { @apply rounded-md; }
+    /* Mode annotation : tout ce qui peut recevoir un retour est désigné, le clic ne suit plus les liens */
+    html[data-retours-mode] #page [data-frame], html[data-retours-mode] #page section[id], html[data-retours-mode] #page > header { cursor: crosshair; }
+    html[data-retours-mode] #page [data-frame] { @apply outline-2 outline-offset-2 outline-dashed outline-doc-accent; }
+    @media print { .retours-ui, .retour-pin { display: none !important; } }
   }
 </style>
 </head>
@@ -507,6 +529,288 @@ if (frameName) {
   }
 }
 renderValues();
+setupRetours();
+
+/*
+ * Retours de relecture. Le bouton « Retours » ouvre un panneau ; en mode annotation, un clic sur une maquette (ou sur un
+ * texte : règle, annotation, point ouvert) ouvre une fenêtre pour demander une correction ou poser une question. Chaque
+ * retour est repéré (R1, R2…) à l'endroit cliqué, gardé dans ce navigateur seulement, puis exporté en Markdown pour
+ * l'agent qui tient les specs : l'export cite l'écran, l'état, le cadre, le texte visé et le fichier source.
+ * Absent des captures (?frame, ?only) et de l'impression.
+ */
+function setupRetours() {
+  if (params.get('frame') || params.get('only') || document.body.dataset.frameIsolated) return;
+  const site = document.querySelector('meta[name="specs-ui-site"]')?.content || document.title.split(' · ').at(-1);
+  const KEY = `specs-ui:retours:${site}`;
+  const page = location.pathname.split('/').filter(Boolean).slice(-2).join('/') || 'index.html';
+  const empty = () => ({ next: 1, author: '', items: [] });
+  let data = empty();
+  try { data = { ...empty(), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* stockage indisponible : retours de la session seulement */ }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* idem */ } render(); };
+  const esc = (text) => String(text ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const clean = (text, max = 90) => { const t = String(text ?? '').replace(/\s+/g, ' ').trim(); return t.length > max ? `${t.slice(0, max - 1)}…` : t; };
+  const open = () => data.items.filter((r) => !r.done);
+  const count = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
+  let annotating = false;
+  let popover = null;
+  let viewer = null;
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'retours-ui retours-toggle';
+  toggle.dataset.retoursUi = '';
+  const panel = document.createElement('div');
+  panel.className = 'retours-ui retours-panel';
+  panel.dataset.retoursUi = '';
+  panel.hidden = true;
+  document.body.append(panel, toggle);
+  // Pendant l'annotation, le bouton l'arrête et rouvre le panneau (pour exporter) ; sinon il ouvre ou ferme le panneau
+  toggle.addEventListener('click', () => { if (annotating) { annotating = false; panel.hidden = false; } else panel.hidden = !panel.hidden; render(); });
+
+  // Ce que vise un clic : le cadre de maquette, sinon la section (règles, annotations, points ouverts) ou l'en-tête
+  const anchorOf = (el) => el.closest('[data-frame]') || el.closest('#page section[id]') || el.closest('#page > header');
+  const sectionOf = (el) => el.closest('section[id]');
+  // Titre de l'état : le texte du <h2>, sans l'identifiant ni le badge de statut (des <span>)
+  const stateTitle = (section) => clean([...(section?.querySelector('h2')?.childNodes ?? [])].filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' '), 70);
+  // Écran ou état : « E4c » ; autre section (règles, points ouverts, liste des écrans…) : son titre
+  const label = (id) => (/^e\d/i.test(id ?? '') ? id.replace(/^e/, 'E') : clean(document.getElementById(id ?? '')?.querySelector('h2')?.textContent, 40) || id || '');
+  // Page publiée dans un cadre (artifact) : le téléchargement y est souvent interdit, l'export s'affiche à la place
+  const framed = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  const describe = (target) => {
+    // L'élément cliqué s'il porte un texte court (un libellé, un bouton), sinon le bloc de texte qui le contient
+    const own = clean(target.innerText || target.textContent, 200);
+    const block = own && own.length <= 80 ? target : target.closest('li, tr, h1, h2, h3, h4, p, button, a, label, td, th') || target;
+    const number = target.closest('li')?.querySelector(':scope > b')?.textContent.trim();
+    return { text: clean(block.innerText || block.textContent), annotation: /^\d+$/.test(number ?? '') ? number : null };
+  };
+  const selectorOf = (r) => (r.frame ? `[data-frame="${CSS.escape(r.frame)}"]` : r.section ? `#${CSS.escape(r.section)}` : '#page > header');
+  const whereOf = (r) => [
+    r.frame ? `maquette ${r.frame.endsWith('-mobile') ? 'mobile' : r.frame.endsWith('-desktop') ? 'desktop' : ''} (\`${r.frame}\`), vers ${Math.round(r.x)} % × ${Math.round(r.y)} %` : r.annotation ? `annotation ${r.annotation}` : r.section ? `section « ${label(r.section)} »` : 'en-tête',
+    r.text ? `sur « ${r.text} »` : '',
+  ].filter(Boolean).join(', ');
+
+  document.addEventListener('click', (event) => {
+    // La navigation du document est exclue, pas celle dessinée dans une maquette
+    if (!annotating || event.target.closest('[data-retours-ui], .retour-pin') || (event.target.closest('nav') && !event.target.closest('[data-frame]'))) return;
+    const anchor = anchorOf(event.target);
+    if (!anchor) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const box = anchor.getBoundingClientRect();
+    const section = sectionOf(anchor) || sectionOf(event.target);
+    const head = anchor.closest('[data-source]') || section;
+    edit({
+      page, section: section?.id ?? null, state: /^e\d/i.test(section?.id ?? '') ? stateTitle(section) : '', source: head?.dataset.source ?? null,
+      frame: anchor.dataset.frame ?? null, x: ((event.clientX - box.left) / box.width) * 100, y: ((event.clientY - box.top) / box.height) * 100,
+      kind: 'correction', ...describe(event.target),
+    }, event.clientX, event.clientY);
+  }, true);
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (viewer) closeExport(); else if (popover) closePopover(); else if (annotating) { annotating = false; render(); }
+  });
+
+  function closePopover() { popover?.remove(); popover = null; }
+  // confirm() ne s'affiche pas dans un cadre isolé (artifact) : une action destructrice se confirme par un second clic
+  function armed(button, label) {
+    if (button.hasAttribute('data-armed')) return true;
+    const text = button.textContent;
+    button.dataset.armed = '';
+    button.textContent = label;
+    setTimeout(() => { if (button.isConnected) { delete button.dataset.armed; button.textContent = text; } }, 4000);
+    return false;
+  }
+  function edit(r, x, y) {
+    closePopover();
+    const isNew = !r.id;
+    popover = document.createElement('div');
+    popover.className = 'retours-ui retours-popover';
+    popover.dataset.retoursUi = '';
+    popover.innerHTML = `
+      <p class="font-semibold">${isNew ? 'Nouveau retour' : `Retour ${esc(r.id)}`}<span class="font-normal text-doc-muted"> · ${esc(label(r.section))} ${esc(r.state)}</span></p>
+      <p class="text-xs text-doc-muted">${esc(whereOf(r))}</p>
+      <div class="flex gap-3 text-xs"><label class="flex items-center gap-1.5"><input type="radio" name="retour-kind" value="correction"${r.kind !== 'question' ? ' checked' : ''}>Correction à faire</label><label class="flex items-center gap-1.5"><input type="radio" name="retour-kind" value="question"${r.kind === 'question' ? ' checked' : ''}>Question</label></div>
+      <textarea rows="4" class="retours-field resize-y" placeholder="Ce qu’il faut changer, et pourquoi…">${esc(r.body)}</textarea>
+      <input class="retours-field" placeholder="Votre nom (facultatif)" value="${esc(r.author ?? data.author)}">
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" class="retours-btn retours-btn-primary" data-act="save">Enregistrer</button>
+        <button type="button" class="retours-btn" data-act="cancel">Annuler</button>
+        ${isNew ? '' : `<button type="button" class="retours-link ml-auto" data-act="done">${r.done ? 'Rouvrir' : 'Marquer traité'}</button><button type="button" class="retours-link" data-act="delete">Supprimer</button>`}
+      </div>`;
+    document.body.append(popover);
+    const left = Math.min(Math.max(8, x + 12), innerWidth - popover.offsetWidth - 8);
+    const top = Math.min(Math.max(8, y + 12), innerHeight - popover.offsetHeight - 8);
+    Object.assign(popover.style, { left: `${left}px`, top: `${top}px` });
+    const [textarea, author] = popover.querySelectorAll('textarea, input.retours-field');
+    textarea.focus();
+    const commit = () => {
+      const body = textarea.value.trim();
+      if (!body) return textarea.focus();
+      data.author = author.value.trim();
+      const values = { body, author: data.author, kind: popover.querySelector('input[name="retour-kind"]:checked').value };
+      if (isNew) data.items.push({ ...r, ...values, id: `R${data.next++}`, at: new Date().toISOString() });
+      else Object.assign(data.items.find((i) => i.id === r.id), values);
+      closePopover();
+      save();
+    };
+    textarea.addEventListener('keydown', (event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) commit(); });
+    popover.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-act]');
+      const act = button?.dataset.act;
+      if (act === 'save') commit();
+      if (act === 'cancel') closePopover();
+      if (act === 'done') { const item = data.items.find((i) => i.id === r.id); item.done = !item.done; closePopover(); save(); }
+      if (act === 'delete' && armed(button, `Confirmer la suppression de ${r.id}`)) { data.items = data.items.filter((i) => i.id !== r.id); closePopover(); save(); }
+    });
+  }
+
+  // Export Markdown, regroupé par fichier source puis par état : c'est ce que l'agent lit pour corriger les sources
+  function exportText() {
+    const items = open();
+    const now = new Date();
+    const lines = [`# Retours sur les specs · ${site}`, '', `Exportés le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} : ${count(items.length, 'retour')} à traiter (${count(items.filter((r) => r.kind !== 'question').length, 'correction')}, ${count(items.filter((r) => r.kind === 'question').length, 'question')}).`];
+    const groups = new Map();
+    for (const r of items) {
+      const key = `${r.source ?? r.page}|${r.section ?? ''}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    }
+    for (const list of groups.values()) {
+      const r = list[0];
+      lines.push('', `## ${[label(r.section), r.state].filter(Boolean).join(' · ') || 'En-tête du lot'}`, '', `Source : \`${r.source ? `sources/${r.source}` : '?'}\` · page \`${r.page}\``);
+      for (const item of list) {
+        lines.push('', `- **${item.id} · ${item.kind === 'question' ? 'Question' : 'Correction'}** · ${whereOf(item)}${item.author ? ` · ${item.author}` : ''}`);
+        item.body.split('\n').forEach((line) => lines.push(`  > ${line}`));
+      }
+    }
+    return lines.join('\n');
+  }
+
+  // Copie de l'export : presse-papiers, sinon copie de la sélection (cadre isolé), sinon false
+  async function copyExport(area) {
+    try { await navigator.clipboard.writeText(exportText()); return true; } catch { /* refusé : copie de la sélection */ }
+    if (!area) return false;
+    area.focus();
+    area.select();
+    try { return document.execCommand('copy'); } catch { return false; }
+  }
+
+  // Export dans une grande fenêtre, pour le relire avant de le copier (ou le copier à la main si la copie est refusée)
+  function closeExport() { viewer?.remove(); viewer = null; document.documentElement.style.removeProperty('overflow'); }
+  function showExport(message = '') {
+    closeExport();
+    closePopover();
+    const items = open();
+    viewer = document.createElement('div');
+    viewer.className = 'retours-ui retours-export';
+    viewer.dataset.retoursUi = '';
+    viewer.innerHTML = `
+      <div class="retours-export-dialog" role="dialog" aria-modal="true" aria-labelledby="retours-export-title">
+        <div class="flex items-start justify-between gap-4 border-b border-doc-line px-5 py-4">
+          <div class="flex flex-col gap-1">
+            <p id="retours-export-title" class="text-base font-semibold">Export des retours</p>
+            <p class="text-xs text-doc-muted">${count(items.length, 'retour')} à traiter (${count(items.filter((r) => r.kind !== 'question').length, 'correction')}, ${count(items.filter((r) => r.kind === 'question').length, 'question')}), en Markdown : à coller dans la conversation avec l’agent qui tient les specs.</p>
+          </div>
+          <button type="button" class="retours-btn" data-act="close">Fermer</button>
+        </div>
+        <textarea readonly spellcheck="false" aria-label="Export Markdown" class="retours-export-text"></textarea>
+        <div class="flex flex-wrap items-center gap-2 border-t border-doc-line px-5 py-3">
+          <button type="button" class="retours-btn retours-btn-primary" data-act="copy">Copier l’export</button>
+          <button type="button" class="retours-btn" data-act="select">Tout sélectionner</button>
+          <p class="text-xs text-doc-muted" data-export-status aria-live="polite"></p>
+        </div>
+      </div>`;
+    const area = viewer.querySelector('textarea');
+    const status = viewer.querySelector('[data-export-status]');
+    area.value = exportText();
+    status.textContent = message;
+    viewer.addEventListener('click', async (event) => {
+      if (event.target === viewer) return closeExport();
+      const act = event.target.closest('[data-act]')?.dataset.act;
+      if (act === 'close') closeExport();
+      if (act === 'select') { area.focus(); area.select(); status.textContent = 'Texte sélectionné : copiez-le avec Ctrl+C (⌘C sur Mac).'; }
+      if (act === 'copy') status.textContent = await copyExport(area) ? 'Export copié : collez-le dans la conversation avec l’agent.' : 'Copie refusée par le navigateur : le texte est sélectionné, copiez-le avec Ctrl+C (⌘C sur Mac).';
+    });
+    document.body.append(viewer);
+    document.documentElement.style.overflow = 'hidden';
+    area.scrollTop = 0;
+    viewer.querySelector('[data-act="copy"]').focus();
+  }
+
+  function render() {
+    document.documentElement.toggleAttribute('data-retours-mode', annotating);
+    const pending = open().length;
+    toggle.setAttribute('aria-pressed', String(annotating));
+    toggle.textContent = annotating ? 'Annotation en cours · Terminer' : `Retours${pending ? ` · ${pending}` : ''}`;
+    // Repères sur la page courante
+    document.querySelectorAll('.retour-pin').forEach((pin) => pin.remove());
+    for (const r of data.items.filter((i) => i.page === page)) {
+      const anchor = document.querySelector(selectorOf(r));
+      if (!anchor) continue;
+      if (getComputedStyle(anchor).position === 'static') anchor.style.position = 'relative';
+      const pin = document.createElement('button');
+      pin.type = 'button';
+      pin.className = 'retour-pin';
+      pin.textContent = r.id;
+      pin.title = clean(r.body, 140);
+      pin.dataset.kind = r.kind;
+      if (r.done) pin.dataset.done = '';
+      Object.assign(pin.style, { left: `${r.x}%`, top: `${r.y}%` });
+      pin.addEventListener('click', (event) => { event.stopPropagation(); edit(r, event.clientX, event.clientY); });
+      anchor.append(pin);
+    }
+    if (panel.hidden) return;
+    const here = data.items.filter((i) => i.page === page);
+    panel.innerHTML = `
+      <div class="flex items-center justify-between gap-2"><p class="font-semibold">Retours sur les specs</p><button type="button" class="retours-link" data-act="close">Fermer</button></div>
+      <p class="text-xs text-doc-muted">Cliquez sur « Annoter », puis sur l’endroit d’une maquette ou d’un texte à corriger. Les retours restent dans ce navigateur : exportez-les pour les transmettre.</p>
+      <button type="button" class="retours-btn ${annotating ? '' : 'retours-btn-primary'} self-start" data-act="mode">${annotating ? 'Arrêter d’annoter' : 'Annoter'}</button>
+      <div class="flex flex-col gap-1.5">
+        <p class="text-xs font-semibold text-doc-muted">Sur cette page · ${here.length}</p>
+        ${here.length ? here.map((r) => `<button type="button" class="flex gap-2 rounded-lg border border-doc-line px-2.5 py-1.5 text-left hover:border-doc-accent${r.done ? ' opacity-50' : ''}" data-open="${esc(r.id)}"><b class="shrink-0 text-doc-accent">${esc(r.id)}</b><span class="min-w-0"><span class="block truncate">${esc(r.body)}</span><span class="block truncate text-xs text-doc-muted">${esc(label(r.section))} · ${r.kind === 'question' ? 'question' : 'correction'}${r.done ? ' · traité' : ''}</span></span></button>`).join('') : '<p class="text-xs text-doc-muted">Aucun retour sur cette page.</p>'}
+        ${here.length ? '<p class="text-xs text-doc-muted">Ouvrez un retour pour le modifier, le marquer traité ou le supprimer.</p>' : ''}
+      </div>
+      <div class="flex flex-col gap-2 border-t border-doc-line pt-3">
+        <p class="text-xs text-doc-muted">Sur tout le site : ${pending} à traiter, ${data.items.length - pending} ${data.items.length - pending > 1 ? 'traités' : 'traité'}.</p>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="retours-btn" data-act="copy"${pending ? '' : ' disabled'}>Copier l’export</button>
+          ${framed ? '' : `<button type="button" class="retours-btn" data-act="download"${pending ? '' : ' disabled'}>Télécharger (.md)</button>`}
+          <button type="button" class="retours-btn" data-act="show"${pending ? '' : ' disabled'}>Afficher l’export</button>
+        </div>
+        ${data.items.length ? `<div class="flex flex-wrap gap-3">
+          ${data.items.length - pending ? `<button type="button" class="retours-link" data-act="purge">Effacer les traités (${data.items.length - pending})</button>` : ''}
+          <button type="button" class="retours-link" data-act="clear">Tout effacer (${data.items.length})</button>
+        </div>` : ''}
+      </div>`;
+    panel.onclick = async (event) => {
+      const opened = event.target.closest('[data-open]')?.dataset.open;
+      if (opened) {
+        const r = data.items.find((i) => i.id === opened);
+        const pin = [...document.querySelectorAll('.retour-pin')].find((p) => p.textContent === opened);
+        pin?.scrollIntoView({ block: 'center' });
+        const box = (pin ?? panel).getBoundingClientRect();
+        return edit(r, box.left, box.top);
+      }
+      const button = event.target.closest('[data-act]');
+      const act = button?.dataset.act;
+      if (act === 'close') { panel.hidden = true; render(); }
+      if (act === 'mode') { annotating = !annotating; if (annotating) panel.hidden = true; render(); }
+      if (act === 'copy') {
+        if (await copyExport()) button.textContent = 'Export copié';
+        else showExport('Copie refusée par le navigateur : utilisez « Tout sélectionner », puis Ctrl+C (⌘C sur Mac).');
+      }
+      if (act === 'show') showExport();
+      if (act === 'download') {
+        const url = URL.createObjectURL(new Blob([exportText()], { type: 'text/markdown' }));
+        Object.assign(document.createElement('a'), { href: url, download: `retours-specs-${site.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md` }).click();
+        URL.revokeObjectURL(url);
+      }
+      if (act === 'purge' && armed(button, 'Confirmer : effacer les traités')) { data.items = open(); save(); }
+      if (act === 'clear' && armed(button, 'Confirmer : tout effacer')) { data = { ...empty(), author: data.author }; save(); }
+    };
+  }
+  render();
+}
 </script>
 </body>
 </html>

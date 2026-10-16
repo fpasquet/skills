@@ -22,7 +22,11 @@ import { resolve, join, relative, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const TEMPLATE_VERSION = '3.0.0'; // version des templates de ce skill (meta specs-ui-template)
+// Versions des templates de ce skill (meta specs-ui-template), lues dans les templates eux-mêmes : les pages construites
+// suivent specs.html, la page des propositions suit propositions.html.
+const templateVersion = (name) => readFileSync(new URL(`../templates/${name}`, import.meta.url), 'utf8').match(/<meta name="specs-ui-template" content="([^"]+)"/)[1];
+const TEMPLATE_VERSION = templateVersion('specs.html');
+const PROPOSITIONS_VERSION = templateVersion('propositions.html');
 
 const args = process.argv.slice(2);
 const WITH_VALUE = new Set(['--ids', '--height', '--width', '--themes', '--lot']);
@@ -91,7 +95,8 @@ for (const file of files) {
   const raw = readFileSync(file, 'utf8');
   const source = withoutCode(raw);
   const version = raw.match(/<meta name="specs-ui-template" content="([^"]+)"/)?.[1];
-  if (version !== TEMPLATE_VERSION) report.versions.add(`${label} (${version ?? 'older than 1.4.0'})`);
+  const expected = basename(file) === 'propositions.html' ? PROPOSITIONS_VERSION : TEMPLATE_VERSION;
+  if (version !== expected) report.versions.add(`${label} (${version ?? 'older than 1.4.0'})`);
 
   if (sectionsWanted) {
     const ids = [...source.matchAll(/<section\b[^>]*\bid="([^"]+)"/gi)].map((m) => m[1]).filter(matchesIds);
