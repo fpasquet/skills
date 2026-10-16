@@ -15,6 +15,8 @@
  *                                   components.html (composants communs : en-tête de projet…)
  *   ui/sources/<lot>/lot.json       { "label", "title", "fonts", "screens": { "e13": "titre court" },
  *                                   "status": { "e13": "done", "e14": { "status": "gap", "note": "…" } } }
+ *                                   Un lot sans écran (revue, décisions à prendre) n'a que des sections ; "summary"
+ *                                   le décrit sur l'accueil du site.
  *   ui/sources/<lot>/style.css      (facultatif) CSS propre au lot
  *   ui/sources/<lot>/NNN-*.html     000-header.html, une section par fichier (ordre numérique) :
  *                                   les sections eN… vont sur la page de l'écran N, les autres
@@ -252,7 +254,8 @@ const pages = new Map(); // chemin → html
 for (const lot of lots) {
   const allTemplates = [...sharedTemplates.filter((t) => !lot.templates.some((l) => l.id === t.id)), ...lot.templates];
   // Index du lot : en-tête, liste des écrans, sections hors écran
-  const screenList = `<section id="ecrans" class="mt-10 scroll-mt-16">
+  // Un lot sans écran (revue, décisions à prendre) ne montre que ses sections
+  const screenList = !lot.pages.length ? '' : `<section id="ecrans" class="mt-10 scroll-mt-16">
   <h2 class="text-xl font-semibold">Écrans du lot</h2>
   ${tracking ? `<p class="mt-1 text-sm text-doc-muted">Implémentation : ${progress(lot.pages)}</p>` : ''}
   <ol class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -285,7 +288,7 @@ ${hasPropositions ? `<p class="mt-6"><a href="propositions.html" class="rounded-
 <section id="lots" class="mt-8">
   <h2 class="text-xl font-semibold">Lots</h2>
   <ol class="mt-3 grid gap-4 md:grid-cols-2">
-    ${lots.map((lot) => `<li class="rounded-xl border border-doc-line bg-doc-card px-5 py-4"><a href="${lot.indexPath}" class="text-lg font-semibold hover:text-doc-accent">${lot.label ?? lot.name}</a><p class="mt-1 text-sm text-doc-muted">${lot.pages.map((p) => `<a href="${p.path}" class="hover:text-doc-accent">${p.status ? `${statusDot(p.status)} ` : ''}${p.screen.toUpperCase()} ${p.title}</a>`).join(' · ')}</p>${tracking ? `<p class="mt-2 text-sm text-doc-muted">Implémentation : ${progress(lot.pages)}</p>` : ''}</li>`).join('\n    ')}
+    ${lots.map((lot) => `<li class="rounded-xl border border-doc-line bg-doc-card px-5 py-4"><a href="${lot.indexPath}" class="text-lg font-semibold hover:text-doc-accent">${lot.label ?? lot.name}</a>${lot.pages.length ? `<p class="mt-1 text-sm text-doc-muted">${lot.pages.map((p) => `<a href="${p.path}" class="hover:text-doc-accent">${p.status ? `${statusDot(p.status)} ` : ''}${p.screen.toUpperCase()} ${p.title}</a>`).join(' · ')}</p>${tracking ? `<p class="mt-2 text-sm text-doc-muted">Implémentation : ${progress(lot.pages)}</p>` : ''}` : lot.summary ? `<p class="mt-1 text-sm text-doc-muted">${lot.summary}</p>` : ''}</li>`).join('\n    ')}
   </ol>
 </section>`;
 pages.set('index.html', renderPage({ title: `${site.title} · Specs UI`, fonts: lots[0]?.fonts, body: homeBody }));

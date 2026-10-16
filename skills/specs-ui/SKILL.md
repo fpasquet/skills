@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.5.0"
+  version: "3.5.1"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -174,6 +174,8 @@ Puis, dans `sources/<lot>/` :
 - renseigner `lot.json` : `label` (« Lot 2 · Projets et dépôts »), `title`, `fonts`, `screens` (titre court de chaque écran : `{ "e4": "Assistant de création" }`) ;
 - renseigner l'en-tête (`000-header.html`) : contexte, règles, parcours ;
 - écrire **un fichier par état d'écran** (`020-e4a.html`, `030-e4b.html`…) en remplaçant les écrans d'exemple. Les sections `eN…` d'un même écran forment une page ; les autres sections (règles, points ouverts, journal, annexe) vont sur l'index du lot.
+
+Un lot peut n'avoir aucun écran : une revue des points ouverts ou une liste de décisions à prendre, faite seulement de sections (tableaux à annoter avec « Retours »), avec `"summary"` dans `lot.json` pour sa carte sur l'accueil.
 
 Les coquilles se modifient une seule fois dans `shells.html`, pour tous les lots ; les composants communs à plusieurs lots (en-tête de projet…) vont dans `sources/shared/components.html`. Les fonds de calque et contenus réutilisés vont dans `templates.html`. Les liens s'écrivent simplement (`#e13b`, `sessions.html#e13b`, `propositions.html#retenu`) : le build les réécrit vers la bonne page.
 
