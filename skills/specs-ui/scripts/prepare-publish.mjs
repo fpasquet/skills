@@ -12,7 +12,8 @@
  *   La page principale (index.html) est publiée sans enveloppe (l'outil l'ajoute) ; les autres pages sont des
  *   documents complets envoyés dans « files » avec leur chemin relatif, ce qui garde les liens entre pages.
  *   Seules les pages modifiées depuis la dernière publication confirmée (site/.published.json, à commiter) sont
- *   listées : une mise à jour n'envoie que celles-là, les autres restent en ligne.
+ *   listées : une mise à jour n'envoie que celles-là, les autres restent en ligne. Les images du site (site/assets/,
+ *   copiées par build.mjs) suivent la même règle.
  *
  * Document isolé (ex. propositions.html publié à part) :
  *   node prepare-publish.mjs <file.html> <copy.html>
@@ -39,7 +40,8 @@ const stripEnvelope = (html) =>
 
 if (statSync(input).isDirectory()) {
   const siteDir = resolve(input);
-  const listPages = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? listPages(join(dir, e.name)) : e.name.endsWith('.html') ? [join(dir, e.name)] : []));
+  // Pages et images ; les fichiers de suivi (.published.json, .build.json) ne se publient pas
+  const listPages = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.name.startsWith('.') ? [] : e.isDirectory() ? listPages(join(dir, e.name)) : e.name.endsWith('.html') || dir !== siteDir ? [join(dir, e.name)] : []));
   const pages = listPages(siteDir).map((p) => relative(siteDir, p).split('\\').join('/')).sort();
   const hash = (path) => createHash('sha1').update(readFileSync(join(siteDir, path))).digest('hex');
   const statePath = join(siteDir, '.published.json');

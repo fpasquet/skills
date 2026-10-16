@@ -9,7 +9,8 @@
  *   ui/tokens.css                   bloc @theme du produit, injecté dans chaque page
  *   ui/propositions.html            (facultatif) copié tel quel dans le site
  *   ui/sources/site.json            { "title", "heading", "intro" (texte ou liste de paragraphes), "artifact",
- *                                   "lots": ["connexion", …], "implementation": true (statut d'implémentation affiché) }
+ *                                   "lots": ["connexion", …], "implementation": true (statut d'implémentation affiché),
+ *                                   "assets": "../../apps/web/public/assets" (facultatif : dossier des images, voir plus bas) }
  *   ui/sources/shared/*.html        <template> partagés par tous les lots : shells.html (coquilles),
  *                                   components.html (composants communs : en-tête de projet…)
  *   ui/sources/<lot>/lot.json       { "label", "title", "fonts", "screens": { "e13": "titre court" },
@@ -19,6 +20,11 @@
  *                                   les sections eN… vont sur la page de l'écran N, les autres
  *                                   (règles, points ouverts, journal, identité) sur l'index du lot
  *   ui/sources/<lot>/templates.html (facultatif) <template> propres au lot (même id = remplace le partagé)
+ *
+ * Images (logos, illustrations, photos du produit) : les sources les citent par « assets/<chemin> »
+ * (src, href, poster, url(…)). Le dossier vient de site.json → assets (chemin relatif à ui/, par exemple le
+ * dossier public de l'application, pour reprendre ses vraies images) ou, par défaut, ui/assets/. Seules les
+ * images citées sont copiées dans site/assets/, et chaque page les cite par un chemin relatif.
  *
  * Statut d'implémentation (site.json → implementation) : todo (défaut), doing, done, gap. Le badge remplace
  * le badge « Nouveau » de chaque état, et l'avancement apparaît dans la navigation, l'index du lot et l'accueil.
@@ -145,6 +151,15 @@ for (const lot of lots) {
 const screenAnchor = (anchor) => /^#e\d+[a-z]?$/i.test(anchor ?? '');
 const hasPropositions = existsSync(join(root, 'propositions.html'));
 const relativeTo = (from, to) => posix.relative(posix.dirname(from), to) || posix.basename(to);
+// Images : « assets/… » dans les sources, chemin relatif à la page dans le site ; citées → copiées
+const assetsDir = site.assets ? resolve(root, site.assets) : join(root, 'assets');
+const usedAssets = new Map(); // chemin dans assets/ → première page qui le cite
+const rewriteAssets = (html, pagePath) =>
+  html.replace(/(\b(?:src|href|poster)=["']|url\(["']?)assets\/([^"')?#\s]+)/g, (match, prefix, path) => {
+    if (path.split('/').includes('..')) return match;
+    if (!usedAssets.has(path)) usedAssets.set(path, pagePath);
+    return `${prefix}${relativeTo(pagePath, `assets/${path}`)}`;
+  });
 const unresolved = new Set();
 // Balises de structure non fermées dans le contenu d'une page (un <header> ouvert avale tout ce qui suit)
 const unbalanced = new Set();
@@ -278,7 +293,7 @@ pages.set('index.html', renderPage({ title: `${site.title} · Specs UI`, fonts: 
 // Écriture, avec typographie et liste des pages modifiées
 const changed = [];
 for (const [path, html] of pages) {
-  const { html: output } = applyTypography(html);
+  const { html: output } = applyTypography(rewriteAssets(html, path));
   const target = join(outDir, path);
   mkdirSync(dirname(target), { recursive: true });
   if (read(target) !== output) changed.push(path);
@@ -288,6 +303,31 @@ if (hasPropositions) {
   const target = join(outDir, 'propositions.html');
   if (read(target) !== read(join(root, 'propositions.html'))) changed.push('propositions.html');
   copyFileSync(join(root, 'propositions.html'), target);
+}
+// Images citées : copiées si elles ont changé ; les autres sortent du site (jamais publiées par erreur)
+const missingAssets = [];
+for (const [path, page] of usedAssets) {
+  const source = join(assetsDir, path);
+  if (!existsSync(source)) {
+    missingAssets.push(`assets/${path} (in ${page})`);
+    continue;
+  }
+  const target = join(outDir, 'assets', path);
+  const before = existsSync(target) ? readFileSync(target) : null;
+  const content = readFileSync(source);
+  if (before && before.equals(content)) continue;
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, content);
+  changed.push(`assets/${path}`);
+}
+const listFiles = (dir) => (existsSync(dir) ? readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? listFiles(join(dir, e.name)) : [join(dir, e.name)])) : []);
+const removedAssets = [];
+for (const file of listFiles(join(outDir, 'assets'))) {
+  const path = relative(join(outDir, 'assets'), file).split('\\').join('/');
+  if (!usedAssets.has(path)) {
+    unlinkSync(file);
+    removedAssets.push(`assets/${path}`);
+  }
 }
 // Pages sans source (écran retiré, lot retiré) : supprimées, pour ne jamais les publier par erreur
 const listPages = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? listPages(join(dir, e.name)) : e.name.endsWith('.html') ? [join(dir, e.name)] : []));
@@ -310,6 +350,9 @@ console.log(`Built ${relative(process.cwd(), outDir) || outDir}: ${pages.size + 
 console.log(changed.length ? `Changed pages (${changed.length}): ${changed.join(', ')}` : 'No page changed.');
 if (duplicates.size) console.log(`WARNING: screen ids used in several lots (links will be wrong): ${[...duplicates].join(', ')}`);
 if (removed.length) console.log(`Removed pages without source: ${removed.join(', ')}`);
+if (usedAssets.size) console.log(`Images: ${usedAssets.size} cited, copied from ${relative(process.cwd(), assetsDir) || assetsDir}.`);
+if (removedAssets.length) console.log(`Removed images no page cites: ${removedAssets.join(', ')}`);
+if (missingAssets.length) console.log(`WARNING: images not found in ${relative(process.cwd(), assetsDir) || assetsDir} (${missingAssets.length}): ${missingAssets.join(', ')}`);
 if (invalidStatuses.size) console.log(`WARNING: unknown implementation status (todo, doing, done, gap): ${[...invalidStatuses].join(', ')}`);
 if (unbalanced.size) console.log(`WARNING: unclosed or extra tags, the layout breaks after them (${unbalanced.size}): ${[...unbalanced].join(', ')}`);
 if (unresolved.size) console.log(`WARNING: unresolved links (${unresolved.size}): ${[...unresolved].slice(0, 15).join(', ')}${unresolved.size > 15 ? ', …' : ''}`);

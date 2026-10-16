@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.4.0"
+  version: "3.5.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -79,14 +79,18 @@ specs/ui/
 ├── tokens.css                  identité : bloc @theme Tailwind, injecté dans chaque document
 ├── propositions.html           propositions d'interface et décision (jamais supprimé ; copié dans le site)
 ├── captures/                   captures du site existant (étape 1B)
+├── assets/                     (facultatif) images du produit : logos, illustrations, photos de démonstration
 ├── sources/
-│   ├── site.json               titre, introduction, URL de l'artifact, liste ordonnée des lots
+│   ├── site.json               titre, introduction, URL de l'artifact, liste ordonnée des lots, dossier des images
 │   ├── shared/shells.html      coquilles <template id="tpl-shell-…"> communes à tous les lots
 │   └── <lot>/                  lot.json, 000-header.html, NNN-<id>.html (un état d'écran par fichier), templates.html
 └── site/                       construit par build.mjs, ne pas modifier à la main :
                                 index.html (accueil), <lot>/index.html (en-tête, règles, écrans, points ouverts,
-                                journal), <lot>/eN.html (une page par écran, tous ses états), propositions.html
+                                journal), <lot>/eN.html (une page par écran, tous ses états), propositions.html,
+                                assets/ (les images citées par les pages)
 ```
+
+**Images du produit.** Un logo, une mascotte, une illustration ou un insigne que l'interface affiche se montre dans la maquette, pas une forme de couleur qui le remplace : sans lui, l'écran ne se reconnaît pas. Les sources citent l'image par `assets/<chemin>` ; dans un projet qui a déjà ses images (application existante), `sources/site.json` → `"assets"` désigne leur dossier (chemin relatif à `specs/ui/`, par exemple `"../../apps/web/public/assets"`) plutôt que de les copier. `build.mjs` copie dans `site/assets/` les seules images citées, et `prepare-publish.mjs` les publie avec les pages (`tailwind.md` §7).
 
 Les captures de vérification vont dans un dossier temporaire (le scratchpad de la session s'il existe), jamais dans le projet.
 
