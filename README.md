@@ -56,15 +56,31 @@ for (const [source, names] of groups) {
 
 Le lancer avant toute commande qui appelle un script de skill (par exemple en tête de `npm run specs:build`), et ignorer `.claude/skills/` et `.agents/` dans git. Pour ne pas recloner à chaque appel, noter l'empreinte (`computedHash`) des skills installés et ne réinstaller que lorsqu'elle diffère du lock.
 
+### Dans le chat claude.ai
+
+Les skills s'utilisent aussi depuis le chat claude.ai, sans Claude Code. Chaque skill s'importe en ZIP : Paramètres → Personnaliser → Skills → Ajouter → Importer un Skill. L'exécution de code doit être activée (Paramètres → Capacités).
+
+```bash
+cd skills && for s in specs-ui prototype-ui requirements-doc; do zip -rq "../$s.zip" "$s"; done
+```
+
+Importer les trois : dans ce mode, `prototype-ui` et `requirements-doc` reprennent les scripts et les consignes de `specs-ui`. Ce qui change dans le chat (détail dans [`claude-ai.md`](skills/specs-ui/references/claude-ai.md)) :
+
+- le projet se garde dans une archive `specs.zip`, à télécharger en fin de conversation et à joindre à la suivante ;
+- chaque livrable est un fichier HTML autonome, à ouvrir, télécharger ou partager, au lieu d'un artifact multi-pages mis à jour page par page ;
+- sans Chrome, les captures se limitent à des contrôles statiques. Ajouter `storage.googleapis.com` aux domaines autorisés permet d'en installer un.
+
+Une nouvelle version d'un skill se réimporte de la même façon. Claude Code sur le web (claude.ai/code) garde le fonctionnement complet : dépôt git, artifacts multi-pages, réseau réglable.
+
 ## 📦 Skills disponibles
 
 | Skill                                                      | Version | Description                                                                                     |
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| [`specs-ui`](skills/specs-ui/README.md)                     | 3.3.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
-| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.3.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
-| [`requirements-doc`](skills/requirements-doc/README.md) | 2.2.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
+| [`specs-ui`](skills/specs-ui/README.md)                     | 3.6.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
+| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.4.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
+| [`requirements-doc`](skills/requirements-doc/README.md) | 2.3.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
 
-Chaque skill publie son résultat comme un artifact claude.ai partageable, et garde une copie locale.
+Chaque skill publie son résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et garde une copie locale.
 
 ## 🔗 La chaîne de travail
 

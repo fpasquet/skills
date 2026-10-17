@@ -17,7 +17,8 @@
  *                  étapes des scénarios : --pages scenarios)
  *
  * Images dans output-dir (par défaut specs/prototype/.check). Nécessite Chrome ou Chromium (variable
- * CHROME_PATH si le chemin n'est pas standard). Aucune dépendance. Code de sortie 1 si un problème bloquant.
+ * CHROME_PATH si le chemin n'est pas standard, CHROME_ARGS pour des options en plus, « --no-sandbox » dans un
+ * conteneur). Aucune dépendance. Code de sortie 1 si un problème bloquant.
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -61,7 +62,8 @@ const freshProfile = () => {
   profiles.push(dir);
   return `--user-data-dir=${dir}`;
 };
-const baseArgs = ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=9000'];
+// CHROME_ARGS : options en plus (« --no-sandbox » dans un conteneur sans bac à sable Chrome)
+const baseArgs = ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=9000', ...(process.env.CHROME_ARGS ?? '').split(/\s+/).filter(Boolean)];
 const pageUrl = (file, params) => `${pathToFileURL(join(siteDir, file)).href}?${params}`;
 const run = promisify(execFile);
 const dumpDom = async (url, size) => (await run(chrome, [...baseArgs, freshProfile(), `--window-size=${size}`, '--dump-dom', url], { encoding: 'utf8', timeout: 90000, maxBuffer: 64 * 1024 * 1024 })).stdout;

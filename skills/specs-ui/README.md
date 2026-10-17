@@ -11,7 +11,7 @@ Skill pour agents IA (Claude Code…) qui produit des **spécifications UI maque
 3. **Inventorie** les écrans et les parcours, et les fait valider avant de dessiner.
 4. **Rédige les specs** en sources par écran (`specs/ui/sources/`), construites par `build.mjs` en un site multi-pages (une page par écran). Chaque écran a une maquette desktop (1280 × 820) et mobile (390 × 844), une note, le flux (Depuis / Ensuite) et des annotations numérotées. S'y ajoutent les règles fonctionnelles, les parcours, les points ouverts, le journal des itérations et une annexe sur l'identité.
 5. **Itère** sur les retours, sans toucher aux écrans déjà validés. Les relecteurs annotent directement les pages publiées : bouton « Retours », clic sur un point d'une maquette ou d'un texte, correction ou question, puis export Markdown à coller dans la conversation. Chaque retour y cite l'écran, l'état, le cadre et le fichier source, pour une correction ciblée.
-6. **Publie** le site comme un seul artifact claude.ai multi-pages ; une mise à jour ne republie que les pages modifiées.
+6. **Publie** le site comme un seul artifact claude.ai multi-pages ; une mise à jour ne republie que les pages modifiées. Dans le chat claude.ai, le site devient un seul fichier HTML autonome, et le projet se garde d'une conversation à l'autre dans une archive `specs.zip`.
 7. **Prépare la suite**, en option : Design System pour Claude Design, prototype cliquable (skill `prototype-ui`), cahier des charges (skill `requirements-doc`).
 8. **Suit l'implémentation** : les specs vivent dans le dépôt de l'application (`specs/ui/`, sources versionnées, site HTML reconstruit à la demande), chaque écran porte son statut (À développer, En cours, Livré, Écart), et un écart constaté pendant le développement se reporte dans les specs, puis dans le prototype et le cahier des charges.
 
@@ -29,7 +29,8 @@ specs/ui/
 │   ├── qualite-ui.md                principes de qualité UI et grille de revue
 │   ├── propositions.md              construire 3 propositions : disposition + thème
 │   ├── site-existant.md             extraire et reproduire l'identité d'un site
-│   └── redaction-specs.md           inventaire, anatomie d'un écran, états, itérations
+│   ├── redaction-specs.md           inventaire, anatomie d'un écran, états, itérations
+│   └── claude-ai.md                 chat claude.ai : archive du projet, version autonome, réseau (trois skills)
 ├── templates/
 │   ├── propositions.html            3 dispositions × 3 thèmes, combinables en direct
 │   ├── specs.html                   document de specs (2 écrans d'exemple)
@@ -43,6 +44,8 @@ specs/ui/
     ├── capture.mjs                  contrôles et captures (planche --sheet, --frames, --thumbnails, --themes)
     ├── check-contrast.mjs           contrôle WCAG AA des tokens
     ├── prepare-publish.mjs          pages à publier, --check : artifact en retard sur le site local
+    ├── bundle.mjs                   version autonome en un seul fichier HTML (specs, prototype, cahier des charges)
+    ├── pack.mjs                     archive specs/ en .zip et la restaure (chat claude.ai)
     ├── migrate-layout.mjs           range specs-ui/, prototype-ui/, cdc/ dans specs/
     ├── extract-identity.mjs         identité d'un site ou d'un code, captures
     ├── upgrade.mjs                  mise à niveau d'un document ancien sans sources
@@ -54,8 +57,8 @@ specs/ui/
 ## Prérequis
 
 - **Node.js 18+** pour les scripts (aucune dépendance).
-- **Chrome ou Chromium** (facultatif) pour les captures de site et la vérification du rendu. Chemin personnalisé : variable `CHROME_PATH`.
-- Navigateur avec accès à `cdn.jsdelivr.net` et Google Fonts pour afficher les maquettes (Tailwind et Lucide sont chargés depuis le CDN).
+- **Chrome ou Chromium** (facultatif) pour les captures de site et la vérification du rendu. Chemin personnalisé : variable `CHROME_PATH` ; options en plus : `CHROME_ARGS` (`--no-sandbox` dans un conteneur).
+- Navigateur avec accès à `cdn.jsdelivr.net` et Google Fonts pour afficher les maquettes (Tailwind et Lucide sont chargés depuis le CDN). La version autonome (`bundle.mjs`) intègre Tailwind et Lucide et s'ouvre sans réseau.
 
 ## Exemples de demandes
 

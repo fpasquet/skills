@@ -10,7 +10,7 @@ description: >
   sans prononcer le mot « prototype ».
 metadata:
   author: fpasquet
-  version: "2.3.1"
+  version: "2.4.0"
 ---
 
 # Prototype UI à partir des specs
@@ -20,6 +20,8 @@ Ce skill part d'un projet de specs (skill `specs-ui`) et en fait un **prototype 
 Textes de l'interface, scénarios et échanges sont en français. Le code (scripts, attributs, variables, actions, identifiants) est en anglais ; ses commentaires peuvent être en français.
 
 `<skill>` désigne le dossier de ce skill : les scripts se lancent avec `node <skill>/scripts/…` depuis la racine du projet, qui contient `specs/` (`specs/ui` pour les specs, `specs/prototype` pour le prototype). Un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/` à la racine) se range d'abord avec `migrate-layout.mjs` du skill `specs-ui`.
+
+**Dans le chat claude.ai** (pas d'outil Artifact multi-fichiers, bac à sable `/mnt/user-data/`) : lire d'abord `references/claude-ai.md` du skill `specs-ui`. Il remplace la reprise d'un projet, la publication et les contrôles en navigateur décrits ici ; tout le reste s'applique.
 
 ## Économiser les tokens (à lire en premier)
 
@@ -46,6 +48,7 @@ Câbler une page demande de comprendre la maquette et de la rendre vivante sans 
 | Écrire les fiches, câbler le partagé | `PROTOTYPE.md`, sorties d'`outline.mjs`, `references/alpine.md` (sections utiles) |
 | Câbler une page (rédacteur) | sa fiche, `references/redacteur.md` |
 | Scénarios, séance de test, démo | `references/scenarios.md` |
+| Chat claude.ai | `claude-ai.md` du skill `specs-ui` |
 
 ## Étape 0 · Prérequis
 
@@ -124,6 +127,8 @@ node <skill>/scripts/check.mjs specs/prototype --scenarios   # --sheet pour les 
 Chaque étape de chaque scénario est contrôlée sur son écran, avec son état reconstitué (`?scenario=<id>&scenario-step=<n>`). `--pages e2,e13` limite le contrôle (`--pages scenarios` pour les étapes seules). Relire la planche du scénario : bon écran, bon état, histoire qui se suit.
 
 ## Étape 7 · Publier
+
+Dans le chat claude.ai, la publication est une version autonome en un seul fichier (`claude-ai.md` §3 du skill `specs-ui`) : la suite de cette étape ne s'applique pas. Dans cette version, chaque page s'affiche dans un cadre sans adresse propre : une action change de page avec `$store.app.go(…)` et lit un paramètre avec `$store.app.param(…)`, jamais par `location` directement.
 
 ```sh
 node <skill>/scripts/prepare-publish.mjs specs/prototype <scratchpad>/prototype-publish

@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.6.0 · 17 oct. 2026
+
+- **Chat claude.ai** : `references/claude-ai.md`, commun aux trois skills de la chaîne, dit comment travailler sans l'outil Artifact de Claude Code ni disque durable. Il couvre la reprise par archive, la publication en un seul fichier, les contrôles sans navigateur et le réseau filtré. `SKILL.md` y renvoie dès que l'environnement est reconnu.
+- `bundle.mjs` produit une **version autonome** en un seul fichier HTML, qui s'ouvre sans réseau (sauf les polices web), pour le site de specs, celui du prototype ou la page du cahier des charges. Les scripts CDN (Tailwind, Lucide, Alpine, Mermaid) sont intégrés une fois, téléchargés depuis le CDN, sinon avec curl, sinon depuis le registre npm. Les images sont intégrées aussi. Une coquille affiche chaque page dans un cadre : elle garde les liens, les ancres et le stockage du navigateur (retours de relecture, données du prototype) d'une page à l'autre, même dans un cadre sandbox sans `localStorage`.
+- `pack.mjs` archive `specs/` en `.zip` sans ce qui se reconstruit, et la restaure (`--extract`, qui refuse d'écraser sans `--force`), pour reprendre un projet d'une conversation à l'autre.
+- `capture.mjs` fonctionne sans navigateur : il garde les contrôles statiques (version, blocs `data-use` sans template) et dit ce qu'il n'a pas vérifié. Il vérifie d'abord que Chrome démarre, au lieu d'accuser les pages quand Chrome échoue. `CHROME_ARGS` ajoute des options à Chrome (`--no-sandbox` dans un conteneur), aussi pour `extract-identity.mjs`, qui repasse par curl quand `fetch` échoue derrière un proxy.
+- Template des specs en 3.1.1 : les retours de relecture reconnaissent leur page dans la version autonome. Toutes les pages changent à la prochaine construction.
+
 ## 3.5.1 · 16 oct. 2026
 
 - **Lot sans écran** : un lot fait seulement de sections (revue des points ouverts, décisions à prendre) n'affiche plus de liste « Écrans du lot » vide ; sur l'accueil du site, sa carte montre `lot.json` → `"summary"` à la place de la liste des écrans.

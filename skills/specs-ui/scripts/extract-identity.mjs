@@ -31,9 +31,19 @@ const MAX_STYLESHEETS = 25;
 const MAX_BYTES = 4_000_000;
 
 async function download(url) {
-  const res = await fetch(url, { headers: { 'user-agent': USER_AGENT, accept: '*/*' }, redirect: 'follow' });
-  if (!res.ok) throw new Error(`${res.status} ${url}`);
-  const text = await res.text();
+  let text;
+  try {
+    const res = await fetch(url, { headers: { 'user-agent': USER_AGENT, accept: '*/*' }, redirect: 'follow' });
+    if (!res.ok) throw new Error(`${res.status} ${url}`);
+    text = await res.text();
+  } catch (e) {
+    // Repli sur curl, qui suit le proxy d'un bac à sable (fetch l'ignore) ; l'erreur d'origine si curl échoue aussi
+    try {
+      text = execFileSync('curl', ['-fsSL', '--max-time', '30', '-A', USER_AGENT, url], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch {
+      throw e;
+    }
+  }
   return text.length > MAX_BYTES ? text.slice(0, MAX_BYTES) : text;
 }
 
@@ -228,7 +238,7 @@ function takeScreenshots(url, dir) {
   return formats.map(([name, size]) => {
     const output = resolve(dir, `${name}.png`);
     try {
-      execFileSync(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=6000', `--window-size=${size}`, `--user-agent=${USER_AGENT}`, `--screenshot=${output}`, url], { stdio: 'ignore', timeout: 60000 });
+      execFileSync(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=6000', ...(process.env.CHROME_ARGS ?? '').split(/\s+/).filter(Boolean), `--window-size=${size}`, `--user-agent=${USER_AGENT}`, `--screenshot=${output}`, url], { stdio: 'ignore', timeout: 60000 });
       return output;
     } catch (e) {
       return `(failed ${name}) ${e.message}`;
