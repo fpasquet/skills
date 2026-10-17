@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="specs-ui-template" content="3.1.0">
+<meta name="specs-ui-template" content="3.1.1">
 <!-- artifact : (URL claude.ai à reporter ici après la première publication) -->
 <title>Orbe · Specs UI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -542,7 +542,8 @@ function setupRetours() {
   if (params.get('frame') || params.get('only') || document.body.dataset.frameIsolated) return;
   const site = document.querySelector('meta[name="specs-ui-site"]')?.content || document.title.split(' · ').at(-1);
   const KEY = `specs-ui:retours:${site}`;
-  const page = location.pathname.split('/').filter(Boolean).slice(-2).join('/') || 'index.html';
+  // Version autonome (bundle.mjs) : la page s'affiche dans un cadre sans adresse, window.__bundle donne son chemin
+  const page = (window.__bundle ? window.__bundle.path : location.pathname.split('/').filter(Boolean).slice(-2).join('/')) || 'index.html';
   const empty = () => ({ next: 1, author: '', items: [] });
   let data = empty();
   try { data = { ...empty(), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* stockage indisponible : retours de la session seulement */ }

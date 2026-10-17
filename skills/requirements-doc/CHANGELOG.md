@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.3.0 · 17/10/2026
+
+- **Chat claude.ai** : `SKILL.md` renvoie à `references/claude-ai.md` du skill `specs-ui`. La page se publie en version autonome (`bundle.mjs`, Mermaid intégré, sans réseau), avec le Markdown à côté, et le projet se garde dans une archive d'une conversation à l'autre.
+
 ## 2.2.0 · 15/10/2026
 
 - **Page HTML hors du dépôt par défaut** : on versionne les sources, le Markdown construit (`requirements.md`, `sources/generated/`) et `.published.json`, plus `requirements.html`, qui se reconstruit et se lit dans l'artifact publié.

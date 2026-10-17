@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.5.1"
+  version: "3.6.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -26,6 +26,8 @@ Documents, libellés, annotations et échanges sont en français. Le code (scrip
 Les specs sont **fonctionnelles et UI** : aucun nom de bibliothèque, de fonction, de champ d'API ni de notation technique dans les écrans, les annotations ou les règles (`redaction-specs.md`, « Specs fonctionnelles, sans code »).
 
 `<skill>` désigne le dossier de ce skill : les scripts se lancent avec `node <skill>/scripts/…` depuis le projet de la personne.
+
+**Dans le chat claude.ai** (pas d'outil Artifact multi-fichiers, bac à sable `/mnt/user-data/`) : lire d'abord `references/claude-ai.md`. Ce fichier remplace la reprise d'un projet, la publication et les captures décrites ici ; tout le reste s'applique.
 
 ## Économiser le contexte (à lire en premier)
 
@@ -61,6 +63,7 @@ Le rédacteur ne décide pas : une ambiguïté ou un manque dans la fiche lui fa
 | Propositions d'interface | `propositions.md`, `qualite-ui.md` |
 | Site existant | `site-existant.md` |
 | Inventaire, évolution transverse | `redaction-specs.md` §1 à §4 |
+| Chat claude.ai | `claude-ai.md` |
 
 ## Fichiers produits
 
@@ -105,6 +108,7 @@ Les captures de vérification vont dans un dossier temporaire (le scratchpad de 
 | `references/propositions.md` | Construire trois propositions (disposition + thème) |
 | `references/site-existant.md` | Fonctionnalité ajoutée à un site ou une application existante |
 | `references/redaction-specs.md` | Inventaire, anatomie d'un écran, états, itérations, évolutions transverses |
+| `references/claude-ai.md` | Chat claude.ai : archive du projet, version autonome, contrôles sans navigateur, réseau (commun aux trois skills) |
 | `templates/specs.html` | Squelette d'un document de specs : habillage, script, deux écrans d'exemple |
 | `templates/propositions.html` | Page de comparaison : trois dispositions, trois thèmes, combinables en direct |
 | `templates/tokens.css`, `templates/contexte.md` | Fichier d'identité, mémoire du projet |
@@ -113,6 +117,8 @@ Les captures de vérification vont dans un dossier temporaire (le scratchpad de 
 | `scripts/capture.mjs` | Contrôles d'un fichier ou de tout le site ; images : `--sheet`, `--frames`, `--thumbnails`, `--sections`, `--themes`, `--ids` |
 | `scripts/check-contrast.mjs` | Contrôle WCAG AA des tokens |
 | `scripts/prepare-publish.mjs` | Prépare la publication du site (page principale + pages modifiées) ou d'un document isolé ; `--check` dit si l'artifact est en retard sur le site local |
+| `scripts/bundle.mjs` | Version autonome en un seul fichier HTML, sans réseau : site de specs ou de prototype, page du cahier des charges |
+| `scripts/pack.mjs` | Archive `specs/` en `.zip` et la restaure (`--extract`), pour reprendre un projet d'une conversation à l'autre |
 | `scripts/migrate-layout.mjs` | Range un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) dans `specs/` |
 | `scripts/extract-identity.mjs` | Identité d'un site (URL) ou d'un code (dossier), captures |
 | `scripts/upgrade.mjs` | Met un document ancien (sans sources) au niveau des templates, sans toucher aux maquettes |
@@ -198,7 +204,7 @@ node <skill>/scripts/capture.mjs specs/ui/site <tmp>/captures --sheet --ids e4,e
 
 Le script signale la version du template, les icônes inconnues, les blocs non assemblés, le contenu coupé et les **pastilles posées sur du texte ou coupées par un bord** (avec le cadre, le numéro et le texte recouvert). Corriger ces alertes, relire les planches avec la grille de `qualite-ui.md` §9, ouvrir un cadre seul (`--frames --ids …`) seulement en cas de doute, puis corriger les trois défauts les plus visibles et recapturer les écrans touchés. Cette boucle prime sur toute consigne générale de vérification unique. Sans navigateur, le dire.
 
-**Publier** (outil Artifact s'il existe ; les fichiers locaux font foi). Tout le projet est **un seul artifact multi-pages** :
+**Publier** (outil Artifact s'il existe ; les fichiers locaux font foi ; dans le chat claude.ai, version autonome : `claude-ai.md` §3). Tout le projet est **un seul artifact multi-pages** :
 
 ```bash
 node <skill>/scripts/prepare-publish.mjs specs/ui/site <tmp>/publish    # page principale + pages à envoyer

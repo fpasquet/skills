@@ -19,6 +19,11 @@
   const config = window.PROTO_CONFIG || {};
   const key = `prototype:${config.id || 'default'}`;
   const clone = (value) => JSON.parse(JSON.stringify(value ?? {}));
+  // Adresse et navigation : dans la version autonome (bundle.mjs du skill specs-ui), la page s'affiche dans un cadre
+  // sans adresse propre ; window.__bundle donne son adresse et change de page à sa place
+  const here = () => new URL(window.__bundle ? window.__bundle.url : location.href);
+  const goTo = (url) => (window.__bundle ? window.__bundle.go(url) : (location.href = url));
+  const replaceUrl = (url) => (window.__bundle ? window.__bundle.replace(url) : history.replaceState(null, '', url));
   // Le stockage peut être indisponible (navigation privée, aperçu) : le prototype marche alors sans mémoire
   const read = (suffix) => {
     try {
@@ -40,7 +45,7 @@
   // presets des étapes jusqu'à n), mémorise chaque étape pour Précédent, et place le panneau sur l'étape.
   // Sert aux liens directs vers une étape et aux planches de check.mjs --scenarios.
   function replayFromUrl(initial) {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(here().search);
     const scenario = (config.scenarios || []).find((s) => s.id === params.get('scenario'));
     if (!scenario) return null;
     const presets = window.PROTO_PRESETS || {};
@@ -84,7 +89,7 @@
         this.data = clone(initial);
         this.persist();
         write(':scenario', null);
-        location.href = config.home || 'index.html';
+        goTo(config.home || 'index.html');
       },
       notify(message) {
         this.toast = message;
@@ -93,10 +98,10 @@
       },
       go(page) {
         this.persist();
-        location.href = page;
+        goTo(page);
       },
       param(name) {
-        return new URLSearchParams(location.search).get(name);
+        return new URLSearchParams(here().search).get(name);
       },
       // Simule ce qui arrive sans la personne (un agent qui avance, une réponse) : effet puis sauvegarde
       later(ms, effect) {
@@ -126,7 +131,7 @@
     // Les données sont mémorisées à l'entrée de chaque étape : Précédent les restaure.
     Alpine.data('protoScenarios', () => ({
       // ?clean masque le panneau (captures d'écran, démo projetée)
-      hidden: new URLSearchParams(location.search).has('clean') || (read(':demo-hidden') ?? false),
+      hidden: new URLSearchParams(here().search).has('clean') || (read(':demo-hidden') ?? false),
       scenarios: config.scenarios || [],
       current: read(':scenario'),
       open: read(':panel-open') ?? false,
@@ -169,7 +174,7 @@
       // L'écran affiché est-il celui de l'étape ? (page et paramètres)
       onStepPage(i) {
         const page = this.stepPage(i);
-        return !page || location.pathname.split('/').pop() + location.search === page;
+        return !page || here().pathname.split('/').pop() + here().search === page;
       },
       save(current) {
         this.current = current;
@@ -199,16 +204,16 @@
         }
         this.save({ ...this.current, step: index });
         const page = this.stepPage(index);
-        const samePath = page && page.split('?')[0] === location.pathname.split('/').pop();
+        const samePath = page && page.split('?')[0] === here().pathname.split('/').pop();
         if (page && !this.onStepPage(index) && !samePath) {
           // Changement d'écran : les données vont droit au stockage, la page quittée ne se redessine pas
           write(':data', data);
-          location.href = page;
+          goTo(page);
         } else {
           // Même écran, autres paramètres (e4.html → e4.html?step=2) : pas de rechargement, la page
           // écoute proto:params pour se mettre à jour
           if (page && !this.onStepPage(index)) {
-            history.replaceState(null, '', page);
+            replaceUrl(page);
             window.dispatchEvent(new CustomEvent('proto:params'));
           }
           app.data = data;
@@ -224,7 +229,7 @@
         const first = this.stepOf(0);
         if (first.preset) return this.enter(0);
         write(':snapshots', { 0: clone(Alpine.store('app').data) });
-        location.href = first.page ?? scenario.start;
+        goTo(first.page ?? scenario.start);
       },
       // Suivant : étape suivante et son écran ; après la dernière, le scénario est terminé
       next() {
@@ -263,7 +268,7 @@
           scenario: scenario?.title ?? null,
           step: step === null ? null : step + 1,
           stepText: step === null ? null : this.stepText(step),
-          page: location.pathname.split('/').pop() + location.search.replace(/[?&](check|clean)\b/g, ''),
+          page: here().pathname.split('/').pop() + here().search.replace(/[?&](check|clean)\b/g, ''),
           at: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
           text,
         }];

@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 2.4.0 · 17/10/2026
+
+- **Chat claude.ai** : `SKILL.md` renvoie à `references/claude-ai.md` du skill `specs-ui` (archive du projet, version autonome en un seul fichier, contrôles sans navigateur).
+- Le socle (`store.js`) lit l'adresse et change de page par `window.__bundle` quand il existe : le prototype fonctionne dans la version autonome de `bundle.mjs` (skill `specs-ui`), scénarios, étapes et données compris. Ailleurs, rien ne change.
+- `check.mjs` accepte `CHROME_ARGS` (`--no-sandbox` dans un conteneur).
+
 ## 2.3.1 · 16/10/2026
 
 - Les messages de confirmation (`$store.app.notify`) s'affichent : l'élément du message, ajouté hors de toute page Alpine, n'était pas initialisé et restait vide.
