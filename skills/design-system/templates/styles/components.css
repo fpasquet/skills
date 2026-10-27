@@ -1,0 +1,15 @@
+/*
+ * Classes sémantiques du design system (à la daisyUI, sans daisyUI) : les styles répétés sont dans des classes, les
+ * ajustements ponctuels restent en utilitaires dans le JSX. Variantes par classes de modificateur (`btn-primary`,
+ * `sheet-right`, `menu-item-danger`), états par les attributs d'accessibilité et les pseudo-classes (`aria-selected`,
+ * `aria-invalid`, `:focus`, `:disabled`) ; `data-state`, posé par Radix, ne sert qu'aux animations.
+ *
+ * Chaque composant a son CSS à côté de lui ({{ui}}/button/ : button.tsx, button.css, son histoire, index.ts) ; les
+ * classes sans composant React sont dans classes/, un fichier par famille. Ce fichier les rassemble : une nouvelle
+ * feuille s'y ajoute (rehome.mjs le fait pour un composant de shadcn). Documentation : Storybook.
+ */
+@import './utilities.css';
+
+/* Composants */
+
+/* Classes sans composant React */

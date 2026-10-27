@@ -1,0 +1,96 @@
+/*
+ * Thème shadcn/ui. Ses variables pointent sur les tokens ({{tokens}}, source unique) : les composants de shadcn et
+ * les classes sémantiques suivent la même identité, en clair comme en sombre.
+ *
+ * Seuls les noms propres à shadcn sont ajoutés au thème. `primary` a le même sens dans les tokens et dans shadcn ;
+ * `muted` est, dans les tokens, la couleur du texte secondaire (`text-muted`), que shadcn appelle `muted-foreground` :
+ * `--color-muted` n'est donc jamais redéfini ici.
+ */
+@custom-variant dark (&:is(.dark *));
+/* Page ou onglet en cours d'un lien de navigation : aria-current: au lieu de aria-[current=page]: */
+@custom-variant aria-current (&[aria-current='page']);
+
+/*
+ * Mises en page des écrans, nommées plutôt qu'écrites en valeurs arbitraires : colonnes des grilles (`grid-cols-*`),
+ * largeurs de lecture (`max-w-*`). Une entrée par besoin réel, nommée d'après son usage.
+ */
+@theme {
+  /* Contenu et colonne latérale : grid-cols-content-aside */
+  --grid-template-columns-content-aside: minmax(0, 1fr) 300px;
+  /* Libellé puis champ : grid-cols-label-field */
+  --grid-template-columns-label-field: 140px minmax(0, 1fr);
+  /* Largeur de lecture : max-w-measure */
+  --container-measure: 60ch;
+}
+
+:root {
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: var(--color-on-primary);
+  --secondary: var(--color-surface-alt);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-surface-alt);
+  --muted-foreground: var(--color-muted);
+  --accent: var(--color-surface-alt);
+  --accent-foreground: var(--color-ink);
+  --destructive: var(--color-danger);
+  --destructive-foreground: var(--color-on-danger);
+  --border: var(--color-line);
+  --input: var(--color-line-strong);
+  --ring: var(--color-primary);
+  --radius: var(--radius-card);
+  --sidebar: var(--color-nav);
+  --sidebar-foreground: var(--color-nav-ink);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: var(--color-on-primary);
+  --sidebar-accent: var(--color-nav-active);
+  --sidebar-accent-foreground: var(--color-nav-ink);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-primary);
+}
+
+/*
+ * Mode sombre : la classe `dark` sur un ancêtre redéfinit les couleurs des tokens (mêmes noms, autres valeurs).
+ * Storybook montre les deux thèmes. Tant que les valeurs ne sont pas choisies, le bloc reste vide.
+ */
+.dark {
+  color-scheme: dark;
+{{darkTokens}}
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+}

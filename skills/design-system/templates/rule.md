@@ -1,0 +1,89 @@
+# Design system ({{app}})
+
+Conventions de l'interface : tokens, classes sémantiques, composants shadcn/ui sur Radix, Storybook. Mémoire et
+décisions du design system : `{{memory}}`. Contrôle : `node <skill design-system>/scripts/audit.mjs {{app}}`.
+
+## Trois couches
+
+1. **Tokens** : `{{tokens}}`, source unique des couleurs, polices, tailles de texte, rayons, hauteurs et ombres (bloc
+   `@theme` de Tailwind v4). Une valeur se change là, jamais dans un composant.{{tokensSource}}
+2. **Thème et classes** : `{{styles}}/theme.css` (variables de shadcn/ui pointées sur les tokens, mode sombre `.dark`,
+   entrées nommées des mises en page, `@custom-variant`) et les classes sémantiques (`@layer components`) : le CSS
+   d'un composant **à côté de lui** (`{{ui}}/button/button.css` près de `button.tsx`), les classes sans composant
+   React dans `{{styles}}/classes/`, un fichier par famille (`tile.css`, `kbd.css`) ; `{{styles}}/components.css` les
+   importe tous, et une nouvelle feuille s'y ajoute.
+3. **Composants** : `{{ui}}` (shadcn/ui sur Radix), dont les variantes CVA posent les classes sémantiques :
+   `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
+
+## Classes sémantiques
+
+- Un motif d'interface répété devient un **composant de `{{ui}}`** (ou de `{{components}}` s'il assemble plusieurs
+  composants), pas une classe recopiée dans le JSX : `Card` (`CardHeader`, `CardTitle`), `Alert`, `Field`… Avant
+  d'écrire un bloc, chercher s'il existe déjà dans `{{ui}}`, puis dans le catalogue de shadcn/ui : un contrôle de
+  formulaire (liste, zone de texte, case, bascule…) passe par son composant, ajouté s'il manque, même pour un seul usage.
+- Un style répété (au moins deux fois, ou un motif du design system) devient une classe : `btn`, `btn-primary`,
+  `btn-sm`, `card`, `alert`, `form-input`, `form-error`, `badge-success`, `dialog`, `sheet`, `menu`, `tab`… Un
+  ajustement ponctuel (marge, largeur, position) reste un utilitaire Tailwind dans le JSX.
+- `@apply` pour les cas simples ; CSS standard pour les sélecteurs complexes et les états. `focus-ring` est un
+  `@utility` pour pouvoir être appliqué par `@apply`.
+- Couleurs uniquement par les tokens (`bg-surface`, `text-muted`) ou les variables de shadcn (`bg-background`) :
+  jamais de valeur en dur, jamais la palette de Tailwind (`bg-gray-100`, `text-white`). Les couleurs d'état (succès,
+  attente, échec, information) ne servent qu'aux états.
+- **Aucune valeur arbitraire** de Tailwind (`w-[720px]`, `text-[13px]`, `grid-cols-[…]`, `rounded-[3px]`) ni
+  variante arbitraire (`aria-[current=page]:`, `[&>svg]:`) : une taille vient de l'échelle de Tailwind (`w-180`,
+  `max-w-160`) ou d'un token (`text-caption`), une mise en page d'écran d'une entrée nommée du thème
+  (`grid-cols-content-aside`, `max-w-measure`), une variante d'un `@custom-variant` (`aria-current:`). Dans une
+  feuille de style, du CSS standard plutôt qu'un `@apply` à valeur arbitraire.
+- Une animation d'ouverture s'arrête sous `prefers-reduced-motion`, dans la feuille du composant animé.
+- Attention : `muted` est, dans les tokens, la couleur du texte secondaire (`text-muted`) ; l'équivalent shadcn est
+  `muted-foreground`. Ne pas redéfinir `--color-muted`.
+- Le lint vérifie les classes du JSX (`eslint-plugin-better-tailwindcss`, qui lit `{{entry}}`) : ordre canonique,
+  classes inconnues (classes sémantiques comprises), en double ou en conflit, formes dépréciées, valeurs arbitraires.
+
+## Pas d'attribut data-*
+
+- Ni `data-slot`, ni `data-variant`, ni `data-size`. Une variante est une classe de modificateur (`btn-primary`,
+  `sheet-right`, `menu-item-danger`) ; un test cible un rôle ou un libellé accessible.
+- Un état se lit dans les attributs d'accessibilité ou les pseudo-classes : `[aria-selected='true']`,
+  `[aria-expanded='true']`, `[aria-invalid='true']`, `[aria-disabled='true']`, `:focus`, `:disabled`.
+- Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture.
+
+## Composants shadcn/ui
+
+- Un dossier par composant, dans `{{ui}}` comme dans `{{components}}` : `<composant>.tsx`, son `.css`, son histoire,
+  et un `index.ts` qui ré-exporte ses noms, pour que l'import reste `@/…/<composant>`. Entre deux composants partagés,
+  l'import passe par l'alias, jamais par un chemin relatif.
+- Ajout par la CLI de shadcn (version épinglée, dans `{{app}}`), qui crée le fichier à plat ; puis
+  `node <skill design-system>/scripts/rehome.mjs {{app}} <composant>` le **range** dans son dossier (un fichier par
+  sous-composant, `index.ts`, feuille importée par `components.css`, attributs `data-*` retirés) et prépare la
+  **réécriture** : classes sémantiques à nommer, premier jet du CSS à relire, TODO, textes à traduire.
+- Garder l'API de shadcn (noms des variantes, `asChild`, sous-composants) ; on peut ajouter des variantes (`success`,
+  `warning`…), pas en retirer. Les textes visibles (« Close » des fenêtres) passent par les messages du projet.
+- `cn` vient d'un seul endroit ({{cn}}) ; CVA reste pour les variantes typées.
+
+## Storybook
+
+- Chaque composant sans état (ui, bloc commun, mise en page, contenu) a son histoire `*.stories.tsx` à côté de lui,
+  en CSF 3 typé (`satisfies Meta<typeof X>`), avec les textes et données du fil rouge du produit. Un composant
+  connecté (qui lit des données ou un contexte) n'a pas d'histoire : sa version sans état en a une.
+- **Le titre dit où est le fichier** : une section selon le rôle, puis les dossiers en anglais et en PascalCase, puis
+  le composant. Six sections, dans cet ordre (`storySort`) :
+  - `Design system/<Page>` : pages MDX de `{{docs}}` ;
+  - `UI/<Composant>` : `{{ui}}` ;
+  - `Shared/<Composant>` : `{{components}}` ;
+  - `Layouts/<Nom>` pour les mises en page partagées, `Layouts/<Fonctionnalité>/<Nom>` pour celles d'une fonctionnalité ;
+  - `Features/<Fonctionnalité>/<Groupe>/<Composant>` : contenus d'une fonctionnalité ;
+  - `Pages/<Fonctionnalité>/<Écran>` : écrans complets, nommés sans le suffixe `Screen`.
+- **Pages** : `<nom>-screen.stories.tsx`, à côté de l'écran, assemble sa mise en page et son contenu avec les données
+  du fil rouge, sans rendre l'écran connecté. Une histoire par état de l'écran.
+- Noms d'histoires en anglais, un état chacun : `Default`, `Empty`, `Loading`, `NotFound`, `Error`, `Mobile`, ou
+  l'état métier. Un squelette n'a pas d'entrée à lui : c'est l'histoire `Loading` de ce qu'il remplace.
+- Les données du fil rouge communes à plusieurs histoires et la coquille qui entoure une page sont dans
+  `src/stories/`, que seules les histoires importent.
+- L'onglet Docs est généré pour toutes les histoires (`autodocs`, une fois dans la configuration). Une histoire qui
+  ouvre un calque d'emblée (fenêtre, panneau) s'y affiche dans son propre cadre (`docs.story.inline: false`).
+- Les pages de `{{docs}}` (introduction, tokens lus dans le fichier de tokens, classes) suivent toute nouvelle classe
+  ou tout nouveau token, dans le même changement. Les exemples HTML des pages MDX sont dans `<Unstyled>`.
+- Chaque histoire est rendue dans Chromium avec son contrôle d'accessibilité (axe), en local comme en CI : une
+  histoire qui plante ou une violation fait échouer. Une violation se corrige dans le composant, jamais en
+  désactivant la règle.

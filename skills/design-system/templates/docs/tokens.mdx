@@ -1,0 +1,44 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { ColorTokens } from './tokens/color-tokens';
+import { ScaleTokens } from './tokens/scale-tokens';
+
+<Meta title="Design system/Tokens" />
+
+# Tokens
+
+Lus dans `{{tokens}}` (bloc `@theme` de Tailwind v4) : cette page suit le fichier sans copie. Les valeurs sombres
+viennent du bloc `.dark` de `{{styles}}/theme.css`. Les variables de shadcn/ui (`--background`,
+`--primary-foreground`, `--ring`…) pointent sur ces tokens.
+
+## Couleurs
+
+<ColorTokens />
+
+## Polices
+
+<ScaleTokens prefix="font-" />
+
+## Tailles de texte
+
+En plus de l'échelle de Tailwind (`text-xs` 12 px, `text-sm` 14 px, `text-base` 16 px, `text-lg` 18 px…). Jamais de
+taille arbitraire (`text-[13px]`).
+
+<ScaleTokens prefix="text-" />
+
+## Rayons
+
+<ScaleTokens prefix="radius-" />
+
+## Hauteurs
+
+<ScaleTokens prefix="spacing-" />
+
+## Ombres
+
+<ScaleTokens prefix="shadow-" />
+
+## Mises en page
+
+Les colonnes des grilles des écrans (`grid-cols-content-aside`…) et les largeurs de lecture (`max-w-measure`) sont des
+entrées nommées du thème, dans `{{styles}}/theme.css` : aucune valeur arbitraire (`grid-cols-[minmax(0,1fr)_300px]`)
+dans les composants.
