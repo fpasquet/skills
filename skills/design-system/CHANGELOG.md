@@ -40,3 +40,6 @@
     et signale celles qui restent nommées d'après leur balise ;
   - l'audit accepte `--allow-data` pour l'attribut d'une bibliothèque sans classe stable ; le fragment ESLint lint
     les constantes de classes ; variante `can-hover:` dans le thème.
+  - promotion de composants de l'application dans le design system : `rehome.mjs` laisse dans le JSX les classes
+    que les feuilles du projet définissent déjà (`field-trigger`), ne pose la classe racine que sur le `cn(…)` qui
+    transmet `className`, traite `disabled && …` et signale les ternaires de classes.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Range un composant ajouté par la CLI de shadcn/ui (un fichier à plat dans ui/) selon les conventions du skill, et
- * prépare sa réécriture en classes sémantiques :
+ * Range un composant ajouté par la CLI de shadcn/ui, ou promu depuis l'application (un fichier à plat dans ui/), selon les
+ * conventions du skill, et prépare sa réécriture en classes sémantiques :
  *
  *   ui/dialog.tsx  →  ui/dialog/dialog.tsx, dialog-content.tsx… (un fichier par composant), index.ts, dialog.css
  *
@@ -23,7 +23,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
-import { detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, shadcnTokenizer, walk } from './project.mjs';
+import { cssImports, detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, shadcnTokenizer, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run', 'keep-classes']);
 const [appDir, name] = positional;
@@ -294,8 +294,19 @@ const slotClass = (slot) => (slot === base ? prefix : slot.startsWith(`${base}-`
 const lintIgnores = [...lintConfigText(project).matchAll(/ignore\s*:\s*\[([\s\S]*?)\]/g)].flatMap((m) =>
   [...m[1].matchAll(/'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"/g)].map((q) => (q[1] ?? q[2]).replace(/\\\\/g, '\\')),
 );
+// Classes sémantiques déjà définies par les feuilles du projet (field-trigger…) : Tailwind les refuse aussi dans @apply
+const projectClasses = new Set();
+for (const queue = project.entry ? [project.entry] : [], seen = new Set(); queue.length; ) {
+  const file = queue.shift();
+  if (seen.has(file) || !existsSync(file)) continue;
+  seen.add(file);
+  const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const rule of css.matchAll(/(?:^|[}{;])\s*([^{}@;]+)\{/g)) for (const m of rule[1].matchAll(/\.([a-z][\w-]*)/g)) projectClasses.add(m[1]);
+  queue.push(...cssImports(file));
+}
 const isMarker = (token) =>
   /^(group|peer)(\/[\w-]+)?$|^(not-)?prose$/.test(token) ||
+  projectClasses.has(token) ||
   lintIgnores.some((pattern) => {
     try {
       return !/[[\]:]/.test(token) && new RegExp(`^(?:${pattern})$`).test(token);
@@ -469,20 +480,22 @@ if (!options['keep-classes']) {
         const cnUtilities = cnStrings === undefined ? undefined : [...cnStrings.matchAll(/"([^"\n]*)"|'([^'\n]*)'|`([^`$]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3]).join(' ');
         const rest = cnStrings?.trimEnd().endsWith(',') ? ', ' : '';
         const utilities = cnUtilities ?? plainUtilities;
-        // La racine d'un composant reçoit toujours sa classe (card-content : px-6) ; une partie intérieure, à partir
-        // de deux utilitaires seulement
-        const atRoot = cnUtilities !== undefined && !rootDone;
+        // La racine d'un composant (le premier cn(…) qui transmet la prop className) reçoit toujours sa classe
+        // (card-content : px-6) ; une partie intérieure, à partir de deux utilitaires seulement : cn('size-4', …)
+        // sur une icône reste en utilitaires
+        const forwardsClassName = /^[^)]*\bclassName\b/.test(whole.slice(offset + match.length));
+        const atRoot = cnUtilities !== undefined && !rootDone && forwardsClassName;
         if (utilities.includes('${') || !utilities.trim() || (!atRoot && utilities.trim().split(/\s+/).length < 2)) return match;
         const tag = whole.slice(0, offset).match(/<([\w.]+)[^<]*$/)?.[1] ?? 'part';
         let className = cls;
-        if (rootDone || !cnUtilities) {
+        if (rootDone || !atRoot) {
           const part = partName(tag);
           const base = `${cls}-${part}`;
           parts.set(base, (parts.get(base) ?? 0) + 1);
           className = parts.get(base) > 1 ? `${base}-${parts.get(base)}` : base;
         }
         const isRoot = className === cls;
-        if (cnUtilities !== undefined) rootDone = true;
+        if (atRoot) rootDone = true;
         const markers = addUtilities(`.${className}`, utilities, isRoot ? modifiers : {});
         classMap.push([`${chunk.name}${isRoot ? '' : ` <${tag}>`}`, className]);
         const extra = isRoot ? dataModifiers.map((m) => `, \`${className}-\${${m.expression}}\``).join('') : '';
@@ -497,8 +510,10 @@ if (!options['keep-classes']) {
 // Classes conditionnelles dans cn(…) : variant === 'grid' && ['…', '…'] ou isListening && '…' deviennent une classe
 // de modificateur de la partie (attachment-grid, prompt-input-speech-button-listening)
 if (!options['keep-classes']) {
+  // Props booléennes courantes, nommées sans préfixe : disabled && '…' donne file-drop-zone-disabled
+  const BOOLEAN_PROPS = 'disabled|active|selected|checked|invalid|open|inline|compact|loading|required';
   const LITERAL = String.raw`(\[(?:\s*(?:'[^'\n]*'|"[^"\n]*"|\`[^\`$]*\`)\s*,?)+\s*\]|'[^'\n]*'|"[^"\n]*"|\`[^\`$]*\`)`;
-  const CONDITIONAL = new RegExp(String.raw`(\b[\w.]+) === (['"])([\w-]+)\2 &&\s*${LITERAL}|(?<![\w.=!<>&|?:]\s*)\b((?:is|has|should|show)[A-Z]\w*) &&\s*${LITERAL}`, 'g');
+  const CONDITIONAL = new RegExp(String.raw`(\b[\w.]+) === (['"])([\w-]+)\2 &&\s*${LITERAL}|(?<![\w.=!<>&|?:]\s*)\b((?:is|has|should|show)[A-Z]\w*|${BOOLEAN_PROPS}) &&\s*${LITERAL}`, 'g');
   for (const chunk of components) {
     chunk.text = chunk.text.replace(CONDITIONAL, (match, expression, q, value, payload, flag, flagPayload, offset, whole) => {
       // La partie : la première classe du même cn(…), ou la racine du composant si ce cn(…) est le premier
@@ -630,6 +645,11 @@ if (!options['keep-classes']) {
       const tokens = match[2].trim().split(/\s+/);
       const utility = (t) => /^[\w-]*[a-z]-[\w./[\]%-]+$|^[\w-]+:[\w[\]=&>*.()/%-]+$|\[/.test(t);
       if (tokens.length >= 2 && tokens.every(utility) && !/^(\.|@|\/)/.test(match[2])) leftovers.push(`${file}: ${match[2].trim()}`);
+    }
+    // Ternaire de classes, même d'un seul utilitaire de chaque côté : file ? 'text-muted' : 'font-medium'
+    for (const match of content.matchAll(/\?\s*(["'`])([\w:./[\]%-]+(?: [\w:./[\]%-]+)*)\1\s*:\s*(["'`])([\w:./[\]%-]+(?: [\w:./[\]%-]+)*)\3/g)) {
+      const tokens = `${match[2]} ${match[4]}`.split(/\s+/);
+      if (tokens.every((t) => /^[\w-]*[a-z]-[\w./[\]%-]+$|^[\w-]+:[\w[\]=&>*.()/%-]+$/.test(t))) leftovers.push(`${file}: ${match[0].trim()}`);
     }
   }
 }

@@ -183,6 +183,7 @@ Chaque ajout se fait dans un seul changement, qui contient le code, sa feuille, 
 - **un composant de shadcn** : étape 3 ;
 - **une variante** : on ajoute à l'API de shadcn, on n'en retire rien ;
 - **du code écrit avec les classes de shadcn** (`bg-card`, `text-muted-foreground`) : `retoken.mjs <app>` les réécrit avec les tokens, puis le lint remet l'ordre des classes ;
+- **un composant de l'application devenu générique** (sans état, sans routeur ni traductions) : le copier à plat dans `<ui>`, puis `rehome.mjs`. Ce qui tient à l'application devient une prop (libellé, rendu des liens, `locale`) et l'application garde un adaptateur ; un déclencheur de champ transmet `id` et `aria-*` à l'élément que le libellé doit nommer. Ses tests suivent le composant ;
 - **un fichier qui contient plusieurs composants** : `rehome.mjs <app> <chemin> --ui src --keep-classes` le découpe (un fichier par composant, l'`index.ts` garde l'API d'origine), sur place si le fichier est déjà dans son dossier ;
 - **une mise à jour de shadcn** : relancer la CLI. Comme le dossier existe, `rehome.mjs` refuse et laisse le fichier à plat pour la comparaison : reporter les changements utiles à la main, puis le supprimer ;
 - **une montée de version** (Storybook, Tailwind, lint) : sur une branche, en vérifiant le build de Storybook, les histoires et le lint, puis noter les versions dans la mémoire.

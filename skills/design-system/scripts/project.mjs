@@ -22,7 +22,7 @@ export const SKIPPED_DIRS = new Set([
   'test-results',
 ]);
 
-export const read = (file) => (existsSync(file) ? readFileSync(file, 'utf8') : '');
+export const read = (file) => (file && existsSync(file) ? readFileSync(file, 'utf8') : '');
 
 /** JSON avec commentaires et virgules finales (tsconfig.json). */
 export function readJsonc(file) {
