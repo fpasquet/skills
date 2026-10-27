@@ -30,14 +30,15 @@ Un composant à plusieurs parties a un fichier par sous-composant (`dialog-conte
    - Une valeur de mise en page devient du CSS standard dans la feuille : `width: min(440px, calc(100vw - 2rem))`.
    - Un sélecteur d'enfant devient un sélecteur CSS : `*:data-[slot=select-value]:flex` → `.select-trigger > span { … }`.
    - Une variable de Radix s'écrit en CSS : `height: var(--radix-select-trigger-height)`.
-5. **Classes restées dans le TSX** : une liste conditionnelle (`position === 'popper' && '…'`) devient une classe de modificateur posée par la condition (`position === 'popper' && 'select-content-popper'`).
-6. **États** : un sélecteur `[data-disabled]` ou `[data-highlighted]` devient `[aria-disabled='true']`, `:focus` ou `[aria-selected='true']`, selon ce que pose la primitive Radix (le vérifier dans sa documentation). Restent `[data-state='open' | 'closed']` et `[data-side]`, pour les animations, et `[data-placeholder]` du Select, sans équivalent ARIA. Une case ou un interrupteur se lit dans `[aria-checked='true']`. Une classe conditionnelle remplace un attribut que le composant posait lui-même (`data-error` → `form-label-error`).
-7. **Focus** : `focus-ring` (utilitaire du design system) au lieu des anneaux de shadcn.
-8. **Animations** : le script ajoute la règle `prefers-reduced-motion`. La vérifier, et l'ajouter pour toute animation écrite à la main.
-9. **Calques ouverts dans une histoire** : Radix masque le reste de la page (`aria-hidden`), Storybook compris, et axe le signale (`aria-hidden-focus`). Limiter le contrôle de l'histoire au calque (`parameters: { a11y: { context: '[role="listbox"]' } }`) plutôt que désactiver la règle.
-10. **Textes** : « Close », « Previous » et « More » passent par les messages du projet (`useTranslations('common')` avec next-intl). Le libellé d'un bouton icône est toujours présent (`sr-only` ou `aria-label`).
-11. **Histoire** : une histoire par variante ou par état, avec les textes du produit (`storybook.md`).
-12. Formater (Prettier du projet), puis `eslint <ui>/<composant>` et `audit.mjs <app> --rule duplicate-selector`.
+5. **Calques** (fenêtre, panneau, menu, popover, infobulle, liste) : le voile prend la classe `overlay` et le calque flottant la classe `popup` (`<styles>/classes/overlay.css`, posée par `scaffold.mjs`), au lieu de répéter les animations de shadcn dans chaque feuille. La boîte d'une fenêtre est `dialog`, et AlertDialog reprend ses classes.
+6. **Classes restées dans le TSX** : une liste conditionnelle (`position === 'popper' && '…'`) devient une classe de modificateur posée par la condition (`position === 'popper' && 'select-content-popper'`). Une classe tirée d'une prop s'écrit en entier (`{ right: 'sheet-right', left: 'sheet-left' }[side]`) : le lint ne reconnaît pas `` `sheet-${side}` ``.
+7. **États** : un sélecteur `[data-disabled]` ou `[data-highlighted]` devient `[aria-disabled='true']`, `:focus` ou `[aria-selected='true']`, selon ce que pose la primitive Radix (le vérifier dans sa documentation). Restent `[data-state='open' | 'closed']` et `[data-side]`, pour les animations, et `[data-placeholder]` du Select, sans équivalent ARIA. Une case ou un interrupteur se lit dans `[aria-checked='true']`. Une classe conditionnelle remplace un attribut que le composant posait lui-même (`data-error` → `form-label-error`).
+8. **Focus** : `focus-ring` (utilitaire du design system) au lieu des anneaux de shadcn.
+9. **Animations** : le script ajoute la règle `prefers-reduced-motion`. La vérifier, et l'ajouter pour toute animation écrite à la main.
+10. **Calques ouverts dans une histoire** : Radix masque le reste de la page (`aria-hidden`), Storybook compris, et axe le signale (`aria-hidden-focus`). Limiter le contrôle de l'histoire au calque (`parameters: { a11y: { context: '[role="listbox"]' } }`) plutôt que désactiver la règle.
+11. **Textes** : « Close », « Previous » et « More » passent par les messages du projet (`useTranslations('common')` avec next-intl). Le libellé d'un bouton icône est toujours présent (`sr-only` ou `aria-label`).
+12. **Histoire** : une histoire par variante ou par état, avec les textes du produit (`storybook.md`).
+13. Formater (Prettier du projet), puis `eslint <ui>/<composant>` et `audit.mjs <app> --rule duplicate-selector`.
 
 La CLI de shadcn crée parfois plusieurs fichiers (un composant et ses dépendances, comme `button` pour `dialog`). Lancer `rehome.mjs` pour chacun. Un composant déjà rangé est simplement réimporté par son alias (`@/shared/ui/button`).
 

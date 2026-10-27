@@ -48,6 +48,9 @@
   --color-info: #1d5ba3;
   --color-info-soft: #e4effb;
 
+  /* Voile derrière les fenêtres et panneaux modaux */
+  --color-overlay: #10182880;
+
   /* Tailles de texte hors de l'échelle de Tailwind (xs 12, sm 14, base 16, lg 18, xl 20 px y sont déjà) */
   --text-caption: 0.6875rem;      /* 11 px : métadonnées, aides sous un champ */
   --text-compact: 0.8125rem;      /* 13 px : texte courant en densité compacte */

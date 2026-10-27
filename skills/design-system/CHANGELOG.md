@@ -18,4 +18,8 @@
     `group-*`, `peer-*`, les propriétés arbitraires, `translate-*`, marges et rayons arbitraires, `calc()` imbriqués ;
     il signale la classe d'une partie visée par la feuille mais posée nulle part ;
   - l'audit accepte les attributs que Radix pose sans équivalent ARIA (`data-side`, `data-placeholder`) et ne compte
-    comme classe définie que le sujet d'un sélecteur.
+    comme classe définie que le sujet d'un sélecteur ;
+  - `rehome.mjs` traite les `className={`…`}` et écrit les déclarations avant l'`@apply`, pour qu'un variant
+    (`sm:max-w-lg`) les remplace ;
+  - gabarit `classes/overlay.css` (`overlay`, `popup`) et token `overlay`, communs aux calques de Radix ;
+  - le `viteFinal` du gabarit filtre les avertissements « use client » au build de Storybook.

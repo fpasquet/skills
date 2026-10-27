@@ -87,6 +87,8 @@ const values = {
 write(theme, fill(template('styles/theme.css'), values));
 write(componentsCss, fill(template('styles/components.css'), { ...values, ui: posix(relative(project.root, project.ui)) }));
 write(join(dirname(componentsCss), 'utilities.css'), template('styles/utilities.css'));
+// Voile des fenêtres et apparition des calques flottants, communs aux composants de Radix
+write(join(dirname(componentsCss), 'classes', 'overlay.css'), template('styles/classes/overlay.css'));
 
 // ---------- Feuille d'entrée ----------
 // Une bibliothèque qui n'a `next` qu'en dépendance de pair se documente avec Vite

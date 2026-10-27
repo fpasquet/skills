@@ -397,9 +397,9 @@ if (!options['keep-classes']) {
     const modifiers = Object.fromEntries(dataModifiers.map((m) => [m.attribute, cls]));
     chunk.text = chunk.text.replace(
       // cn('…', '…', `…`, className) : toutes les chaînes du début, commentaires compris, forment la liste
-      /className=(?:\{cn\(\s*((?:(?:"[^"\n]*"|'[^'\n]*'|`[^`$]*`)\s*(?:,\s*)?(?:\/\/[^\n]*\n\s*)*)+)|"([^"]*)"|'([^']*)')/g,
-      (match, cnStrings, doubleQuoted, singleQuoted, offset, whole) => {
-        const plainUtilities = doubleQuoted ?? singleQuoted;
+      /className=(?:\{cn\(\s*((?:(?:"[^"\n]*"|'[^'\n]*'|`[^`$]*`)\s*(?:,\s*)?(?:\/\/[^\n]*\n\s*)*)+)|"([^"]*)"|'([^']*)'|\{`([^`$]*)`\})/g,
+      (match, cnStrings, doubleQuoted, singleQuoted, templated, offset, whole) => {
+        const plainUtilities = doubleQuoted ?? singleQuoted ?? templated;
         const cnUtilities = cnStrings === undefined ? undefined : [...cnStrings.matchAll(/"([^"\n]*)"|'([^'\n]*)'|`([^`$]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3]).join(' ');
         const rest = cnStrings?.trimEnd().endsWith(',') ? ', ' : '';
         const utilities = cnUtilities ?? plainUtilities;
@@ -484,8 +484,9 @@ const cssLines = [`/* ${pascal(base)} : classes posées par le composant (premie
 for (const [selector, { apply, declarations, todo }] of css) {
   if (!apply.length && !declarations.length && !todo.length) continue;
   cssLines.push(`  ${selector} {`);
-  if (apply.length) cssLines.push(`    @apply ${[...new Set(apply)].join(' ')};`);
+  // Déclarations d'abord : un variant de l'@apply (sm:max-w-lg) doit pouvoir les remplacer
   for (const declaration of declarations) cssLines.push(`    ${declaration}`);
+  if (apply.length) cssLines.push(`    @apply ${[...new Set(apply)].join(' ')};`);
   for (const token of todo) {
     cssLines.push(`    /* TODO ${token} */`);
     todos.push(`${selector}: ${token}`);
