@@ -5,8 +5,8 @@
  * déduisent de `components.json` (alias de shadcn/ui, feuille d'entrée de Tailwind), de `tsconfig.json` (alias `@/`)
  * et des `@import` de la feuille d'entrée ; une option de la ligne de commande les remplace.
  */
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 
 export const SKIPPED_DIRS = new Set([
   'node_modules',
@@ -43,7 +43,13 @@ export function readJsonc(file) {
 export function walk(dir, extensions) {
   const files = [];
   if (!existsSync(dir)) return files;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return files; // dossier illisible (données d'un conteneur…)
+  }
+  for (const entry of entries) {
     if (entry.name.startsWith('.') && entry.name !== '.storybook') continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -63,14 +69,69 @@ export function repoRoot(dir) {
   return resolve(dir);
 }
 
-/** Feuilles importées par une feuille CSS (`@import '...'`), en chemins absolus, sans les paquets. */
+/** Chemin du fichier d'un paquet visible depuis `fromDir` (`@acme/ui/global.css`), par son champ exports. */
+export function resolvePackageFile(fromDir, spec) {
+  const parts = spec.split('/');
+  const name = spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
+  const sub = parts.slice(spec.startsWith('@') ? 2 : 1).join('/');
+  let dir = resolve(fromDir);
+  while (dir !== dirname(dir)) {
+    const pkgDir = join(dir, 'node_modules', name);
+    const pkg = readJsonc(join(pkgDir, 'package.json'));
+    if (pkg) {
+      const exported = exportTarget(pkg.exports, sub);
+      const path = exported ?? (sub ? `./${sub}` : null);
+      return path && existsSync(join(pkgDir, path)) ? realpathSync(join(pkgDir, path)) : null;
+    }
+    dir = dirname(dir);
+  }
+  return null;
+}
+
+/** Cible du champ exports pour un sous-chemin (`components/button`), motifs `./components/*` compris. */
+function exportTarget(exportsField, sub) {
+  if (!exportsField || typeof exportsField !== 'object') return null;
+  const pick = (value) => (typeof value === 'string' ? value : (value?.import ?? value?.default ?? null));
+  const key = sub ? `./${sub}` : '.';
+  if (exportsField[key]) return pick(exportsField[key]);
+  for (const [pattern, value] of Object.entries(exportsField)) {
+    const star = pattern.indexOf('*');
+    if (star < 0 || !key.startsWith(pattern.slice(0, star)) || !key.endsWith(pattern.slice(star + 1))) continue;
+    const middle = key.slice(star, key.length - (pattern.length - star - 1));
+    return pick(value)?.replace('*', middle) ?? null;
+  }
+  return null;
+}
+
+/** Feuilles importées par une feuille CSS (`@import '...'`), en chemins absolus, paquets du dépôt compris. */
 export function cssImports(file) {
   const imports = [];
   for (const match of read(file).matchAll(/@import\s+(?:url\()?['"]([^'"]+)['"]/g)) {
-    if (!match[1].startsWith('.')) continue;
-    imports.push(resolve(dirname(file), match[1]));
+    if (match[1].startsWith('.')) imports.push(resolve(dirname(file), match[1]));
+    else if (!/^(tailwindcss|tw-animate-css)$/.test(match[1]) && /^(@[\w.-]+\/)?[\w.-]+\/.+\.css$/.test(match[1])) {
+      const target = resolvePackageFile(dirname(file), match[1]);
+      // Seuls les paquets du dépôt (lien symbolique hors de node_modules) portent un design system
+      if (target && !target.includes(`${sep}node_modules${sep}`)) imports.push(target);
+    }
   }
   return imports;
+}
+
+/**
+ * Dossier désigné par un alias de components.json qui commence par le nom du paquet (`@acme/ui/components`,
+ * design system rangé dans un paquet du monorepo) : déduit du champ exports, sinon `src/<suite>`.
+ */
+function fromPackageAlias(root, pkg, alias) {
+  if (!pkg.name || !alias?.startsWith(`${pkg.name}/`)) return null;
+  const sub = alias.slice(pkg.name.length + 1);
+  for (const [key, value] of Object.entries(pkg.exports ?? {})) {
+    const target = typeof value === 'string' ? value : (value?.import ?? value?.default);
+    if (!target || !key.startsWith(`./${sub}/`)) continue;
+    const rest = key.slice(sub.length + 3).replace('*', '');
+    const at = target.lastIndexOf(rest.split('/')[0]);
+    if (at > 0) return resolve(root, target.slice(0, at));
+  }
+  return existsSync(join(root, 'src', sub)) ? join(root, 'src', sub) : join(root, sub);
 }
 
 const hasThemeColors = (css) => /@theme\b[^{]*\{[\s\S]*?--color-[\w-]+\s*:/.test(css);
@@ -84,12 +145,13 @@ export function detectProject(appDir, overrides = {}) {
   const componentsJson = readJsonc(join(root, 'components.json'));
   const tsconfig = readJsonc(join(root, 'tsconfig.json'));
   const pkg = readJsonc(join(root, 'package.json')) ?? {};
-  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  const deps = { ...pkg.peerDependencies, ...pkg.dependencies, ...pkg.devDependencies };
 
   // Alias « @/… » de tsconfig (le plus courant : "@/*": ["./src/*"])
   const paths = tsconfig?.compilerOptions?.paths ?? {};
   const aliasTarget = (paths['@/*']?.[0] ?? (existsSync(join(root, 'src')) ? './src/*' : './*')).replace(/\*$/, '');
-  const fromAlias = (alias) => (alias?.startsWith('@/') ? join(root, aliasTarget, alias.slice(2)) : null);
+  const fromAlias = (alias) =>
+    alias?.startsWith('@/') ? join(root, aliasTarget, alias.slice(2)) : fromPackageAlias(root, pkg, alias);
   const option = (name) => (overrides[name] ? resolve(root, overrides[name]) : null);
 
   const src = option('src') ?? (existsSync(join(root, 'src')) ? join(root, 'src') : root);
@@ -123,9 +185,20 @@ export function detectProject(appDir, overrides = {}) {
   const styles = option('styles') ?? (theme ? dirname(theme) : join(src, 'styles'));
   const docs = option('docs') ?? join(src, 'design-system');
 
+  // Application qui consomme le design system d'un paquet du dépôt (`@import '@acme/ui/global.css'`)
+  const repo = repoRoot(root);
+  const packageDir = (file) => {
+    for (let dir = dirname(file); dir.startsWith(repo) && dir !== repo; dir = dirname(dir)) {
+      if (existsSync(join(dir, 'package.json'))) return existsSync(join(dir, 'components.json')) ? dir : null;
+    }
+    return null;
+  };
+  const designSystemPackage = componentsJson ? null : (sheets.map((file) => !file.startsWith(root + sep) && packageDir(file)).find(Boolean) ?? null);
+
   return {
     root,
-    repo: repoRoot(root),
+    repo,
+    designSystemPackage,
     src,
     ui,
     components,
@@ -139,6 +212,8 @@ export function detectProject(appDir, overrides = {}) {
     storybook: existsSync(join(root, '.storybook')) ? join(root, '.storybook') : null,
     componentsJson,
     deps,
+    // Dépendance de pair seulement (bibliothèque de composants qui accepte `next` sans en dépendre)
+    peerOnly: (name) => Boolean(pkg.peerDependencies?.[name] && !pkg.dependencies?.[name] && !pkg.devDependencies?.[name]),
     // Import de `cn` : le paquet officiel `cn` de shadcn s'il est installé, sinon l'alias utils de components.json
     cnImport: deps.cn ? 'cn' : (componentsJson?.aliases?.utils ?? '@/lib/utils'),
   };

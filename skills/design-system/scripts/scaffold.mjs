@@ -56,10 +56,16 @@ const fill = (text, values) => text.replace(/\{\{(\w+)\}\}/g, (match, key) => (k
 
 // ---------- Tokens ----------
 const specsTokens = join(project.repo, 'specs', 'ui', 'tokens.css');
-const tokens = project.tokens ?? (existsSync(specsTokens) ? specsTokens : join(project.styles, 'tokens.css'));
+// Couleurs déclarées par la feuille d'entrée elle-même (shadcn d'origine) : ce ne sont pas encore des tokens
+const tokensInEntry = project.tokens && project.tokens === project.entry;
+const tokens = (!tokensInEntry && project.tokens) || (existsSync(specsTokens) ? specsTokens : join(project.styles, 'tokens.css'));
 const tokensFromSpecs = tokens === specsTokens;
 if (!existsSync(tokens) && write(tokens, template('styles/tokens.css'))) {
-  notes.push(`${rel(project, tokens)}: template values. Replace them with the colours found by audit.mjs (rule hardcoded-color, palette-class) or the brand.`);
+  notes.push(
+    tokensInEntry
+      ? `${rel(project, tokens)}: template values. ${rel(project, project.entry)} declares the colours itself (:root, .dark, @theme inline): move their values into the tokens with the names of references/tokens.md, point the shadcn variables of theme.css at them, then delete them from the entry (step 2).`
+      : `${rel(project, tokens)}: template values. Replace them with the colours found by audit.mjs (rule hardcoded-color, palette-class) or the brand.`,
+  );
 }
 
 // ---------- Thème, classes, utilitaires ----------
@@ -83,7 +89,8 @@ write(componentsCss, fill(template('styles/components.css'), { ...values, ui: po
 write(join(dirname(componentsCss), 'utilities.css'), template('styles/utilities.css'));
 
 // ---------- Feuille d'entrée ----------
-const isNext = Boolean(project.deps.next);
+// Une bibliothèque qui n'a `next` qu'en dépendance de pair se documente avec Vite
+const isNext = Boolean(project.deps.next) && !project.peerOnly('next');
 const entry =
   project.entry ??
   (project.componentsJson?.tailwind?.css ? join(project.root, project.componentsJson.tailwind.css) : join(project.src, isNext ? 'app' : '', isNext ? 'globals.css' : 'index.css'));
@@ -168,7 +175,18 @@ const ruleValues = {
     ? ' Le fichier est partagé avec les maquettes des specs (skill `specs-ui`) : une couleur, un rayon ou une police se change dans les specs, jamais dans l\'application.'
     : '',
 };
-let ruleText = fill(template('rule.md'), ruleValues);
+let ruleText = fill(template('rule.md'), { ...ruleValues, uiAlias: project.componentsJson?.aliases?.ui ?? '@/…' });
+// Composants d'interface et blocs partagés dans le même dossier (paquet de composants d'un monorepo) : une seule mention
+const sameDir = project.ui === project.components;
+const dedupe = (text) =>
+  sameDir
+    ? text
+        .replace(/\s*\(ou de `[^`]+` s'il assemble plusieurs\s+composants\)/, '')
+        .replace(/dans (`[^`]+`) comme dans \1/, 'dans $1')
+        .replace(/^\s*- `Shared\/<Composant>` : `[^`]+` ;\n/m, '')
+        .replace(/(`[^`]+`), \1 \|/, '$1 |')
+    : text;
+ruleText = dedupe(ruleText);
 if (rule.startsWith(rulesDir)) {
   // Règle de Claude Code : chargée seule quand un fichier de l'interface est ouvert
   const app = fromRepo(project.root);
@@ -179,18 +197,45 @@ if (write(rule, ruleText) && !rule.startsWith(rulesDir)) {
 }
 write(
   memory,
-  fill(template('memory.md'), { ...values, entry: fromRepo(entry), rule: fromRepo(rule), mode: options.mode ?? 'create', date: new Date().toISOString().slice(0, 10) }),
+  dedupe(fill(template('memory.md'), { ...values, entry: fromRepo(entry), rule: fromRepo(rule), mode: options.mode ?? 'create', date: new Date().toISOString().slice(0, 10) })),
 );
 
 // ---------- Dépendances ----------
 const lockfile = ['pnpm-lock.yaml', 'yarn.lock', 'bun.lock', 'package-lock.json'].find((f) => existsSync(join(project.repo, f)));
 const manager = { 'pnpm-lock.yaml': 'pnpm add -E', 'yarn.lock': 'yarn add -E', 'bun.lock': 'bun add -E' }[lockfile] ?? 'npm install -E';
-// Déjà fournis : playwright par @playwright/test, le greffon de lint par une configuration partagée
+const hasPostcssTailwind = ['postcss.config.mjs', 'postcss.config.js', 'postcss.config.cjs'].some((f) => /@tailwindcss\/postcss/.test(read(join(project.root, f))));
+// Déjà fournis sous une autre forme : playwright par @playwright/test, radix-ui par les paquets @radix-ui/react-*,
+// cn par la fonction de components.json (aliases.utils), le greffon de lint par une configuration partagée, le
+// greffon Vite de Tailwind par une configuration PostCSS (que Vite lit aussi)
 const provided = (name) =>
-  project.deps[name] || (name === 'playwright' && project.deps['@playwright/test']) || (name === 'eslint-plugin-better-tailwindcss' && lintReady);
+  project.deps[name] ||
+  (name === 'playwright' && project.deps['@playwright/test']) ||
+  (name === 'radix-ui' && Object.keys(project.deps).some((dep) => dep.startsWith('@radix-ui/react-'))) ||
+  (name === 'cn' && project.componentsJson?.aliases?.utils) ||
+  (name === 'eslint-plugin-better-tailwindcss' && lintReady) ||
+  (name === '@tailwindcss/vite' && hasPostcssTailwind);
 const missingDeps = (list) => Object.entries(list).filter(([name]) => !provided(name)).map(([name, version]) => `${name}@${version}`);
 const deps = missingDeps(versions.dependencies);
 const devDeps = missingDeps({ ...versions.devDependencies, ...versions.framework[isNext ? 'next' : 'vite'] });
+
+// Catalogue pnpm (`catalog:` dans package.json) : les versions s'ajoutent à pnpm-workspace.yaml, pas au paquet
+const workspaceYaml = read(join(project.repo, 'pnpm-workspace.yaml'));
+const usesCatalog = /"catalog:/.test(read(join(project.root, 'package.json'))) && /^catalog:/m.test(workspaceYaml);
+const catalogBlock = workspaceYaml.match(/^catalog:\n((?:[ \t]+[^\n]*\n?)*)/m)?.[1] ?? '';
+const catalog = Object.fromEntries(
+  [...catalogBlock.matchAll(/^\s+'?([^':\s]+)'?:\s*['"]?([^'"\s#]+)/gm)].map(([, name, version]) => [name, version]),
+);
+// Une version du dépôt plus ancienne que celle des gabarits (majeure en dessous) : à trancher avant d'installer
+const major = (version) => Number(String(version).replace(/^[^\d]*/, '').split('.')[0]);
+const resolvedVersion = (name) => (project.deps[name]?.startsWith('catalog:') ? catalog[name] : project.deps[name]);
+for (const [name, version] of Object.entries({ ...versions.dependencies, ...versions.devDependencies })) {
+  const current = resolvedVersion(name) ?? catalog[name];
+  if (current && major(current) < major(version)) {
+    notes.push(
+      `${name}: the repository has ${current}, the templates were tested with ${version}.${name === 'vitest' ? ' @storybook/addon-vitest needs vitest 4 or later: upgrade it, or give the Storybook packages their own version (pnpm named catalog, catalogs.storybook) in this package only.' : ''}`,
+    );
+  }
+}
 
 // ---------- Rapport ----------
 console.log(`${dry ? 'Would write' : 'Written'} (${written.length}):`);
@@ -201,8 +246,16 @@ if (kept.length) {
 }
 if (deps.length || devDeps.length) {
   console.log(`\nDependencies to install in ${positional[0]} (versions tested together on ${versions.testedOn}):`);
-  if (deps.length) console.log(`  ${manager} ${deps.join(' ')}`);
-  if (devDeps.length) console.log(`  ${manager.replace(/ -E$/, ' -D -E')} ${devDeps.join(' ')}`);
+  if (usesCatalog) {
+    console.log('  pnpm catalog: add to the catalog of pnpm-workspace.yaml, then "catalog:" in package.json');
+    for (const dep of [...deps, ...devDeps]) {
+      const [name, version] = dep.split(/@(?=[^@]+$)/);
+      console.log(`    ${name.startsWith('@') ? `'${name}'` : name}: ${catalog[name] ? `${catalog[name]} (already in the catalog)` : version}${devDeps.includes(dep) ? '  (dev)' : ''}`);
+    }
+  } else {
+    if (deps.length) console.log(`  ${manager} ${deps.join(' ')}`);
+    if (devDeps.length) console.log(`  ${manager.replace(/ -E$/, ' -D -E')} ${devDeps.join(' ')}`);
+  }
 }
 const scripts = readFileSync(join(project.root, 'package.json'), 'utf8');
 const wantedScripts = { storybook: 'storybook dev -p 6006 --no-open', 'build-storybook': 'storybook build -o storybook-static --quiet', 'test:stories': 'vitest run --project stories' };

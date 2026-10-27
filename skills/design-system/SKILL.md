@@ -64,7 +64,7 @@ Deux rédacteurs ne touchent jamais les mêmes fichiers. **Seul le modèle princ
 
 ## Étape 0 · Repérer et choisir le mode
 
-1. Trouver l'application. Dans un dépôt à plusieurs applications, demander laquelle si la conversation ne le dit pas.
+1. Trouver l'application. Dans un dépôt à plusieurs applications, demander laquelle si la conversation ne le dit pas. Quand les composants vivent dans un paquet partagé (`packages/ui`), `<app>` est ce paquet : l'audit d'une application qui le consomme l'indique (ligne `package`). Voir `references/setup.md`.
 2. Si `DESIGN-SYSTEM.md` existe, c'est une reprise : lire la mémoire et passer à l'étape utile.
 3. Lancer l'audit :
 
@@ -128,6 +128,8 @@ npx shadcn@<version> add dialog                      # dans <app> ; version épi
 node <skill>/scripts/rehome.mjs <app> dialog          # --class btn pour un préfixe court ; --dry-run pour voir
 ```
 
+Un composant d'un sous-dossier de registre se désigne par son chemin (`rehome.mjs <app> ai-elements/message`).
+
 `rehome.mjs` range le composant dans son dossier :
 
 - un fichier par sous-composant, et un `index.ts` ;
@@ -139,7 +141,8 @@ Il liste ensuite ce qui reste à relire :
 - les noms de classes et de variantes à aligner sur les conventions ;
 - les TODO (valeurs ou variantes arbitraires) ;
 - les classes conditionnelles restées dans le TSX ;
-- les textes en dur.
+- les textes en dur ;
+- le code ailleurs qui ciblait ses `data-slot`.
 
 La relecture suit `references/components.md` :
 
@@ -164,7 +167,7 @@ Détails : `references/storybook.md`.
 ## Étape 5 · Migrer (mode migrer)
 
 1. Faire l'inventaire avec `audit.mjs <app> --json`, et lister les sources à migrer (`references/migration.md`).
-2. Découper en **lots** : socle et tokens, puis composants de `<ui>`, puis composants partagés, puis une fonctionnalité à la fois. Écrire le plan dans la mémoire.
+2. Découper en **lots** : socle et tokens, puis composants de `<ui>`, puis composants partagés, puis une fonctionnalité à la fois. Écrire le plan dans la mémoire. Depuis shadcn d'origine, le lot des tokens renomme aussi les fonds `bg-muted` en `bg-surface-alt` dans tout le code qui importe le thème. Proposer aussi de retirer les composants que rien n'importe (`references/migration.md`).
 3. Pour chaque lot, dans un commit qui compile, passe le lint du lot et garde les histoires vertes :
    - réécrire le lot ;
    - lancer `eslint <dossier>`, puis `audit.mjs <app> --rule …` ;
@@ -196,10 +199,10 @@ Dire à la personne ce qui a été contrôlé et ce qui ne l'a pas été. Une su
 
 | Fichier | Rôle |
 |---|---|
-| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, `data-*`, feuilles non importées, sélecteurs en double), avertissements, suggestions ; `--json`, `--strict` |
+| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`), avertissements, suggestions ; `--json`, `--strict` |
 | `scripts/scaffold.mjs` | Socle sans rien écraser : tokens, thème, classes, Storybook, vitest, ESLint, conventions, mémoire ; dépendances à installer |
 | `scripts/rehome.mjs` | Composant de shadcn rangé (un fichier par sous-composant, `index.ts`), classes sémantiques et premier jet du CSS |
-| `scripts/project.mjs` | Repérage des emplacements, partagé par les scripts |
+| `scripts/project.mjs` | Repérage des emplacements (application, ou paquet de composants d'un monorepo), partagé par les scripts |
 | `references/setup.md` | Mise en place : Next.js ou Vite, Storybook, vitest, ESLint, polices, messages, CI |
 | `references/tokens.md` | Vocabulaire des tokens, tokens tirés du code, mode sombre, thème shadcn, mises en page nommées |
 | `references/components.md` | Relecture d'un composant rangé, composants maison, classes ou composant, animations, textes |

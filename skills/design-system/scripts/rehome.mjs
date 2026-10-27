@@ -23,7 +23,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { detectProject, isDir, kebab, parseArgs, pascal, rel } from './project.mjs';
+import { detectProject, isDir, kebab, parseArgs, pascal, rel, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run', 'keep-classes']);
 const [appDir, name] = positional;
@@ -47,7 +47,11 @@ if (existsSync(folder)) {
 const code = readFileSync(source, 'utf8');
 const ext = source.endsWith('.jsx') ? '.jsx' : '.tsx';
 const quote = code.includes("from '") ? "'" : '"';
-const prefix = options.class ?? name;
+// Point-virgule en fin d'import, comme dans le fichier d'origine
+const semi = /from\s*["'][^"']+["'];/.test(code) ? ';' : '';
+// Composant d'un sous-dossier de registre (ai-elements/message) : le nom de fichier et de classe est la fin du chemin
+const base = name.split('/').pop();
+const prefix = options.class ?? base;
 const todos = [];
 const classMap = [];
 
@@ -123,17 +127,17 @@ if (!components.length) {
   console.error(`No component found in ${rel(project, source)}.`);
   process.exit(1);
 }
-const main = components.find((c) => kebab(c.name) === name) ?? components[0];
+const main = components.find((c) => kebab(c.name) === base) ?? components[0];
 const uses = (text, identifier) => new RegExp(`(^|[^\\w$.])${identifier.replace('$', '\\$')}([^\\w$]|$)`).test(text);
 const bodyOf = (chunk) => chunk.text.split('\n').slice(1).join('\n');
 
 // Fichier de chaque déclaration
 for (const chunk of chunks) {
-  if (chunk.component) chunk.file = chunk === main ? name : kebab(chunk.name);
+  if (chunk.component) chunk.file = chunk === main ? base : kebab(chunk.name);
   else {
     const users = components.filter((c) => uses(c.text, chunk.name));
     chunk.owner = users.length === 1 ? users[0] : main;
-    chunk.file = chunk.owner === main ? name : kebab(chunk.owner.name);
+    chunk.file = chunk.owner === main ? base : kebab(chunk.owner.name);
   }
 }
 const classOf = (component) => {
@@ -189,16 +193,27 @@ const unescape = (value) =>
  * `modifiers` : attributs data-* du composant qui deviennent des classes de modificateur ({ size: 'select-trigger' } :
  * data-[size=sm]: → .select-trigger.select-trigger-sm).
  */
+// Partie désignée par son data-slot (card-action) : sa classe, préfixe court compris (--class btn)
+const slotClass = (slot) => (slot === base ? prefix : slot.startsWith(`${base}-`) ? `${prefix}-${slot.slice(base.length + 1)}` : slot);
+
 function addUtilities(selector, utilities, modifiers = {}) {
   for (const token of utilities.split(/\s+/).filter(Boolean)) {
     const parts = splitVariants(token);
     let base = parts.pop();
     let suffix = '';
+    let element = '';
     const kept = [];
     let unsupported = false;
     for (const variant of parts) {
       let match;
-      if ((match = variant.match(/^data-\[([\w-]+)=([^\]]+)\]$/)) && modifiers[match[1]]) suffix += `.${modifiers[match[1]]}-${match[2]}`;
+      // data-slot retiré par le script : la partie se désigne par sa classe
+      if ((match = variant.match(/^data-\[slot=([\w-]+)\]$/))) suffix = suffix.endsWith(' > *') ? `${suffix.slice(0, -1)}.${slotClass(match[1])}` : `${suffix} .${slotClass(match[1])}`;
+      else if ((match = variant.match(/^has-data-\[slot=([\w-]+)\]$/))) suffix += `:has(.${slotClass(match[1])})`;
+      else if (variant === '*') suffix += ' > *';
+      // [a&]: le composant rendu comme lien ; [.border-b]: le composant qui porte aussi cette classe
+      else if ((match = variant.match(/^\[([a-z]+)&\]$/))) element = match[1];
+      else if ((match = variant.match(/^\[(\.[\w-]+)\]$/))) suffix += match[1];
+      else if ((match = variant.match(/^data-\[([\w-]+)=([^\]]+)\]$/)) && modifiers[match[1]]) suffix += `.${modifiers[match[1]]}-${match[2]}`;
       else if (match) suffix += `[data-${match[1]}='${match[2]}']`;
       else if ((match = variant.match(/^data-\[([\w-]+)\]$/))) suffix += `[data-${match[1]}]`;
       else if ((match = variant.match(/^aria-\[([\w-]+)=([^\]]+)\]$/))) suffix += `[aria-${match[1]}='${match[2]}']`;
@@ -214,8 +229,17 @@ function addUtilities(selector, utilities, modifiers = {}) {
       rule(selector).todo.push(token);
       continue;
     }
-    const target = rule(`${selector}${suffix}`);
+    const target = rule(`${element}${selector}${suffix}`);
     const arbitrary = base.match(/^(-?)([\w-]+?)-\[(.+)\]$/);
+    // transition-[color,box-shadow] : les propriétés en CSS, la durée et la courbe par défaut de Tailwind
+    if (arbitrary?.[2] === 'transition' && !kept.length) {
+      target.declarations.push(
+        `transition-property: ${arbitrary[3].split(',').join(', ')};`,
+        'transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));',
+        'transition-duration: var(--tw-duration, var(--default-transition-duration));',
+      );
+      continue;
+    }
     if (arbitrary) {
       const property = ARBITRARY_CSS[arbitrary[2]];
       if (property && !kept.length && !arbitrary[1]) target.declarations.push(`${property}: ${unescape(arbitrary[3])};`);
@@ -265,8 +289,8 @@ if (!options['keep-classes']) {
         text.slice(0, open) +
         text.slice(open, close + 1).replace(/(\n\s*)(\w+):\s*\{([\s\S]*?)\n\s*\},?/g, (group, indent, groupName, body) => {
           if (groupName === 'variants') return group;
-          const replaced = body.replace(/(\n\s*)("?[\w-]+"?):\s*\n?\s*(["'`])([\s\S]*?)\3/g, (entry, space, key, q, utilities) => {
-            const clean = key.replace(/"/g, '');
+          const replaced = body.replace(/(\n\s*)(["']?[\w-]+["']?):\s*\n?\s*(["'`])([\s\S]*?)\3/g, (entry, space, key, q, utilities) => {
+            const clean = key.replace(/["']/g, '');
             if (!utilities.trim()) return entry;
             let modifier = `${cls}-${clean}`;
             if (used.has(modifier)) modifier = `${cls}-${groupName}-${clean}`;
@@ -294,7 +318,10 @@ if (!options['keep-classes']) {
       (match, q1, cnUtilities, doubleQuoted, singleQuoted, offset, whole) => {
         const plainUtilities = doubleQuoted ?? singleQuoted;
         const utilities = cnUtilities ?? plainUtilities;
-        if (utilities.includes('${') || utilities.trim().split(/\s+/).length < 2) return match;
+        // La racine d'un composant reçoit toujours sa classe (card-content : px-6) ; une partie intérieure, à partir
+        // de deux utilitaires seulement
+        const atRoot = cnUtilities !== undefined && !rootDone;
+        if (utilities.includes('${') || !utilities.trim() || (!atRoot && utilities.trim().split(/\s+/).length < 2)) return match;
         const tag = whole.slice(0, offset).match(/<([\w.]+)[^<]*$/)?.[1] ?? 'part';
         let className = cls;
         if (rootDone || !cnUtilities) {
@@ -340,7 +367,7 @@ for (const [file, list] of files) {
   const header = [];
   for (const entry of imports) {
     if (entry.side) {
-      header.push(`import ${quote}${entry.from}${quote}`);
+      header.push(`import ${quote}${entry.from}${quote}${semi}`);
       continue;
     }
     const named = entry.named.filter((n) => uses(body, n.local));
@@ -350,23 +377,23 @@ for (const [file, list] of files) {
     const clause = [keepNamespace ? `* as ${entry.namespace}` : keepDefault ? entry.defaultName : null, named.length ? `{ ${named.map((n) => n.text).join(', ')} }` : null]
       .filter(Boolean)
       .join(', ');
-    header.push(`import ${entry.typeOnly ? 'type ' : ''}${clause} from ${quote}${entry.from}${quote}`);
+    header.push(`import ${entry.typeOnly ? 'type ' : ''}${clause} from ${quote}${entry.from}${quote}${semi}`);
   }
   const siblings = new Map();
   for (const [identifier, otherFile] of definedIn) {
     if (otherFile === file || !uses(body, identifier)) continue;
     siblings.set(otherFile, [...(siblings.get(otherFile) ?? []), identifier]);
   }
-  for (const [otherFile, names] of siblings) header.push(`import { ${names.sort().join(', ')} } from ${quote}./${otherFile}${quote}`);
+  for (const [otherFile, names] of siblings) header.push(`import { ${names.sort().join(', ')} } from ${quote}./${otherFile}${quote}${semi}`);
   output.set(`${file}${ext}`, `${directive ? `${directive}\n\n` : ''}${header.join('\n')}\n\n${body}\n`);
 }
 const indexLines = [...exportsOf]
-  .sort(([a], [b]) => (a === name ? -1 : b === name ? 1 : a.localeCompare(b)))
+  .sort(([a], [b]) => (a === base ? -1 : b === base ? 1 : a.localeCompare(b)))
   .map(([file, names]) => `export { ${names.sort().join(', ')} } from './${file}';`);
 output.set('index.ts', `${indexLines.join('\n')}\n`);
 
 // Premier jet de la feuille de style
-const cssLines = [`/* ${pascal(name)} : classes posées par le composant (premier jet de rehome.mjs, à relire). */`, '@layer components {'];
+const cssLines = [`/* ${pascal(base)} : classes posées par le composant (premier jet de rehome.mjs, à relire). */`, '@layer components {'];
 for (const [selector, { apply, declarations, todo }] of css) {
   if (!apply.length && !declarations.length && !todo.length) continue;
   cssLines.push(`  ${selector} {`);
@@ -384,7 +411,7 @@ if (animated.length) {
   cssLines.push('', '/* Moins de mouvement demandé par le système : apparition sans animation. */', '@media (prefers-reduced-motion: reduce) {');
   cssLines.push(`  ${[...new Set(animated)].join(',\n  ')} {`, '    animation: none;', '  }', '}');
 }
-if (!options['keep-classes']) output.set(`${name}.css`, `${cssLines.join('\n')}\n`);
+if (!options['keep-classes']) output.set(`${base}.css`, `${cssLines.join('\n')}\n`);
 
 // Classes restées dans le TSX (conditionnelles, calculées) : à transformer en classes de modificateur
 const leftovers = [];
@@ -399,10 +426,23 @@ if (!options['keep-classes']) {
   }
 }
 
-// Textes en dur à passer par les messages du projet
+// Textes en dur à passer par les messages du projet : contenu des balises et attributs lus par les lecteurs d'écran
 const texts = [];
 for (const [file, content] of output) {
   for (const match of content.matchAll(/>\s*([A-Z][A-Za-z]+(?: [A-Za-z]+)*)\s*</g)) texts.push(`${file}: "${match[1]}"`);
+  for (const match of content.matchAll(/\b(aria-label|title|placeholder|alt)="([A-Z][^"]*)"/g)) texts.push(`${file}: ${match[1]}="${match[2]}"`);
+}
+
+// Code qui cible les data-slot retirés ([data-slot=card-content], *:data-[slot=…]) : à passer sur les classes
+const slots = new Set(components.map((c) => kebab(c.name)));
+const slotUsers = [];
+const searchRoots = project.repo === project.root ? [project.root] : [project.repo];
+for (const file of searchRoots.flatMap((dir) => walk(dir, ['.tsx', '.jsx', '.ts', '.css']))) {
+  if (file === source || file.startsWith(folder)) continue;
+  const content = readFileSync(file, 'utf8');
+  for (const match of content.matchAll(/slot=['"]?([\w-]+)/g)) {
+    if (slots.has(match[1])) slotUsers.push(`${relative(project.repo, file)}:${content.slice(0, match.index).split('\n').length}  [data-slot=${match[1]}] → .${classOf(components.find((c) => kebab(c.name) === match[1]))}`);
+  }
 }
 
 // ---------- Écriture ----------
@@ -415,7 +455,7 @@ if (options['dry-run']) {
   rmSync(source);
   if (project.componentsCss && !options['keep-classes']) {
     const sheet = readFileSync(project.componentsCss, 'utf8');
-    const target = relative(dirname(project.componentsCss), join(folder, `${name}.css`)).split('\\').join('/');
+    const target = relative(dirname(project.componentsCss), join(folder, `${base}.css`)).split('\\').join('/');
     const line = `@import '${target.startsWith('.') ? target : `./${target}`}';`;
     if (!sheet.includes(line)) {
       const uiImports = [...sheet.matchAll(new RegExp(`^@import ['"][^'"]*/${relative(project.src, project.ui).split('\\').join('/')}/[^\\n]*$`, 'gm'))];
@@ -427,23 +467,38 @@ if (options['dry-run']) {
   }
 }
 
+// Paquet du monorepo qui exporte chaque composant (`"./components/button": "./src/components/button.tsx"`) :
+// l'entrée pointe désormais sur l'index du dossier, les imports des applications ne changent pas
+const packageJson = join(project.root, 'package.json');
+const sourcePath = `./${relative(project.root, source).split('\\').join('/')}`;
+const pkgText = readFileSync(packageJson, 'utf8');
+const exportUpdated = pkgText.includes(`"${sourcePath}"`);
+if (exportUpdated && !options['dry-run']) {
+  writeFileSync(packageJson, pkgText.replace(`"${sourcePath}"`, `"./${relative(project.root, join(folder, 'index.ts')).split('\\').join('/')}"`));
+}
+
 console.log(`${options['dry-run'] ? 'Would move' : 'Moved'} ${rel(project, source)} → ${relFolder}/ (${[...output.keys()].join(', ')})`);
+if (exportUpdated) console.log(`package.json exports: ${sourcePath} → ${relFolder}/index.ts`);
 if (classMap.length) {
   console.log('\nClasses (rename to the conventions: default → primary, destructive → danger, short prefix such as btn):');
   for (const [where, cls] of classMap) console.log(`  ${cls.padEnd(28)} ${where}`);
 }
 if (todos.length) {
-  console.log(`\nTODO in ${name}.css (${todos.length}): arbitrary values or variants to rewrite with the scale, a token or standard CSS:`);
+  console.log(`\nTODO in ${base}.css (${todos.length}): arbitrary values or variants to rewrite with the scale, a token or standard CSS:`);
   for (const todo of todos) console.log(`  ${todo}`);
 }
 if (leftovers.length) {
   console.log('\nUtility classes left in the TSX (conditional or computed): turn them into modifier classes:');
   for (const leftover of leftovers) console.log(`  ${leftover}`);
 }
+if (slotUsers.length) {
+  console.log('\nCode that targets the removed data-slot attributes: select the class instead:');
+  for (const user of slotUsers) console.log(`  ${user}`);
+}
 if (texts.length) {
   console.log('\nHard-coded texts to move to the messages of the project:');
   for (const text of texts) console.log(`  ${text}`);
 }
 console.log(
-  `\nNext: review ${name}.css (shadcn colours → tokens if needed), write ${name}.stories.tsx, run the formatter and the linter${project.componentsCss || options['keep-classes'] ? '' : ', import the stylesheet (no components.css found)'}.`,
+  `\nNext: review ${base}.css (shadcn colours → tokens if needed), write ${base}.stories.tsx, run the formatter and the linter${project.componentsCss || options['keep-classes'] ? '' : ', import the stylesheet (no components.css found)'}.`,
 );

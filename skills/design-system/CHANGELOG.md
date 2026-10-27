@@ -7,3 +7,9 @@
 - **`audit.mjs`** : état des lieux en lecture seule, compteurs par règle, `--json` et `--strict`.
 - **`scaffold.mjs`** : pose le socle sans rien écraser (tokens, thème, classes, Storybook, vitest, ESLint, conventions, mémoire) et affiche les dépendances à installer.
 - **`rehome.mjs`** : range un composant ajouté par la CLI de shadcn (un fichier par sous-composant, `index.ts`), retire les `data-*`, remplace les utilitaires par des classes sémantiques et écrit un premier jet de sa feuille.
+- Éprouvée aussi sur un monorepo dont les composants vivent dans un paquet partagé, que plusieurs applications consomment :
+  - les alias au nom du paquet et les `@import` de paquet sont repérés ;
+  - `rehome.mjs` met à jour les `exports` du paquet et signale le code qui ciblait les `data-slot` retirés ;
+  - `scaffold.mjs` sait poser les tokens d'un thème shadcn écrit dans la feuille d'entrée, et suit le catalogue pnpm ;
+  - l'audit signale `bg-muted` (`muted-background`) ;
+  - Storybook rend le JSX même sous `"jsx": "preserve"`, et ses histoires passent dès le premier lancement en CI.

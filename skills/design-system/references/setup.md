@@ -16,6 +16,10 @@ Une version plus récente s'adopte sur une branche : build de Storybook, histoir
 | Histoires dans le navigateur | `vitest`, `@vitest/browser`, `@vitest/browser-playwright`, `playwright` (ou `@playwright/test`) |
 | Lint | `eslint-plugin-better-tailwindcss` |
 
+- **Catalogue pnpm** (`catalog:` dans les `package.json`) : le script liste les versions à ajouter au catalogue de `pnpm-workspace.yaml` au lieu d'une commande `pnpm add`.
+- **Version plus ancienne dans le dépôt** : le script la signale. `@storybook/addon-vitest` demande vitest 4 ou plus. Si le reste du dépôt est en vitest 3, les paquets de Storybook prennent leur propre version dans un catalogue nommé, réservé au paquet du design system (`catalogs: { storybook: { vitest: … } }`, puis `"vitest": "catalog:storybook"`).
+- Déjà fournis sous une autre forme, donc pas redemandés : `radix-ui` par les paquets `@radix-ui/react-*`, `cn` par la fonction de `aliases.utils`, `@tailwindcss/vite` par une configuration PostCSS, que Vite lit aussi.
+
 La CLI de shadcn se lance à sa version épinglée (`npx shadcn@<version> add …`, version dans `versions.json` → `cli`), notée dans la mémoire.
 
 ## Feuille d'entrée
@@ -34,6 +38,17 @@ Ordre des imports : Tailwind, animations, tokens, thème, classes. Le script ajo
 - **Vite** : polices par `@fontsource/*` ou Google Fonts dans `index.html`.
 - `@source '../../node_modules/<paquet>/dist/*.js'` pour une bibliothèque qui pose des classes Tailwind elle-même (rendu Markdown…).
 - Une entrée Tailwind v3 (`@tailwind base;`) se migre d'abord (`migration.md`) : le script ne la touche pas.
+
+## Design system dans un paquet du monorepo
+
+Les composants vivent parfois dans un paquet partagé (`packages/ui`), que les applications importent par son nom (`@acme/ui/components/button`, `@import '@acme/ui/global.css'`). `<app>` est alors **ce paquet** :
+
+- `components.json` y déclare des alias au nom du paquet. Les scripts retrouvent les dossiers par le champ `exports` du `package.json`.
+- `audit.mjs` lancé sur une application qui consomme le paquet suit l'`@import` du paquet pour trouver les tokens, et dit où lancer l'audit des composants (ligne `package`).
+- `rehome.mjs` réécrit l'entrée `exports` du composant (`./src/components/button.tsx` → `./src/components/button/index.ts`) : les imports des applications ne changent pas.
+- Storybook et ses histoires vivent dans le paquet, avec `@storybook/react-vite` quand `next` n'y est qu'une dépendance de pair.
+- Les polices viennent de chaque application (`next/font` dans l'une, Google Fonts dans l'autre). Les tokens les nomment avec une valeur de repli, `--font-sans: var(--font-inter, "Inter"), ui-sans-serif, …`, pour qu'une application sans la variable garde la bonne famille.
+- Les changements du thème touchent toutes les applications : leurs tests et leur lint se lancent avec ceux du paquet.
 
 ## `components.json`
 
@@ -62,6 +77,7 @@ Ordre des imports : Tailwind, animations, tokens, thème, classes. Le script ajo
   ```
 
 - **Messages** : un décorateur enveloppe l'histoire dans le fournisseur du projet. Avec next-intl, c'est `<NextIntlClientProvider locale timeZone formats messages>`, avec tous les messages assemblés comme dans l'application.
+- **`viteFinal` du gabarit** : JSX en mode automatique, même quand `tsconfig.json` est en `"jsx": "preserve"` (Next.js, paquet partagé qui en hérite). Sans cela : « React is not defined ». Il pré-optimise aussi le runtime JSX. Sinon, Vite le découvre pendant le premier lancement des histoires, recharge la page, et les tests échouent à chaque cache vide, donc toujours en CI.
 - **Avertissement « use client »** des paquets Radix dans le build Vite de Storybook : à filtrer dans `viteFinal` (`rolldownOptions.onLog`, code `MODULE_LEVEL_DIRECTIVE`).
 - Les histoires importent le type `Meta` du framework (`@storybook/nextjs-vite` ou `@storybook/react-vite`). Le modèle `templates/ui/button/button.stories.tsx` importe `@storybook/react-vite` : à adapter.
 
@@ -102,6 +118,7 @@ Points d'attention :
 
 - **Un parseur TypeScript est nécessaire** pour les `.tsx` (`typescript-eslint`, déjà là avec `eslint-config-next`).
 - **`react/no-multi-comp`** demande le greffon `react`, que `eslint-config-next` enregistre déjà. Ailleurs, l'enregistrer, ou passer `oneComponentPerFile: false` si la version d'`eslint-plugin-react` n'accepte pas la version d'ESLint.
+- **`eslint-plugin-better-tailwindcss` en version 3** : la règle des classes inconnues s'appelle `no-unregistered-classes`, et `detectComponentClasses` est une option de cette règle, pas un réglage partagé. `enforce-canonical-classes` n'existe pas encore. Adapter le fragment, ou monter le greffon en version 4 sur une branche à part.
 - **`no-restricted-syntax`** : une configuration qui le définit déjà est remplacée, pas complétée, par le fragment. Fusionner les deux listes de sélecteurs.
 - **Monorepo** : le fragment peut vivre dans le paquet de configurations partagé. `audit.mjs` suit les imports de la configuration pour le trouver.
 

@@ -25,8 +25,18 @@ C'est le cas le plus fréquent : les composants viennent de la CLI, à plat, ave
   2. le traiter avec `rehome.mjs`, puis le relire (`components.md`).
 - **Composant modifié à la main** : `rehome.mjs` le range de la même façon, mais le compte rendu demande une relecture plus attentive. Avec `--keep-classes`, il range seulement, et la réécriture des classes se fait à la main.
 - **Sélecteurs sur `data-slot`** ailleurs dans le code (`[data-slot=card-header]`, `*:data-[slot=…]`) : ils deviennent des sélecteurs de classe (`.card-header`). L'audit les liste (`data-attribute`, `data-selector`).
-- **Tests qui ciblent `data-slot`** : ils passent aux rôles et libellés accessibles (`getByRole('dialog', { name })`).
-- **Variables CSS de shadcn** (`--background`, `--primary`…) définies en dur dans la feuille d'entrée : elles vont dans `theme.css` et pointent sur les tokens.
+- **Code qui cible les `data-slot` retirés** (`[[data-slot=card-content]_&]:`, `*:data-[slot=…]`) dans un autre composant ou une application : `rehome.mjs` le liste à la fin de son compte rendu. Il passe à la classe (`[.card-content_&]:`), en attendant la migration de ce composant.
+- **Tests qui ciblent `data-slot`** ou une classe d'implémentation (`toHaveClass('animate-spin')`) : ils passent aux rôles et libellés accessibles (`getByRole('dialog', { name })`), sinon à la classe sémantique (`toHaveClass('spinner')`).
+- **Variables CSS de shadcn** (`--background`, `--primary`…) définies en dur dans la feuille d'entrée (`:root`, `.dark`, `@theme inline`) : leurs valeurs deviennent les tokens, avec les noms du vocabulaire (`--background` → `canvas`, `--card` → `surface`, `--muted` → `surface-alt`, `--muted-foreground` → `muted`, `--border` → `line`, `--input` → `line-strong`). Les variables de shadcn vont dans `theme.css` et pointent sur ces tokens, sans que le rendu change. `scaffold.mjs` pose alors un `tokens.css` séparé : la feuille d'entrée ne garde que ses `@import` et sa couche `base`.
+- **`bg-muted` de shadcn** : c'est un fond, alors que `muted` est la couleur du texte dans les tokens. Dans le même commit que les tokens, renommer les fonds dans tout le code qui importe le thème, applications comprises, puis vérifier avec l'audit (`muted-background`) :
+
+  ```sh
+  perl -pi -e 's/\b(bg|fill|border|from|via|to|ring|outline|divide|stroke)-muted(?![-\w])/$1-surface-alt/g' $(grep -rlP '\b(bg|fill|border)-muted(?![-\w])' src)
+  ```
+
+- **`accent` de shadcn** : il sert au survol des menus. Le pointer sur le token qui a ce rôle dans la maquette (`primary-soft` ou `surface-alt`).
+- **Rayons et ombres** : garder l'échelle de shadcn (`--radius-md: calc(var(--radius) - 2px)`) et ramener les ombres de Tailwind aux deux reliefs des tokens (`--shadow-sm: var(--shadow-card)`, `--shadow-lg: var(--shadow-overlay)`), pour que les composants pas encore migrés gardent leur rendu.
+- **Composants inutilisés** : avant le premier lot, lister les exports que rien n'importe, même indirectement, et proposer de les retirer avec leurs dépendances. Moins de composants, c'est moins de lots.
 
 ## Depuis Tailwind v3
 

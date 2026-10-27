@@ -45,7 +45,7 @@ Quand `specs/ui/tokens.css` existe, l'application l'importe directement (`@impor
 
 `theme.css` pointe les variables de shadcn sur les tokens (`--background: var(--color-canvas)`, `--primary-foreground: var(--color-on-primary)`…), puis les expose à Tailwind dans un `@theme inline`. Les composants de shadcn gardent ainsi leurs classes (`bg-background`, `text-muted-foreground`) et suivent l'identité.
 
-- **Piège `muted`** : dans les tokens, `muted` est la couleur du texte secondaire (`text-muted`). Pour shadcn, `muted` est un fond, et son texte secondaire s'appelle `muted-foreground`. `theme.css` définit `--muted` (fond) et `--muted-foreground: var(--color-muted)`, mais ne redéfinit jamais `--color-muted`. L'audit le vérifie (`muted-redefined`).
+- **Piège `muted`** : dans les tokens, `muted` est la couleur du texte secondaire (`text-muted`). Pour shadcn, `muted` est un fond, et son texte secondaire s'appelle `muted-foreground`. `theme.css` définit `--muted` (fond) et `--muted-foreground: var(--color-muted)`, mais ne redéfinit jamais `--color-muted`. L'audit le vérifie (`muted-redefined`). Le fond s'écrit `bg-surface-alt`, jamais `bg-muted`, qui prendrait la couleur du texte : l'audit le signale (`muted-background`), et `migration.md` donne la commande pour renommer le code existant.
 - `primary` a le même sens des deux côtés : seul `--primary-foreground` est ajouté.
 - `--radius` vient de `--radius-card`, et les rayons `sm`, `md`, `lg`, `xl` de shadcn en dérivent.
 

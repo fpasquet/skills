@@ -36,7 +36,8 @@ décisions du design system : `{{memory}}`. Contrôle : `node <skill design-syst
   feuille de style, du CSS standard plutôt qu'un `@apply` à valeur arbitraire.
 - Une animation d'ouverture s'arrête sous `prefers-reduced-motion`, dans la feuille du composant animé.
 - Attention : `muted` est, dans les tokens, la couleur du texte secondaire (`text-muted`) ; l'équivalent shadcn est
-  `muted-foreground`. Ne pas redéfinir `--color-muted`.
+  `muted-foreground`. Ne pas redéfinir `--color-muted`, et écrire le fond secondaire `bg-surface-alt`, jamais
+  `bg-muted` (qui prendrait la couleur du texte).
 - Le lint vérifie les classes du JSX (`eslint-plugin-better-tailwindcss`, qui lit `{{entry}}`) : ordre canonique,
   classes inconnues (classes sémantiques comprises), en double ou en conflit, formes dépréciées, valeurs arbitraires.
 
@@ -51,7 +52,7 @@ décisions du design system : `{{memory}}`. Contrôle : `node <skill design-syst
 ## Composants shadcn/ui
 
 - Un dossier par composant, dans `{{ui}}` comme dans `{{components}}` : `<composant>.tsx`, son `.css`, son histoire,
-  et un `index.ts` qui ré-exporte ses noms, pour que l'import reste `@/…/<composant>`. Entre deux composants partagés,
+  et un `index.ts` qui ré-exporte ses noms, pour que l'import reste `{{uiAlias}}/<composant>`. Entre deux composants partagés,
   l'import passe par l'alias, jamais par un chemin relatif.
 - Ajout par la CLI de shadcn (version épinglée, dans `{{app}}`), qui crée le fichier à plat ; puis
   `node <skill design-system>/scripts/rehome.mjs {{app}} <composant>` le **range** dans son dossier (un fichier par

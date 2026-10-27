@@ -14,7 +14,8 @@
  *   --min-classes une liste de classes répétée compte à partir de ce nombre de classes (4 par défaut)
  *
  * Erreurs : couleur en dur, couleur de la palette de Tailwind, valeur ou variante arbitraire, attribut data-slot /
- * data-variant / data-size, feuille de composant non importée, sélecteur déclaré deux fois, `--color-muted` redéfini.
+ * data-variant / data-size, feuille de composant non importée, sélecteur déclaré deux fois, `--color-muted` redéfini,
+ * fond `bg-muted` de shadcn alors que `muted` est la couleur du texte.
  * Avertissements : composant hors de son dossier, sans index.ts ou sans histoire, plusieurs composants par fichier,
  * import relatif entre composants partagés, animation sans prefers-reduced-motion, histoire hors de sa section,
  * @apply à valeur arbitraire, sélecteur sur un autre attribut data-* que data-state.
@@ -42,6 +43,7 @@ const RULES = {
   'css-import-missing': ['error', 'components.css imports a file that does not exist'],
   'duplicate-selector': ['error', 'Selector declared twice in the same context: the second one silently wins'],
   'muted-redefined': ['error', '--color-muted redefined by the theme: in the tokens it is the secondary text colour'],
+  'muted-background': ['error', 'bg-muted is a shadcn background, but muted is the text colour of the tokens: use bg-surface-alt'],
   'flat-component': ['warning', 'Component file at the root of ui/: move it to its folder (rehome.mjs)'],
   'missing-index': ['warning', 'Component folder without index.ts re-exporting its names'],
   'missing-story': ['warning', 'Stateless component without a *.stories.tsx next to it'],
@@ -69,7 +71,7 @@ const inside = (file, dir) => dir && (file === dir || file.startsWith(dir + sep)
 const codeFiles = walk(project.src, ['.tsx', '.jsx', '.ts', '.js', '.mdx']).filter((f) => !f.endsWith('.d.ts'));
 const cssFiles = walk(project.src, ['.css']);
 if (project.tokens && !cssFiles.includes(project.tokens)) cssFiles.push(project.tokens);
-const shared = [project.ui, project.components, project.layouts].filter((dir) => isDir(dir));
+const shared = [...new Set([project.ui, project.components, project.layouts])].filter((dir) => isDir(dir));
 
 // ---------- Classes dans le code : className="…", cn(…), cva(…), clsx(…) ----------
 const COLOR_NAMES =
@@ -77,6 +79,9 @@ const COLOR_NAMES =
 const PALETTE = new RegExp(
   `^-?(bg|text|border(-[trblxyse])?|ring|ring-offset|fill|stroke|from|via|to|outline|divide|placeholder|decoration|shadow|accent|caret)-((${COLOR_NAMES})-(50|[1-9]00|950)|black|white)(/\\d+)?$`,
 );
+// Fond « muted » de shadcn (bg-muted, bg-muted/50) quand les tokens font de muted la couleur du texte secondaire
+const MUTED_SURFACE = /^-?(bg|fill|stroke|border(-[trblxyse])?|from|via|to|ring|outline|divide)-muted(\/\d+)?$/;
+const mutedIsText = project.tokens ? /--color-muted\s*:/.test(read(project.tokens)) : false;
 const VISUAL = /^-?(bg|border|rounded|shadow|ring|divide|font|tracking|leading|text|uppercase|italic|underline|decoration|opacity)\b/;
 const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/;
 
@@ -124,6 +129,7 @@ for (const file of codeFiles) {
       const base = token.split(':').pop().replace(/^!/, '');
       if (token.includes('[')) add('arbitrary-class', file, lineOf(code, index), token);
       else if (PALETTE.test(base)) add('palette-class', file, lineOf(code, index), token);
+      else if (mutedIsText && MUTED_SURFACE.test(base)) add('muted-background', file, lineOf(code, index), token);
     }
     // Une liste qui ne fait que placer (flex, gap, marges) reste en utilitaires : seules comptent celles qui habillent
     if (!isStory && classes.length >= minClasses && classes.some((token) => VISUAL.test(token.split(':').pop()))) {
@@ -170,6 +176,7 @@ for (const file of cssFiles) {
       const base = token.split(':').pop().replace(/^!/, '');
       if (token.includes('[')) add('arbitrary-apply', file, lineOf(css, match.index), token);
       else if (PALETTE.test(base)) add('palette-class', file, lineOf(css, match.index), token);
+      else if (mutedIsText && MUTED_SURFACE.test(base)) add('muted-background', file, lineOf(css, match.index), token);
     }
   }
   // Règles : contexte (at-rules et règles parentes) + sélecteur
@@ -188,7 +195,8 @@ for (const file of cssFiles) {
         if (/\[data-(?!state\b)[\w-]+/.test(prelude)) add('data-selector', file, lineOf(css, i), prelude);
         if (/\[data-(slot|variant|size)\b/.test(prelude)) add('data-attribute', file, lineOf(css, i), prelude);
         if (inside(file, project.src) && file !== project.theme) {
-          for (const cls of prelude.matchAll(/\.([a-z][\w-]*)/g)) {
+          // Première classe de chaque sélecteur composé : dans .card-header.border-b, border-b est un utilitaire
+          for (const cls of prelude.matchAll(/(?:^|[\s,>+~(])\.([a-z][\w-]*)/g)) {
             if (!definedClasses.has(cls[1])) definedClasses.set(cls[1], { file, line: lineOf(css, i) });
           }
         }
@@ -238,20 +246,27 @@ if (project.componentsCss) {
 
 // ---------- Composants partagés ----------
 const TOP_LEVEL_COMPONENT = /^(?:export\s+)?(?:default\s+)?(?:function\s+([A-Z]\w*)|const\s+([A-Z]\w*)\s*(?::[^=]+)?=\s*(?:\(|(?:React\.)?(?:forwardRef|memo)\b))/gm;
-for (const dir of shared) {
+// `group` : sous-dossier qui regroupe des composants à plat (registre ai-elements de shadcn), pas un composant
+const scanComponents = (dir, group = '') => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isFile() && /\.(tsx|jsx)$/.test(entry.name) && !entry.name.includes('.stories.')) {
-      add('flat-component', path, 1, `node rehome.mjs <app-dir> ${entry.name.replace(/\.(tsx|jsx)$/, '')}`);
+    if (entry.isFile() && /\.(tsx|jsx)$/.test(entry.name) && !entry.name.includes('.stories.') && !entry.name.includes('.test.')) {
+      add('flat-component', path, 1, `node rehome.mjs <app-dir> ${group}${entry.name.replace(/\.(tsx|jsx)$/, '')}`);
     }
     if (!entry.isDirectory()) continue;
     const files = readdirSync(path);
     const sources = files.filter((f) => /\.(tsx|jsx)$/.test(f) && !f.includes('.stories.') && !f.includes('.test.'));
     if (!sources.length) continue;
-    if (!files.includes('index.ts') && !files.includes('index.tsx')) add('missing-index', path, 0, entry.name);
-    if (!files.some((f) => f.includes('.stories.'))) add('missing-story', path, 0, entry.name);
+    const hasIndex = files.includes('index.ts') || files.includes('index.tsx');
+    if (!group && !hasIndex && sources.length > 1 && !sources.some((f) => f.startsWith(`${entry.name}.`))) {
+      scanComponents(path, `${entry.name}/`);
+      continue;
+    }
+    if (!hasIndex) add('missing-index', path, 0, `${group}${entry.name}`);
+    if (!files.some((f) => f.includes('.stories.'))) add('missing-story', path, 0, `${group}${entry.name}`);
   }
-}
+};
+for (const dir of shared) scanComponents(dir);
 for (const file of codeFiles) {
   if (!/\.(tsx|jsx)$/.test(file) || file.includes('.stories.') || file.includes('.test.')) continue;
   const code = stripJsComments(read(file));
@@ -298,7 +313,9 @@ if (classesPage) {
 // ---------- Outillage ----------
 const lint = lintConfigText(project);
 const tokensCount = project.tokens ? (read(project.tokens).match(/^\s*--[\w-]+\s*:/gm) ?? []).length : 0;
-const uiCount = isDir(project.ui) ? readdirSync(project.ui, { withFileTypes: true }).filter((e) => e.isDirectory()).length : 0;
+const uiCount = isDir(project.ui)
+  ? readdirSync(project.ui, { withFileTypes: true }).filter((e) => e.isDirectory() && ['index.ts', 'index.tsx'].some((f) => existsSync(join(project.ui, e.name, f)))).length
+  : 0;
 const storiesCount = codeFiles.filter((f) => /\.stories\.[jt]sx?$/.test(f)).length;
 const preview = project.storybook ? walk(project.storybook, ['.ts', '.tsx', '.js', '.jsx']).map(read).join('\n') : '';
 const layout = {
@@ -306,7 +323,10 @@ const layout = {
   tokens: project.tokens ? `${rel(project, project.tokens)} (${tokensCount} tokens)` : 'none',
   theme: rel(project, project.theme),
   components: project.componentsCss ? `${rel(project, project.componentsCss)} (${(read(project.componentsCss).match(/@import/g) ?? []).length} imports)` : 'none',
-  ui: `${rel(project, project.ui)} (${uiCount} component folders)`,
+  ui: isDir(project.ui) ? `${rel(project, project.ui)} (${uiCount} component folders)` : 'none',
+  ...(project.designSystemPackage && {
+    package: `${rel(project, project.designSystemPackage)}: design system of a workspace package, audit it there`,
+  }),
   storybook: project.storybook ? `${storiesCount} stories, a11y ${/a11y[\s\S]{0,80}test:\s*['"]error['"]/.test(preview) ? 'blocking' : 'not blocking'}` : 'none',
   lint: /better-tailwindcss/.test(lint)
     ? `better-tailwindcss${/no-restricted-classes/.test(lint) ? ', arbitrary values blocked' : ', arbitrary values allowed'}${/no-unknown-classes/.test(lint) ? ', unknown classes' : ''}`
