@@ -264,6 +264,12 @@ if (missingScripts.length) {
   console.log('\nScripts to add to package.json:');
   for (const [name, command] of missingScripts) console.log(`  "${name}": "${command}"`);
 }
+// Dépôt piloté par un Makefile : une cible pour ouvrir Storybook sans connaître le paquet ni le gestionnaire
+const makefile = join(project.repo, 'Makefile');
+if (existsSync(makefile) && !/^storybook\s*:/m.test(read(makefile))) {
+  const run = lockfile === 'pnpm-lock.yaml' && project.repo !== project.root ? `pnpm --filter=${JSON.parse(scripts).name} storybook` : `cd ${fromRepo(project.root)} && npm run storybook`;
+  notes.push(`Makefile: add a "storybook" target (and its line in "help"): ${run}`);
+}
 if (notes.length) {
   console.log('\nTo do:');
   for (const note of notes) console.log(`  - ${note}`);

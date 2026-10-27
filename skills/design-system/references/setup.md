@@ -81,6 +81,8 @@ Les composants vivent parfois dans un paquet partagé (`packages/ui`), que les a
 - **Avertissement « use client »** des paquets Radix dans le build Vite de Storybook : à filtrer dans `viteFinal` (`rolldownOptions.onLog`, code `MODULE_LEVEL_DIRECTIVE`).
 - Les histoires importent le type `Meta` du framework (`@storybook/nextjs-vite` ou `@storybook/react-vite`). Le modèle `templates/ui/button/button.stories.tsx` importe `@storybook/react-vite` : à adapter.
 
+Un dépôt piloté par un `Makefile` reçoit aussi une cible `storybook`, avec sa ligne dans l'aide (`make storybook`, `pnpm --filter=<paquet> storybook` dans un monorepo). `scaffold.mjs` la propose.
+
 Scripts du `package.json` :
 
 ```json

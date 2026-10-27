@@ -12,4 +12,5 @@
   - `rehome.mjs` met à jour les `exports` du paquet et signale le code qui ciblait les `data-slot` retirés ;
   - `scaffold.mjs` sait poser les tokens d'un thème shadcn écrit dans la feuille d'entrée, et suit le catalogue pnpm ;
   - l'audit signale `bg-muted` (`muted-background`) ;
-  - Storybook rend le JSX même sous `"jsx": "preserve"`, et ses histoires passent dès le premier lancement en CI.
+  - Storybook rend le JSX même sous `"jsx": "preserve"`, et ses histoires passent dès le premier lancement en CI ;
+  - `scaffold.mjs` propose une cible `make storybook` quand le dépôt a un `Makefile`.
