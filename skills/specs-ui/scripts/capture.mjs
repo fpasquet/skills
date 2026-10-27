@@ -15,7 +15,9 @@
  *   --height 1500      hauteur de fenêtre des captures de section · --width 1440 largeur
  *
  * Un dossier (site construit par build.mjs) est contrôlé page par page. Nécessite Chrome ou Chromium
- * (variable CHROME_PATH si le chemin n'est pas standard). Aucune dépendance.
+ * (variable CHROME_PATH si le chemin n'est pas standard, CHROME_ARGS pour des options en plus). Aucune dépendance.
+ * Sans navigateur (bac à sable de claude.ai, voir references/claude-ai.md) : contrôles statiques seulement (version,
+ * blocs data-use sans template) ; icônes, contenu coupé, pastilles et images ne sont pas vérifiés, et le script le dit.
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync } from 'node:fs';
 import { resolve, join, relative, basename } from 'node:path';
@@ -56,11 +58,20 @@ const chrome = [
   '/Applications/Chromium.app/Contents/MacOS/Chromium',
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
 ].filter(Boolean).find((c) => existsSync(c));
-if (!chrome) {
-  console.error('No Chrome/Chromium found (set CHROME_PATH). Ask the person to open the file.');
-  process.exit(1);
+// CHROME_ARGS : options en plus (« --no-sandbox » dans un conteneur sans bac à sable Chrome, voir references/claude-ai.md)
+const baseArgs = ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=9000', ...(process.env.CHROME_ARGS ?? '').split(/\s+/).filter(Boolean)];
+// Un Chrome qui ne démarre pas ferait accuser les pages : on le vérifie d'abord, et on passe aux contrôles statiques
+let browserError = null;
+if (chrome) {
+  try {
+    execFileSync(chrome, [...baseArgs, '--dump-dom', 'data:text/html,ok'], { stdio: ['ignore', 'pipe', 'pipe'], timeout: 60000 });
+  } catch (e) {
+    browserError = String(e.stderr || e.message).split('\n').find((line) => /fatal|error/i.test(line))?.trim() ?? String(e.message).split('\n')[0];
+  }
 }
-const baseArgs = ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=9000'];
+if (!chrome) console.log('No Chrome/Chromium found (set CHROME_PATH): static checks only, see references/claude-ai.md to install one.');
+else if (browserError) console.log(`Chrome found but it did not start (${browserError.slice(0, 200)}): static checks only. In a container, CHROME_ARGS=--no-sandbox (see references/claude-ai.md).`);
+const browser = chrome && !browserError ? chrome : null;
 const pageUrl = (file, params = {}) => {
   const u = new URL(pathToFileURL(resolve(file)).href);
   if (themes) u.searchParams.set('themes', themes);
@@ -75,7 +86,7 @@ const screenshot = (url, png, size) => {
     return `(failed) ${png}: ${e.message}`;
   }
 };
-const dumpDom = (url) => execFileSync(chrome, [...baseArgs, '--dump-dom', url], { encoding: 'utf8', timeout: 90000, maxBuffer: 64 * 1024 * 1024 });
+const dumpDom = (url) => execFileSync(chrome, [...baseArgs, '--dump-dom', url], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 90000, maxBuffer: 64 * 1024 * 1024 });
 const withoutCode = (html) => html.replace(/<template[\s\S]*?<\/template>|<script[\s\S]*?<\/script>/gi, '');
 mkdirSync(outputDir, { recursive: true });
 const suffix = themes ? `-themes-${themes.replace(/,/g, '')}` : '';
@@ -98,6 +109,12 @@ for (const file of files) {
   const expected = basename(file) === 'propositions.html' ? PROPOSITIONS_VERSION : TEMPLATE_VERSION;
   if (version !== expected) report.versions.add(`${label} (${version ?? 'older than 1.4.0'})`);
 
+  if (!browser) {
+    // Contrôle statique : chaque bloc data-use doit trouver son template dans la page
+    const ids = new Set([...raw.matchAll(/<template id="tpl-([^"]+)">/g)].map((m) => m[1]));
+    for (const m of source.matchAll(/\sdata-use="([^"]+)"/g)) if (!ids.has(m[1])) report.unassembled.add(`${m[1]} (${label})`);
+    continue;
+  }
   if (sectionsWanted) {
     const ids = [...source.matchAll(/<section\b[^>]*\bid="([^"]+)"/gi)].map((m) => m[1]).filter(matchesIds);
     ids.forEach((id) => shots.push(screenshot(pageUrl(file, { only: id }), resolve(outputDir, `section-${id}${suffix}.png`), `${width},${height}`)));
@@ -178,10 +195,11 @@ if (thumbnails) {
 }
 
 // Compte rendu
-console.log(`Checked ${files.length} page(s).`);
+console.log(`Checked ${files.length} page(s)${browser ? '' : ' without a browser'}.`);
 if (report.versions.size) console.log(`WARNING: pages not on template ${TEMPLATE_VERSION}: ${[...report.versions].join(', ')}. Rebuild with build.mjs (or upgrade.mjs for a document without sources).`);
 if (report.notIsolated.length) console.log(`WARNING: frames not isolated (?frame ignored) in: ${report.notIsolated.join(', ')}. Rebuild or upgrade those pages.`);
-console.log(report.icons.size ? `Unknown Lucide icons (nothing is drawn): ${[...report.icons].join(', ')}` : 'All Lucide icons render.');
+if (!browser) console.log(`NOT CHECKED without a browser: Lucide icons, clipped content, annotation markers${frames || sectionsWanted ? ', images (--sheet, --frames, --thumbnails, --sections)' : ''}. Say so to the person.`);
+else console.log(report.icons.size ? `Unknown Lucide icons (nothing is drawn): ${[...report.icons].join(', ')}` : 'All Lucide icons render.');
 if (report.unassembled.size) console.log(`Unassembled data-use blocks: ${[...report.unassembled].join(', ')} (check the <template id="tpl-…">).`);
 if (report.annos.length) console.log(`Annotation markers to move to an empty area:\n${report.annos.map((a) => `  - ${a}`).join('\n')}`);
 if (report.clipped.length) console.log(`Clipped content in: ${report.clipped.join(', ')}. Check on a sheet: fix a truncated block, or mark an intended cut (a list that goes on) with data-clip-ok on its container.`);

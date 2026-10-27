@@ -13,7 +13,7 @@ description: >
   lots, même sans prononcer le mot « cahier des charges ».
 metadata:
   author: fpasquet
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # Cahier des charges à partir des specs
@@ -24,6 +24,8 @@ Ce skill part d'un projet de specs (skill `specs-ui`, et le prototype du skill `
 - une **page HTML** publiée comme artifact : sommaire qui suit la lecture, recherche par identifiant, pastilles RF / CA / NF / DT / RQ, diagrammes, thème clair et sombre, boutons « Copier le Markdown », pour le document entier ou une partie. La partie fonctionnelle et UI vient des specs **par extraction** (aucune réécriture), la partie technique (architecture, stack, infrastructure) est **proposée puis validée** avec la personne, et le découpage en lots porte des **estimations en fourchettes** avec leurs hypothèses.
 
 Document et échanges en français. Code des scripts en anglais ; commentaires en français. `<skill>` désigne le dossier de ce skill ; les scripts se lancent depuis le dossier qui contient `specs/ui/`. Aucune dépendance : Node suffit.
+
+**Dans le chat claude.ai** (pas d'outil Artifact multi-fichiers, bac à sable `/mnt/user-data/`) : lire d'abord `references/claude-ai.md` du skill `specs-ui`. Il remplace la reprise d'un projet et la publication décrites ici ; tout le reste s'applique.
 
 ## Économiser les tokens (à lire en premier)
 
@@ -47,6 +49,7 @@ Les specs d'un produit pèsent souvent plus d'1 Mo de HTML ; le cahier des charg
 | Plan, identifiants, style | `references/plan.md` |
 | Architecture, stack, infrastructure | `references/architecture.md` |
 | Lots et estimations | `references/estimations.md` |
+| Chat claude.ai | `claude-ai.md` du skill `specs-ui` |
 
 ## Étape 0 · Prérequis et préparation
 
@@ -116,6 +119,8 @@ Le build écrit trois fichiers :
 - `specs/requirements/requirements.md` : le document Markdown ;
 - `specs/requirements/requirements.html` : la page complète, ouvrable en local, avec les diagrammes rendus ;
 - `specs/requirements/publish/requirements.html` : la même page sans enveloppe, pour l'outil Artifact (hors du dépôt git : elle se régénère).
+
+Dans le chat claude.ai, publier la version autonome de `requirements.html` et livrer `requirements.md` (`claude-ai.md` §3 du skill `specs-ui`) au lieu de ce qui suit.
 
 **Publier `specs/requirements/publish/requirements.html` avec l'outil Artifact** (`prepare-publish.mjs specs/requirements` dit s'il y a quelque chose à publier et vers quelle URL). Le titre vient de la balise `<title>`, et l'outil rend les diagrammes `mermaid` lui-même. Republier ce même fichier garde l'URL ; la noter dans `requirements.json` → `artifacts.requirements` et dans `REQUIREMENTS.md`, puis lancer `prepare-publish.mjs specs/requirements --confirm` (empreinte dans `.published.json`, à commiter). `--check` dit si l'artifact est en retard sur la page locale. La page ne peut pas faire télécharger de fichier (le lecteur l'interdit) : le Markdown se récupère par les boutons « Copier », ou dans le fichier `.md` local. Passer la version et le statut dans `00-titre.md` à chaque publication notable.
 
