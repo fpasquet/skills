@@ -28,4 +28,8 @@
     `type` et ignore le contenu des chaînes pour garder un import ;
   - `rehome.mjs` traduit aussi `in-*`, `has-data-[…]`, les ancêtres arbitraires (`[[data-side=left]_&]`), les
     pixels vers l'échelle (`w-[2px]` → `w-0.5`), cible par sa classe la variante qu'un parent posait en `data-variant`
-    et fusionne deux conditions sur le même pair.
+    et fusionne deux conditions sur le même pair ;
+  - `rehome.mjs` range un sous-dossier de registre (imports relatifs réécrits d'un niveau), transforme les classes
+    conditionnelles de `cn(…)` (`variant === 'grid' && […]`, `isListening && '…'`) en classes de modificateur, laisse
+    dans le JSX les marqueurs que le lint du projet déclare (`toaster`, `not-prose`), exporte toujours les types et
+    garde `X.displayName` avec son composant.

@@ -23,7 +23,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { detectProject, isDir, kebab, parseArgs, pascal, rel, walk } from './project.mjs';
+import { detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run', 'keep-classes']);
 const [appDir, name] = positional;
@@ -65,7 +65,8 @@ for (;;) {
   if (!match) break;
   rest = rest.slice(match[0].length);
   if (match.length === 3) {
-    imports.push({ side: true, from: match[2], specifiers: [] });
+    const from = match[2].startsWith('./') ? `../${match[2].slice(2)}` : match[2].startsWith('../') ? `../${match[2]}` : match[2];
+    imports.push({ side: true, from, specifiers: [] });
     continue;
   }
   let clause = match[1].trim();
@@ -83,6 +84,9 @@ for (;;) {
     }
   }
   if (project.cnImport === 'cn' && entry.named.some((n) => n.local === 'cn') && entry.from !== 'cn' && entry.named.length === 1) entry.from = 'cn';
+  // Les fichiers descendent d'un niveau (dans le dossier du composant) : ./shimmer devient ../shimmer
+  if (entry.from.startsWith('./')) entry.from = `../${entry.from.slice(2)}`;
+  else if (entry.from.startsWith('../')) entry.from = `../${entry.from}`;
   imports.push(entry);
 }
 
@@ -103,6 +107,13 @@ for (let i = 0; i < lines.length; i++) {
       const exportedName = part.replace(/^\s*type\s+/, '').split(/\s+as\s+/)[0].trim();
       if (exportedName) exported.add(exportedName);
     }
+    current = null;
+    continue;
+  }
+  // Chat.displayName = 'Chat' : la ligne suit son composant, où qu'elle soit dans le fichier
+  const property = line.match(/^([A-Z]\w*)\.(displayName|defaultProps)\s*=/);
+  if (property && chunks.some((c) => c.name === property[1])) {
+    chunks.find((c) => c.name === property[1]).lines.push(line);
     current = null;
     continue;
   }
@@ -196,6 +207,8 @@ function stateSelector(state) {
   if ((match = state.match(/^aria-([\w-]+)$/))) return `[aria-${match[1]}='true']`;
   if ((match = state.match(/^has-\[(.+)\]$/))) return `:has(${slotsToClasses(unescape(match[1])).replace(/^>/, '> ')})`;
   if ((match = state.match(/^has-data-\[([\w-]+)=([^\]]+)\]$/))) return `:has([data-${match[1]}='${match[2]}'])`;
+  // group-[.is-user]: le groupe porte aussi cette classe
+  if ((match = state.match(/^\[(\.[\w-]+)\]$/))) return match[1];
   if (PSEUDO.has(state)) return `:${{ first: 'first-child', last: 'last-child' }[state] ?? state}`;
   return null;
 }
@@ -262,10 +275,25 @@ const slotClass = (slot) => (slot === base ? prefix : slot.startsWith(`${base}-`
  * Rend les marqueurs `group`, `group/nom`, `peer` : ils restent dans le JSX (Tailwind ne les accepte pas dans @apply),
  * et les variants group-…/peer-… deviennent des sélecteurs qui les ciblent.
  */
+// Marqueurs qui ne sont pas des utilitaires : group, peer, not-prose (typographie), et les classes que le lint du
+// projet déclare connues (ignore de no-unregistered-classes : toaster…). Tailwind les refuse dans @apply.
+const lintIgnores = [...lintConfigText(project).matchAll(/ignore\s*:\s*\[([\s\S]*?)\]/g)].flatMap((m) =>
+  [...m[1].matchAll(/'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"/g)].map((q) => (q[1] ?? q[2]).replace(/\\\\/g, '\\')),
+);
+const isMarker = (token) =>
+  /^(group|peer)(\/[\w-]+)?$|^(not-)?prose$/.test(token) ||
+  lintIgnores.some((pattern) => {
+    try {
+      return !/[[\]:]/.test(token) && new RegExp(`^(?:${pattern})$`).test(token);
+    } catch {
+      return false;
+    }
+  });
+
 function addUtilities(selector, utilities, modifiers = {}) {
   const markers = [];
   for (const token of utilities.split(/\s+/).filter(Boolean)) {
-    if (/^(group|peer)(\/[\w-]+)?$/.test(token)) {
+    if (isMarker(token)) {
       markers.push(token);
       continue;
     }
@@ -450,6 +478,30 @@ if (!options['keep-classes']) {
   }
 }
 
+// Classes conditionnelles dans cn(…) : variant === 'grid' && ['…', '…'] ou isListening && '…' deviennent une classe
+// de modificateur de la partie (attachment-grid, prompt-input-speech-button-listening)
+if (!options['keep-classes']) {
+  const LITERAL = String.raw`(\[(?:\s*(?:'[^'\n]*'|"[^"\n]*"|\`[^\`$]*\`)\s*,?)+\s*\]|'[^'\n]*'|"[^"\n]*"|\`[^\`$]*\`)`;
+  const CONDITIONAL = new RegExp(String.raw`(\b[\w.]+) === (['"])([\w-]+)\2 &&\s*${LITERAL}|(?<![\w.=!<>&|?:]\s*)\b((?:is|has|should|show)[A-Z]\w*) &&\s*${LITERAL}`, 'g');
+  for (const chunk of components) {
+    chunk.text = chunk.text.replace(CONDITIONAL, (match, expression, q, value, payload, flag, flagPayload, offset, whole) => {
+      // La partie : la première classe du même cn(…), ou la racine du composant si ce cn(…) est le premier
+      const callStart = whole.lastIndexOf('className=', offset);
+      const isRootCall = callStart >= 0 && whole.indexOf('className=') === callStart;
+      const owner = whole.slice(callStart, offset).match(/cn\(\s*['"]([\w-]+)/)?.[1] ?? (isRootCall ? classOf(chunk) : null);
+      if (callStart < 0 || !owner) return match;
+      const literal = payload ?? flagPayload;
+      const utilities = [...literal.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`$]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3]).join(' ');
+      const name = value ?? kebab(flag.replace(/^(is|has|should|show)(?=[A-Z])/, ''));
+      const modifier = `${owner}-${name}`;
+      const markers = addUtilities(`.${modifier}`, utilities);
+      classMap.push([`${chunk.name} ${value ? `${expression} === '${value}'` : flag}`, modifier]);
+      const classes = [modifier, ...markers].join(' ');
+      return value ? `${expression} === ${q}${value}${q} && ${quote}${classes}${quote}` : `${flag} && ${quote}${classes}${quote}`;
+    });
+  }
+}
+
 // data-slot, data-variant, data-size
 for (const chunk of chunks) chunk.text = chunk.text.replace(/\s+data-(?:slot|variant|size)=(?:"[^"]*"|'[^']*'|\{[^}]*\})/g, '');
 
@@ -465,7 +517,13 @@ const exportsOf = new Map();
 for (const [file, list] of files) {
   const body = list
     .map((chunk) => {
-      const needsExport = chunk.component || exported.has(chunk.name) || chunks.some((other) => other.file !== file && uses(other.text, chunk.name));
+      // Un type est toujours exporté : un autre fichier peut l'utiliser sans le nommer (type inféré d'un hook)
+      const needsExport =
+        chunk.component ||
+        chunk.kind === 'type' ||
+        chunk.kind === 'interface' ||
+        exported.has(chunk.name) ||
+        chunks.some((other) => other.file !== file && uses(other.text, chunk.name));
       if (needsExport) exportsOf.set(file, [...(exportsOf.get(file) ?? []), chunk.kind === 'type' || chunk.kind === 'interface' ? `type ${chunk.name}` : chunk.name]);
       return needsExport && !/^export\s/.test(chunk.text.split('\n').find((l) => DECLARATION.test(l)) ?? '')
         ? chunk.text.replace(/^((?:\s*(?:\/\/|\/\*|\*).*\n)*)(?=(?:async\s+)?(?:function|const|let|type|interface|class|enum)\s)/, '$1export ')
