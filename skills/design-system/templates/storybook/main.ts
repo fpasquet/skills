@@ -16,6 +16,18 @@ const config: StorybookConfig = {
       ...viteConfig.optimizeDeps,
       include: [...(viteConfig.optimizeDeps?.include ?? []), 'react/jsx-runtime', 'react/jsx-dev-runtime'],
     },
+    // Directives « use client » des composants Radix et de shadcn : sans effet hors de Next.js, signalées à chaque
+    // fichier par le build
+    build: {
+      ...viteConfig.build,
+      rollupOptions: {
+        ...viteConfig.build?.rollupOptions,
+        onwarn(warning, warn) {
+          if (warning.code === 'MODULE_LEVEL_DIRECTIVE' || warning.code === 'SOURCEMAP_ERROR') return;
+          warn(warning);
+        },
+      },
+    },
   }),
 };
 

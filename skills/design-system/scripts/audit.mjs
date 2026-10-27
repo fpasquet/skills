@@ -160,6 +160,31 @@ findings['repeated-classes'].sort((a, b) => b.count - a.count || b.detail.length
 // ---------- Feuilles de style ----------
 const selectorKeys = new Map();
 const definedClasses = new Map();
+/** Première classe du dernier composé de chaque sélecteur de la liste (hors parenthèses et crochets). */
+function definedBy(prelude) {
+  const classes = [];
+  let depth = 0;
+  let compound = '';
+  const flush = () => {
+    const cls = compound.match(/^[^(\[]*?\.([a-z][\w-]*)/)?.[1] ?? compound.match(/\.([a-z][\w-]*)/)?.[1];
+    return cls;
+  };
+  let last = '';
+  for (const char of `${prelude},`) {
+    if (char === '(' || char === '[') depth++;
+    else if (char === ')' || char === ']') depth--;
+    if (depth === 0 && char === ',') {
+      compound = last.trim();
+      const cls = flush();
+      if (cls) classes.push(cls);
+      last = '';
+    } else if (depth === 0 && /[\s>+~]/.test(char)) {
+      if (last.trim()) compound = last;
+      last = last.trim() ? '' : last;
+    } else last += char;
+  }
+  return classes;
+}
 for (const file of cssFiles) {
   const css = stripCssComments(read(file));
   const isTokens = file === project.tokens;
@@ -193,12 +218,16 @@ for (const file of cssFiles) {
         const places = selectorKeys.get(key) ?? [];
         places.push({ file, line: lineOf(css, start + css.slice(start, i).search(/\S/)) });
         selectorKeys.set(key, places);
-        if (/\[data-(?!state\b)[\w-]+/.test(prelude)) add('data-selector', file, lineOf(css, i), prelude);
+        // data-state, et les attributs que Radix pose sans équivalent ARIA (côté et alignement d'un calque, valeur
+        // absente d'un Select), restent permis
+        if (/\[data-(?!(state|side|align|orientation|placeholder)\b)[\w-]+/.test(prelude)) add('data-selector', file, lineOf(css, i), prelude);
         if (/\[data-(slot|variant|size)\b/.test(prelude)) add('data-attribute', file, lineOf(css, i), prelude);
         if (inside(file, project.src) && file !== project.theme) {
-          // Première classe de chaque sélecteur composé : dans .card-header.border-b, border-b est un utilitaire
-          for (const cls of prelude.matchAll(/(?:^|[\s,>+~(])\.([a-z][\w-]*)/g)) {
-            if (!definedClasses.has(cls[1])) definedClasses.set(cls[1], { file, line: lineOf(css, i) });
+          // Classe définie : la première du sujet de chaque sélecteur (dernier composé). Dans .card-header.border-b,
+          // border-b est un utilitaire ; dans .group[data-disabled] .label ou .card-content .calendar, l'ancêtre est
+          // le contexte, pas la classe définie
+          for (const cls of definedBy(prelude)) {
+            if (!definedClasses.has(cls)) definedClasses.set(cls, { file, line: lineOf(css, i) });
           }
         }
       }

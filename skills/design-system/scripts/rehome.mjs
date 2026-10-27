@@ -166,7 +166,35 @@ const ARBITRARY_CSS = {
   gap: 'gap',
   'grid-cols': 'grid-template-columns',
   'grid-rows': 'grid-template-rows',
+  rounded: 'border-radius',
+  m: 'margin',
+  mx: 'margin-inline',
+  my: 'margin-block',
+  ml: 'margin-left',
+  mr: 'margin-right',
+  mt: 'margin-top',
+  mb: 'margin-bottom',
+  p: 'padding',
+  px: 'padding-inline',
+  py: 'padding-block',
+  pl: 'padding-left',
+  pr: 'padding-right',
+  pt: 'padding-top',
+  pb: 'padding-bottom',
 };
+// Pseudo-classes de group-* et peer-* (group-hover:, peer-disabled:) ; aria-* au sens de Tailwind (valeur true)
+const PSEUDO = new Set(['hover', 'focus', 'focus-visible', 'focus-within', 'active', 'disabled', 'enabled', 'checked', 'invalid', 'required', 'placeholder-shown', 'first', 'last', 'open']);
+/** Condition d'un variant group-…/peer-… : data-[k=v], has-[…], aria-x, pseudo-classe. */
+function stateSelector(state) {
+  let match;
+  if ((match = state.match(/^data-\[([\w-]+)=([^\]]+)\]$/))) return `[data-${match[1]}='${match[2]}']`;
+  if ((match = state.match(/^data-\[([\w-]+)\]$/))) return `[data-${match[1]}]`;
+  if ((match = state.match(/^aria-\[([\w-]+)=([^\]]+)\]$/))) return `[aria-${match[1]}='${match[2]}']`;
+  if ((match = state.match(/^aria-([\w-]+)$/))) return `[aria-${match[1]}='true']`;
+  if ((match = state.match(/^has-\[(.+)\]$/))) return `:has(${slotsToClasses(unescape(match[1])).replace(/^>/, '> ')})`;
+  if (PSEUDO.has(state)) return `:${{ first: 'first-child', last: 'last-child' }[state] ?? state}`;
+  return null;
+}
 const FRACTIONS = { 'top-[50%]': 'top-1/2', 'left-[50%]': 'left-1/2', 'translate-x-[-50%]': '-translate-x-1/2', 'translate-y-[-50%]': '-translate-y-1/2' };
 
 /** Découpe « a:[&_svg]:b-[x:y] » sur les « : » hors crochets. */
@@ -186,30 +214,71 @@ function splitVariants(token) {
   return parts;
 }
 // Valeur arbitraire en CSS : « _ » est une espace, et Tailwind espace les opérateurs de calc()
-const unescape = (value) =>
-  value.replace(/_/g, ' ').replace(/(calc|min|max|clamp)\(([^)]*)\)/g, (_, fn, inner) => `${fn}(${inner.replace(/([\d%)])([+-])(?=[\d(.a-z])/gi, '$1 $2 ')})`);
+// (parenthèses imbriquées comprises : calc(var(--radius)-5px) → calc(var(--radius) - 5px))
+function unescape(value) {
+  let text = value.replace(/_/g, ' ');
+  for (let at = text.search(/(calc|min|max|clamp)\(/); at >= 0; ) {
+    const open = text.indexOf('(', at);
+    let depth = 0;
+    let close = open;
+    for (; close < text.length; close++) {
+      if (text[close] === '(') depth++;
+      else if (text[close] === ')' && --depth === 0) break;
+    }
+    const inner = text.slice(open + 1, close).replace(/(\d[a-z%]*|\))([+-])(?=[\d(.a-z])/gi, '$1 $2 ');
+    text = `${text.slice(0, open + 1)}${inner}${text.slice(close)}`;
+    const next = text.slice(open + inner.length + 2).search(/(calc|min|max|clamp)\(/);
+    at = next < 0 ? -1 : open + inner.length + 2 + next;
+  }
+  return text;
+}
 
 /**
  * `modifiers` : attributs data-* du composant qui deviennent des classes de modificateur ({ size: 'select-trigger' } :
  * data-[size=sm]: → .select-trigger.select-trigger-sm).
  */
+// [data-slot=x] dans un sélecteur arbitraire : la classe de la partie ; chaque classe ainsi visée est notée pour
+// vérifier que la partie la porte bien
+const targetedSlots = new Set();
+const slotsToClasses = (selector) =>
+  selector.replace(/\[data-slot=['"]?([\w-]+)['"]?\]/g, (_, slot) => {
+    targetedSlots.add(slotClass(slot));
+    return `.${slotClass(slot)}`;
+  });
 // Partie désignée par son data-slot (card-action) : sa classe, préfixe court compris (--class btn)
 const slotClass = (slot) => (slot === base ? prefix : slot.startsWith(`${base}-`) ? `${prefix}-${slot.slice(base.length + 1)}` : slot);
 
+/**
+ * Rend les marqueurs `group`, `group/nom`, `peer` : ils restent dans le JSX (Tailwind ne les accepte pas dans @apply),
+ * et les variants group-…/peer-… deviennent des sélecteurs qui les ciblent.
+ */
 function addUtilities(selector, utilities, modifiers = {}) {
+  const markers = [];
   for (const token of utilities.split(/\s+/).filter(Boolean)) {
+    if (/^(group|peer)(\/[\w-]+)?$/.test(token)) {
+      markers.push(token);
+      continue;
+    }
     const parts = splitVariants(token);
     let base = parts.pop();
     let suffix = '';
+    let ancestor = '';
     let element = '';
     const kept = [];
     let unsupported = false;
     for (const variant of parts) {
       let match;
       // data-slot retiré par le script : la partie se désigne par sa classe
-      if ((match = variant.match(/^data-\[slot=([\w-]+)\]$/))) suffix = suffix.endsWith(' > *') ? `${suffix.slice(0, -1)}.${slotClass(match[1])}` : `${suffix} .${slotClass(match[1])}`;
-      else if ((match = variant.match(/^has-data-\[slot=([\w-]+)\]$/))) suffix += `:has(.${slotClass(match[1])})`;
+      if ((match = variant.match(/^data-\[slot=([\w-]+)\]$/)) && targetedSlots.add(slotClass(match[1]))) suffix = suffix.endsWith(' > *') ? `${suffix.slice(0, -1)}.${slotClass(match[1])}` : `${suffix} .${slotClass(match[1])}`;
+      else if ((match = variant.match(/^has-data-\[slot=([\w-]+)\]$/)) && targetedSlots.add(slotClass(match[1]))) suffix += `:has(.${slotClass(match[1])})`;
       else if (variant === '*') suffix += ' > *';
+      // *:[span]: les enfants qui sont des span
+      else if ((match = variant.match(/^\[([a-z]+)\]$/)) && suffix.endsWith(' > *')) suffix = `${suffix.slice(0, -1)}${match[1]}`;
+      // group-data-[disabled=true]/input-group: → .group\/input-group[data-disabled='true'] .partie ; peer-disabled: → .peer:disabled ~ .partie
+      else if ((match = variant.match(/^(group|peer)-(.+?)(?:\/([\w-]+))?$/)) && stateSelector(match[2])) {
+        const marker = `.${match[1]}${match[3] ? `\\/${match[3]}` : ''}`;
+        ancestor += `${marker}${stateSelector(match[2])}${match[1] === 'peer' ? ' ~ ' : ' '}`;
+      }
       // [a&]: le composant rendu comme lien ; [.border-b]: le composant qui porte aussi cette classe
       else if ((match = variant.match(/^\[([a-z]+)&\]$/))) element = match[1];
       else if ((match = variant.match(/^\[(\.[\w-]+)\]$/))) suffix += match[1];
@@ -217,7 +286,7 @@ function addUtilities(selector, utilities, modifiers = {}) {
       else if (match) suffix += `[data-${match[1]}='${match[2]}']`;
       else if ((match = variant.match(/^data-\[([\w-]+)\]$/))) suffix += `[data-${match[1]}]`;
       else if ((match = variant.match(/^aria-\[([\w-]+)=([^\]]+)\]$/))) suffix += `[aria-${match[1]}='${match[2]}']`;
-      else if ((match = variant.match(/^has-\[(.+)\]$/))) suffix += `:has(${unescape(match[1]).replace(/^>/, '> ')})`;
+      else if ((match = variant.match(/^has-\[(.+)\]$/))) suffix += `:has(${slotsToClasses(unescape(match[1])).replace(/^>/, '> ')})`;
       else if ((match = variant.match(/^\[&(.+)\]$/))) suffix += unescape(match[1]).replace(/^>/, ' > ').replace(/^([^ :[.])/, ' $1');
       else if (/[[\]]|^(group|peer|in|\*|supports)/.test(variant)) unsupported = true;
       else kept.push(variant);
@@ -229,8 +298,20 @@ function addUtilities(selector, utilities, modifiers = {}) {
       rule(selector).todo.push(token);
       continue;
     }
-    const target = rule(`${element}${selector}${suffix}`);
+    const target = rule(`${ancestor}${element}${selector}${suffix}`);
+    // Propriété arbitraire ([--cell-size:--spacing(8)]) : déclaration CSS telle quelle
+    const property = base.match(/^\[(-{0,2}[a-z][\w-]*):(.+)\]$/);
+    if (property && !kept.length) {
+      target.declarations.push(`${property[1]}: ${unescape(property[2])};`);
+      continue;
+    }
     const arbitrary = base.match(/^(-?)([\w-]+?)-\[(.+)\]$/);
+    // translate-x-[calc(100%-2px)] : propriété translate standard
+    if (arbitrary && /^translate-[xy]$/.test(arbitrary[2]) && !kept.length) {
+      const value = `${arbitrary[1]}${unescape(arbitrary[3])}`;
+      target.declarations.push(`translate: ${arbitrary[2].endsWith('x') ? `${value} 0` : `0 ${value}`};`);
+      continue;
+    }
     // transition-[color,box-shadow] : les propriétés en CSS, la durée et la courbe par défaut de Tailwind
     if (arbitrary?.[2] === 'transition' && !kept.length) {
       target.declarations.push(
@@ -252,6 +333,7 @@ function addUtilities(selector, utilities, modifiers = {}) {
     }
     target.apply.push([...kept, base].join(':'));
   }
+  return markers;
 }
 
 /** Nom de la partie à partir de la balise : DialogPrimitive.Close → close, XIcon → icon, span → span. */
@@ -270,8 +352,8 @@ if (!options['keep-classes']) {
     const call = text.indexOf('cva(');
     const baseMatch = text.slice(call).match(/^cva\(\s*(["'`])([\s\S]*?)\1/);
     if (baseMatch) {
-      addUtilities(`.${cls}`, baseMatch[2]);
-      text = text.slice(0, call) + text.slice(call).replace(baseMatch[0], `cva(${quote}${cls}${quote}`);
+      const markers = addUtilities(`.${cls}`, baseMatch[2]);
+      text = text.slice(0, call) + text.slice(call).replace(baseMatch[0], `cva(${quote}${[cls, ...markers].join(' ')}${quote}`);
       classMap.push([`${owner.name} (cva base)`, cls]);
     }
     // Objet `variants: { … }` seul (pas defaultVariants ni compoundVariants), accolades équilibrées
@@ -295,9 +377,9 @@ if (!options['keep-classes']) {
             let modifier = `${cls}-${clean}`;
             if (used.has(modifier)) modifier = `${cls}-${groupName}-${clean}`;
             used.add(modifier);
-            addUtilities(`.${modifier}`, utilities);
+            const markers = addUtilities(`.${modifier}`, utilities);
             classMap.push([`${groupName}=${clean}`, modifier]);
-            return `${space}${key}: ${quote}${modifier}${quote}`;
+            return `${space}${key}: ${quote}${[modifier, ...markers].join(' ')}${quote}`;
           });
           return group.replace(body, replaced);
         }) +
@@ -314,9 +396,12 @@ if (!options['keep-classes']) {
     const dataModifiers = [...chunk.text.matchAll(/\sdata-(size|variant)=\{([\w.]+)\}/g)].map((m) => ({ attribute: m[1], expression: m[2] }));
     const modifiers = Object.fromEntries(dataModifiers.map((m) => [m.attribute, cls]));
     chunk.text = chunk.text.replace(
-      /className=(?:\{cn\(\s*(["'`])([\s\S]*?)\1|"([^"]*)"|'([^']*)')/g,
-      (match, q1, cnUtilities, doubleQuoted, singleQuoted, offset, whole) => {
+      // cn('…', '…', `…`, className) : toutes les chaînes du début, commentaires compris, forment la liste
+      /className=(?:\{cn\(\s*((?:(?:"[^"\n]*"|'[^'\n]*'|`[^`$]*`)\s*(?:,\s*)?(?:\/\/[^\n]*\n\s*)*)+)|"([^"]*)"|'([^']*)')/g,
+      (match, cnStrings, doubleQuoted, singleQuoted, offset, whole) => {
         const plainUtilities = doubleQuoted ?? singleQuoted;
+        const cnUtilities = cnStrings === undefined ? undefined : [...cnStrings.matchAll(/"([^"\n]*)"|'([^'\n]*)'|`([^`$]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3]).join(' ');
+        const rest = cnStrings?.trimEnd().endsWith(',') ? ', ' : '';
         const utilities = cnUtilities ?? plainUtilities;
         // La racine d'un composant reçoit toujours sa classe (card-content : px-6) ; une partie intérieure, à partir
         // de deux utilitaires seulement
@@ -332,11 +417,12 @@ if (!options['keep-classes']) {
         }
         const isRoot = className === cls;
         if (cnUtilities !== undefined) rootDone = true;
-        addUtilities(`.${className}`, utilities, isRoot ? modifiers : {});
+        const markers = addUtilities(`.${className}`, utilities, isRoot ? modifiers : {});
         classMap.push([`${chunk.name}${isRoot ? '' : ` <${tag}>`}`, className]);
         const extra = isRoot ? dataModifiers.map((m) => `, \`${className}-\${${m.expression}}\``).join('') : '';
         if (extra) for (const m of dataModifiers) classMap.push([`${chunk.name} data-${m.attribute}={${m.expression}}`, `${className}-<${m.expression}>`]);
-        return cnUtilities !== undefined ? `className={cn(${quote}${className}${quote}${extra}` : `className=${quote}${className}${quote}`;
+        const classes = [className, ...markers].join(' ');
+        return cnUtilities !== undefined ? `className={cn(${quote}${classes}${quote}${extra}${rest}` : `className=${quote}${classes}${quote}`;
       },
     );
   }
@@ -381,7 +467,8 @@ for (const [file, list] of files) {
   }
   const siblings = new Map();
   for (const [identifier, otherFile] of definedIn) {
-    if (otherFile === file || !uses(body, identifier)) continue;
+    // Le contenu des chaînes ne compte pas (« used within <FormField> » dans un message d'erreur)
+    if (otherFile === file || !uses(body.replace(/(["'`])(?:(?!\1)[^\\\n]|\\.)*\1/g, '""'), identifier)) continue;
     siblings.set(otherFile, [...(siblings.get(otherFile) ?? []), identifier]);
   }
   for (const [otherFile, names] of siblings) header.push(`import { ${names.sort().join(', ')} } from ${quote}./${otherFile}${quote}${semi}`);
@@ -490,6 +577,12 @@ if (todos.length) {
 if (leftovers.length) {
   console.log('\nUtility classes left in the TSX (conditional or computed): turn them into modifier classes:');
   for (const leftover of leftovers) console.log(`  ${leftover}`);
+}
+const tsxText = [...output].filter(([file]) => /\.[jt]sx$/.test(file)).map(([, content]) => content).join('\n');
+const missingTargets = [...targetedSlots].filter((cls) => !new RegExp(`['"\` ]${cls}['"\` ]`).test(tsxText));
+if (missingTargets.length) {
+  console.log('\nClasses targeted by the stylesheet but set by no part (the data-slot had no class): add them to the part:');
+  for (const cls of missingTargets) console.log(`  .${cls}`);
 }
 if (slotUsers.length) {
   console.log('\nCode that targets the removed data-slot attributes: select the class instead:');

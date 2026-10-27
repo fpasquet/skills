@@ -78,7 +78,7 @@ Les composants vivent parfois dans un paquet partagé (`packages/ui`), que les a
 
 - **Messages** : un décorateur enveloppe l'histoire dans le fournisseur du projet. Avec next-intl, c'est `<NextIntlClientProvider locale timeZone formats messages>`, avec tous les messages assemblés comme dans l'application.
 - **`viteFinal` du gabarit** : JSX en mode automatique, même quand `tsconfig.json` est en `"jsx": "preserve"` (Next.js, paquet partagé qui en hérite). Sans cela : « React is not defined ». Il pré-optimise aussi le runtime JSX. Sinon, Vite le découvre pendant le premier lancement des histoires, recharge la page, et les tests échouent à chaque cache vide, donc toujours en CI.
-- **Avertissement « use client »** des paquets Radix dans le build Vite de Storybook : à filtrer dans `viteFinal` (`rolldownOptions.onLog`, code `MODULE_LEVEL_DIRECTIVE`).
+- **Avertissements « use client »** des composants Radix et de shadcn au build : le `viteFinal` du gabarit les filtre (`MODULE_LEVEL_DIRECTIVE`, `SOURCEMAP_ERROR`).
 - Les histoires importent le type `Meta` du framework (`@storybook/nextjs-vite` ou `@storybook/react-vite`). Le modèle `templates/ui/button/button.stories.tsx` importe `@storybook/react-vite` : à adapter.
 
 Un dépôt piloté par un `Makefile` reçoit aussi une cible `storybook`, avec sa ligne dans l'aide (`make storybook`, `pnpm --filter=<paquet> storybook` dans un monorepo). `scaffold.mjs` la propose.

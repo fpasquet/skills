@@ -47,7 +47,9 @@ décisions du design system : `{{memory}}`. Contrôle : `node <skill design-syst
   `sheet-right`, `menu-item-danger`) ; un test cible un rôle ou un libellé accessible.
 - Un état se lit dans les attributs d'accessibilité ou les pseudo-classes : `[aria-selected='true']`,
   `[aria-expanded='true']`, `[aria-invalid='true']`, `[aria-disabled='true']`, `:focus`, `:disabled`.
-- Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture.
+- Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture, avec `data-side` et
+  `data-align` pour leur direction. `data-placeholder` (Select) est le seul autre attribut de Radix lu, faute
+  d'équivalent ARIA.
 
 ## Composants shadcn/ui
 

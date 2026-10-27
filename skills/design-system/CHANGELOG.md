@@ -13,4 +13,9 @@
   - `scaffold.mjs` sait poser les tokens d'un thème shadcn écrit dans la feuille d'entrée, et suit le catalogue pnpm ;
   - l'audit signale `bg-muted` (`muted-background`) ;
   - Storybook rend le JSX même sous `"jsx": "preserve"`, et ses histoires passent dès le premier lancement en CI ;
-  - `scaffold.mjs` propose une cible `make storybook` quand le dépôt a un `Makefile`.
+  - `scaffold.mjs` propose une cible `make storybook` quand le dépôt a un `Makefile` ;
+  - `rehome.mjs` lit toutes les chaînes d'un `cn(…)`, garde les marqueurs `group` et `peer` dans le JSX et traduit
+    `group-*`, `peer-*`, les propriétés arbitraires, `translate-*`, marges et rayons arbitraires, `calc()` imbriqués ;
+    il signale la classe d'une partie visée par la feuille mais posée nulle part ;
+  - l'audit accepte les attributs que Radix pose sans équivalent ARIA (`data-side`, `data-placeholder`) et ne compte
+    comme classe définie que le sujet d'un sélecteur.
