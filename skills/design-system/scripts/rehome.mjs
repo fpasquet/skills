@@ -188,11 +188,14 @@ const PSEUDO = new Set(['hover', 'focus', 'focus-visible', 'focus-within', 'acti
 /** Condition d'un variant group-…/peer-… : data-[k=v], has-[…], aria-x, pseudo-classe. */
 function stateSelector(state) {
   let match;
+  // data-variant / data-size retirés par le script : la classe de modificateur du composant qui les posait
+  if ((match = state.match(/^data-\[(variant|size)=([^\]]+)\]$/)) && fileModifiers[match[1]]) return `.${fileModifiers[match[1]]}-${match[2]}`;
   if ((match = state.match(/^data-\[([\w-]+)=([^\]]+)\]$/))) return `[data-${match[1]}='${match[2]}']`;
   if ((match = state.match(/^data-\[([\w-]+)\]$/))) return `[data-${match[1]}]`;
   if ((match = state.match(/^aria-\[([\w-]+)=([^\]]+)\]$/))) return `[aria-${match[1]}='${match[2]}']`;
   if ((match = state.match(/^aria-([\w-]+)$/))) return `[aria-${match[1]}='true']`;
   if ((match = state.match(/^has-\[(.+)\]$/))) return `:has(${slotsToClasses(unescape(match[1])).replace(/^>/, '> ')})`;
+  if ((match = state.match(/^has-data-\[([\w-]+)=([^\]]+)\]$/))) return `:has([data-${match[1]}='${match[2]}'])`;
   if (PSEUDO.has(state)) return `:${{ first: 'first-child', last: 'last-child' }[state] ?? state}`;
   return null;
 }
@@ -238,6 +241,12 @@ function unescape(value) {
  * `modifiers` : attributs data-* du composant qui deviennent des classes de modificateur ({ size: 'select-trigger' } :
  * data-[size=sm]: → .select-trigger.select-trigger-sm).
  */
+// data-variant={variant} posé par un composant du fichier : ses descendants le ciblent par sa classe de modificateur
+const fileModifiers = {};
+for (const chunk of chunks.filter((c) => c.component)) {
+  for (const m of chunk.text.matchAll(/\sdata-(size|variant)=\{[\w.]+\}/g)) fileModifiers[m[1]] ??= classOf(chunk);
+}
+
 // [data-slot=x] dans un sélecteur arbitraire : la classe de la partie ; chaque classe ainsi visée est notée pour
 // vérifier que la partie la porte bien
 const targetedSlots = new Set();
@@ -273,12 +282,19 @@ function addUtilities(selector, utilities, modifiers = {}) {
       if ((match = variant.match(/^data-\[slot=([\w-]+)\]$/)) && targetedSlots.add(slotClass(match[1]))) suffix = suffix.endsWith(' > *') ? `${suffix.slice(0, -1)}.${slotClass(match[1])}` : `${suffix} .${slotClass(match[1])}`;
       else if ((match = variant.match(/^has-data-\[slot=([\w-]+)\]$/)) && targetedSlots.add(slotClass(match[1]))) suffix += `:has(.${slotClass(match[1])})`;
       else if (variant === '*') suffix += ' > *';
+      // in-data-[side=left]: un ancêtre porte l'attribut ; [[data-side=left][data-state=collapsed]_&]: idem, sélecteur libre
+      else if ((match = variant.match(/^in-(.+)$/)) && stateSelector(match[1])) ancestor += `${stateSelector(match[1]).replace(/^:/, '*:')} `;
+      else if ((match = variant.match(/^\[(.+)_&\]$/))) ancestor += `${slotsToClasses(unescape(match[1]))} `;
       // *:[span]: les enfants qui sont des span
       else if ((match = variant.match(/^\[([a-z]+)\]$/)) && suffix.endsWith(' > *')) suffix = `${suffix.slice(0, -1)}${match[1]}`;
       // group-data-[disabled=true]/input-group: → .group\/input-group[data-disabled='true'] .partie ; peer-disabled: → .peer:disabled ~ .partie
       else if ((match = variant.match(/^(group|peer)-(.+?)(?:\/([\w-]+))?$/)) && stateSelector(match[2])) {
         const marker = `.${match[1]}${match[3] ? `\\/${match[3]}` : ''}`;
-        ancestor += `${marker}${stateSelector(match[2])}${match[1] === 'peer' ? ' ~ ' : ' '}`;
+        const combinator = match[1] === 'peer' ? ' ~ ' : ' ';
+        // peer-data-[a]:peer-data-[b]: les deux conditions sur le même pair (ou le même groupe)
+        if (ancestor.endsWith(combinator) && ancestor.slice(0, -combinator.length).split(/[ ~]+/).pop().startsWith(marker)) {
+          ancestor = `${ancestor.slice(0, -combinator.length)}${stateSelector(match[2])}${combinator}`;
+        } else ancestor += `${marker}${stateSelector(match[2])}${combinator}`;
       }
       // [a&]: le composant rendu comme lien ; [.border-b]: le composant qui porte aussi cette classe
       else if ((match = variant.match(/^\[([a-z]+)&\]$/))) element = match[1];
@@ -295,6 +311,11 @@ function addUtilities(selector, utilities, modifiers = {}) {
     if (FRACTIONS[base]) base = FRACTIONS[base];
     // Largeur en pixels qui existe dans l'échelle : ring-[3px] → ring-3
     base = base.replace(/^(ring|border|outline|ring-offset)-\[(\d)px\]$/, '$1-$2');
+    // Espacement en pixels : un quart de l'unité de Tailwind (4 px) ; w-[2px] → w-0.5, -ml-[6px] → -ml-1.5
+    base = base.replace(
+      /^(-?)(w|h|size|min-w|min-h|max-w|max-h|p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|top|left|right|bottom|inset|inset-x|inset-y)-\[(\d+)px\]$/,
+      (_, minus, utility, px) => `${minus}${utility}-${Number(px) / 4}`,
+    );
     if (unsupported) {
       rule(selector).todo.push(token);
       continue;
@@ -471,7 +492,9 @@ for (const [file, list] of files) {
   const siblings = new Map();
   for (const [identifier, otherFile] of definedIn) {
     // Le contenu des chaînes ne compte pas (« used within <FormField> » dans un message d'erreur)
-    if (otherFile === file || !uses(body.replace(/(["'`])(?:(?!\1)[^\\\n]|\\.)*\1/g, '""'), identifier)) continue;
+    // ni le texte du JSX (<span>Toggle Sidebar</span>)
+    const code = body.replace(/(["'`])(?:(?!\1)[^\\\n]|\\.)*\1/g, '""').replace(/>[^<>{}]*</g, '><');
+    if (otherFile === file || !uses(code, identifier)) continue;
     siblings.set(otherFile, [...(siblings.get(otherFile) ?? []), identifier]);
   }
   for (const [otherFile, names] of siblings) header.push(`import { ${names.sort().join(', ')} } from ${quote}./${otherFile}${quote}${semi}`);

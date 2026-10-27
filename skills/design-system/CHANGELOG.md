@@ -25,4 +25,7 @@
   - le `viteFinal` du gabarit filtre les avertissements « use client » au build de Storybook ;
   - `rehome.mjs` réécrit les couleurs, ombres et rayons de shadcn avec les tokens, d'après la correspondance de
     `theme.css` ; il ne prend plus les constantes en majuscules pour des composants, réexporte les types avec
-    `type` et ignore le contenu des chaînes pour garder un import.
+    `type` et ignore le contenu des chaînes pour garder un import ;
+  - `rehome.mjs` traduit aussi `in-*`, `has-data-[…]`, les ancêtres arbitraires (`[[data-side=left]_&]`), les
+    pixels vers l'échelle (`w-[2px]` → `w-0.5`), cible par sa classe la variante qu'un parent posait en `data-variant`
+    et fusionne deux conditions sur le même pair.
