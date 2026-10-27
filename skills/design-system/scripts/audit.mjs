@@ -4,7 +4,7 @@
  * ce qui reste à faire. Sert à créer un design system à partir de l'existant, à le maintenir et à suivre une
  * migration. Lecture seule : aucun fichier n'est modifié.
  *
- * Usage : node audit.mjs <app-dir> [--rule <id>] [--limit 8] [--json] [--strict] [--min-classes 4]
+ * Usage : node audit.mjs <app-dir> [--rule <id>] [--limit 8] [--json] [--strict] [--min-classes 4] [--allow-data a,b]
  *                         [--src …] [--ui …] [--components …] [--layouts …] [--entry …] [--tokens …] [--docs …]
  *
  *   --rule        une seule règle, par son identifiant (hardcoded-color, repeated-classes…), avec --limit 0 pour tout
@@ -12,6 +12,7 @@
  *   --json        rapport complet en JSON
  *   --strict      code de sortie 1 s'il reste une erreur (CI, fin de migration)
  *   --min-classes une liste de classes répétée compte à partir de ce nombre de classes (4 par défaut)
+ *   --allow-data  attributs data-* d'une bibliothèque permis dans les sélecteurs (streamdown : data-streamdown)
  *
  * Erreurs : couleur en dur, couleur de la palette de Tailwind, valeur ou variante arbitraire, attribut data-slot /
  * data-variant / data-size, feuille de composant non importée, sélecteur déclaré deux fois, `--color-muted` redéfini,
@@ -56,6 +57,10 @@ const RULES = {
   'repeated-classes': ['suggestion', 'Class list repeated: candidate semantic class or shared component'],
   'undocumented-class': ['suggestion', 'Semantic class missing from the Classes page of Storybook'],
 };
+// data-* permis dans les sélecteurs : ceux que Radix pose sans équivalent ARIA, et ceux d'une bibliothèque sans classe
+// stable, déclarés par --allow-data (streamdown pour data-streamdown='link')
+const allowedData = ['state', 'side', 'align', 'orientation', 'placeholder', ...String(options['allow-data'] ?? '').split(',').filter(Boolean)];
+const dataSelector = new RegExp(`\\[data-(?!(${allowedData.join('|')})\\b)[\\w-]+`);
 const findings = Object.fromEntries(Object.keys(RULES).map((id) => [id, []]));
 const add = (id, file, line, detail) => findings[id].push({ file: rel(project, file), line, detail });
 
@@ -220,7 +225,7 @@ for (const file of cssFiles) {
         selectorKeys.set(key, places);
         // data-state, et les attributs que Radix pose sans équivalent ARIA (côté et alignement d'un calque, valeur
         // absente d'un Select), restent permis
-        if (/\[data-(?!(state|side|align|orientation|placeholder)\b)[\w-]+/.test(prelude)) add('data-selector', file, lineOf(css, i), prelude);
+        if (dataSelector.test(prelude)) add('data-selector', file, lineOf(css, i), prelude);
         if (/\[data-(slot|variant|size)\b/.test(prelude)) add('data-attribute', file, lineOf(css, i), prelude);
         if (inside(file, project.src) && file !== project.theme) {
           // Classe définie : la première du sujet de chaque sélecteur (dernier composé). Dans .card-header.border-b,

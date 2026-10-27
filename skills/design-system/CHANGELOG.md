@@ -32,4 +32,11 @@
   - `rehome.mjs` range un sous-dossier de registre (imports relatifs réécrits d'un niveau), transforme les classes
     conditionnelles de `cn(…)` (`variant === 'grid' && […]`, `isListening && '…'`) en classes de modificateur, laisse
     dans le JSX les marqueurs que le lint du projet déclare (`toaster`, `not-prose`), exporte toujours les types et
-    garde `X.displayName` avec son composant.
+    garde `X.displayName` avec son composant ;
+  - `retoken.mjs` : réécrit les classes de shadcn d'une application avec les tokens, sans toucher aux noms qui sont
+    aussi des tokens (`muted`) ;
+  - `rehome.mjs --keep-classes` découpe un fichier d'application à plusieurs composants (sur place s'il est déjà
+    dans son dossier, `index.ts` limité à l'API d'origine), nomme les parties d'après leur rôle (`h4` → `-title`)
+    et signale celles qui restent nommées d'après leur balise ;
+  - l'audit accepte `--allow-data` pour l'attribut d'une bibliothèque sans classe stable ; le fragment ESLint lint
+    les constantes de classes ; variante `can-hover:` dans le thème.

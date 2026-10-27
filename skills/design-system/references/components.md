@@ -19,6 +19,7 @@ Un composant à plusieurs parties a un fichier par sous-composant (`dialog-conte
 1. **Noms des classes**. Le script propose `<préfixe>-<partie>` (`dialog-content`, `dialog-content-close`) et `<préfixe>-<valeur>` pour les variantes CVA (`btn-outline`). Les aligner sur les conventions et sur l'existant :
    - un préfixe court et connu (`btn`, `card`, `badge`, `menu`) ;
    - la partie principale porte le nom du composant : la boîte d'une fenêtre est `dialog`, pas `dialog-content` ;
+   - une partie nommée d'après sa balise ou numérotée (`tool-header-div`, `step-div-2`) prend un nom de rôle (`step-line`, `step-body`) ; si elle ne fait que placer (`flex items-center gap-2`), elle redevient un utilitaire dans le JSX ;
    - les variantes de couleur portent le nom des tokens d'état : `default` et `primary` → `btn-primary`, `destructive` → `btn-danger` ;
    - la taille par défaut se fusionne dans la classe de base (valeur `''` dans CVA), et les autres tailles restent des modificateurs (`btn-sm`, `btn-lg`, `btn-icon`).
 

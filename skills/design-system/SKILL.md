@@ -138,7 +138,7 @@ Un composant d'un sous-dossier de registre se désigne par son chemin (`rehome.m
 
 Il liste ensuite ce qui reste à relire :
 
-- les noms de classes et de variantes à aligner sur les conventions ;
+- les noms de classes et de variantes à aligner sur les conventions, dont les parties nommées d'après leur balise (`-div`, `-2`) ;
 - les TODO (valeurs ou variantes arbitraires) ;
 - les classes conditionnelles restées dans le TSX ;
 - les textes en dur ;
@@ -182,6 +182,8 @@ Chaque ajout se fait dans un seul changement, qui contient le code, sa feuille, 
 - **une classe** : la feuille du composant, ou un fichier de `classes/` importé par `components.css`, plus une section de la page Classes ;
 - **un composant de shadcn** : étape 3 ;
 - **une variante** : on ajoute à l'API de shadcn, on n'en retire rien ;
+- **du code écrit avec les classes de shadcn** (`bg-card`, `text-muted-foreground`) : `retoken.mjs <app>` les réécrit avec les tokens, puis le lint remet l'ordre des classes ;
+- **un fichier qui contient plusieurs composants** : `rehome.mjs <app> <chemin> --ui src --keep-classes` le découpe (un fichier par composant, l'`index.ts` garde l'API d'origine), sur place si le fichier est déjà dans son dossier ;
 - **une mise à jour de shadcn** : relancer la CLI. Comme le dossier existe, `rehome.mjs` refuse et laisse le fichier à plat pour la comparaison : reporter les changements utiles à la main, puis le supprimer ;
 - **une montée de version** (Storybook, Tailwind, lint) : sur une branche, en vérifiant le build de Storybook, les histoires et le lint, puis noter les versions dans la mémoire.
 
@@ -201,7 +203,8 @@ Dire à la personne ce qui a été contrôlé et ce qui ne l'a pas été. Une su
 |---|---|
 | `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`), avertissements, suggestions ; `--json`, `--strict` |
 | `scripts/scaffold.mjs` | Socle sans rien écraser : tokens, thème, classes, Storybook, vitest, ESLint, conventions, mémoire ; dépendances à installer |
-| `scripts/rehome.mjs` | Composant de shadcn rangé (un fichier par sous-composant, `index.ts`), classes sémantiques et premier jet du CSS |
+| `scripts/rehome.mjs` | Composant de shadcn rangé (un fichier par sous-composant, `index.ts`), classes sémantiques et premier jet du CSS ; avec `--keep-classes`, découpe aussi un fichier d'application qui contient plusieurs composants |
+| `scripts/retoken.mjs` | Classes de shadcn réécrites avec les tokens dans le code d'une application (`bg-card` → `bg-surface`), d'après `theme.css` ; peut être relancé |
 | `scripts/project.mjs` | Repérage des emplacements (application, ou paquet de composants d'un monorepo), partagé par les scripts |
 | `references/setup.md` | Mise en place : Next.js ou Vite, Storybook, vitest, ESLint, polices, messages, CI |
 | `references/tokens.md` | Vocabulaire des tokens, tokens tirés du code, mode sombre, thème shadcn, mises en page nommées |

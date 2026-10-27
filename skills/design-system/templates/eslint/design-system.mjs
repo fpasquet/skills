@@ -2,6 +2,7 @@
 // conventions des composants (pas d'attribut data-slot / data-variant / data-size, un composant par fichier).
 // Usage dans eslint.config.mjs : ...designSystem({ entryPoint: 'src/app/globals.css' })
 import betterTailwindcss from 'eslint-plugin-better-tailwindcss';
+import { getDefaultSelectors } from 'eslint-plugin-better-tailwindcss/defaults';
 
 const COLOR_UTILITIES =
   'bg|text|border|border-[trblxyse]|ring|ring-offset|fill|stroke|from|via|to|outline|divide|placeholder|decoration|shadow|accent|caret';
@@ -23,7 +24,19 @@ export function designSystem({ entryPoint, oneComponentPerFile = true, level = '
       plugins: { 'better-tailwindcss': betterTailwindcss },
       settings: {
         // detectComponentClasses : les classes sémantiques de @layer components sont des classes connues
-        'better-tailwindcss': { entryPoint, detectComponentClasses: true },
+        'better-tailwindcss': {
+          entryPoint,
+          detectComponentClasses: true,
+          // Constantes de classes (MENU_BUTTON_CLASS_NAME, SIZE_CLASS…) lintées aussi : sinon elles cachent des valeurs arbitraires
+          selectors: [
+            ...getDefaultSelectors(),
+            {
+              kind: 'variable',
+              name: '^[A-Z][A-Z0-9_]*_(CLASS|CLASSES|CLASS_NAME|CLASS_NAMES)$',
+              match: [{ type: 'strings' }, { type: 'objectValues' }],
+            },
+          ],
+        },
       },
       rules: {
         'better-tailwindcss/enforce-consistent-class-order': level,

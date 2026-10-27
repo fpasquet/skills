@@ -277,3 +277,47 @@ export function lintConfigText(project) {
   }
   return text;
 }
+
+/**
+ * Réécrit une classe de shadcn avec les tokens : couleurs d'après les variables de theme.css
+ * (`--card: var(--color-surface)` : bg-card → bg-surface), ombres et rayons vers les tokens qui existent. Un nom qui est
+ * aussi un token (`muted`, `primary`) garde son sens de token : la réécriture peut être relancée sans dommage.
+ */
+export function shadcnTokenizer(project) {
+  const themeCss = read(project.theme);
+  const tokensCss = read(project.tokens);
+  const rootBlock = themeCss.match(/:root\s*\{([^}]*)\}/)?.[1] ?? '';
+  const hasToken = (name) => new RegExp(`--${name}\\s*:`).test(tokensCss);
+  const colorMap = new Map(
+    [...rootBlock.matchAll(/--([\w-]+)\s*:\s*var\(--color-([\w-]+)\)/g)]
+      .map((m) => [m[1], m[2]])
+      .filter(([from, to]) => from !== to && !hasToken(`color-${from}`)),
+  );
+  const SCALE_MAP = [
+    [/^shadow-(2xs|xs|sm)$/, 'shadow-card', 'shadow-card'],
+    [/^shadow(-md|-lg|-xl|-2xl)?$/, 'shadow-overlay', 'shadow-overlay'],
+    [/^rounded-md$/, 'rounded-control', 'radius-control'],
+  ];
+  let count = 0;
+  const toTokens = (utility) => {
+    const parts = utility.split(':');
+    let last = parts.pop();
+    const important = last.startsWith('!') ? '!' : '';
+    last = last.replace(/^!/, '');
+    const match = last.match(/^(-?)(bg|text|border(?:-[trblxyse])?|ring|ring-offset|fill|stroke|outline|divide|from|via|to|placeholder|decoration|caret|accent)-([\w-]+?)(\/\d+)?$/);
+    let changed = false;
+    if (match && colorMap.has(match[3])) {
+      last = `${match[1]}${match[2]}-${colorMap.get(match[3])}${match[4] ?? ''}`;
+      changed = true;
+    } else {
+      const scale = SCALE_MAP.find(([pattern, , token]) => pattern.test(last) && hasToken(token));
+      if (scale) {
+        last = scale[1];
+        changed = true;
+      }
+    }
+    if (changed) count++;
+    return [...parts, `${important}${last}`].join(':');
+  };
+  return { toTokens, count: () => count };
+}

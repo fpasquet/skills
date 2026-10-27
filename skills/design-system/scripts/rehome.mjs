@@ -22,8 +22,8 @@
  *   --keep-classes  range seulement, sans toucher aux classes (composant déjà réécrit, ou réécriture à la main)
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, walk } from './project.mjs';
+import { basename, dirname, join, relative } from 'node:path';
+import { detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, shadcnTokenizer, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run', 'keep-classes']);
 const [appDir, name] = positional;
@@ -33,17 +33,20 @@ if (!appDir || !name || !isDir(appDir)) {
 }
 const project = detectProject(appDir, options);
 const source = [join(project.ui, `${name}.tsx`), join(project.ui, `${name}.jsx`)].find(existsSync);
-const folder = join(project.ui, name);
+// Fichier déjà dans son dossier (profiles-table/profiles-table.tsx) : découpé sur place, à côté de lui
+const inPlace = Boolean(source) && basename(dirname(source)) === name.split('/').pop();
+const folder = inPlace ? dirname(source) : join(project.ui, name);
 if (!source) {
   console.error(`${rel(project, join(project.ui, `${name}.tsx`))} not found: add the component with the shadcn CLI first.`);
   process.exit(1);
 }
-if (existsSync(folder)) {
+if (!inPlace && existsSync(folder)) {
   console.error(
     `${rel(project, folder)}/ already exists. The new version stays in ${rel(project, source)} for comparison: report its changes by hand, then delete it.`,
   );
   process.exit(1);
 }
+const inPlaceImports = inPlace;
 const code = readFileSync(source, 'utf8');
 const ext = source.endsWith('.jsx') ? '.jsx' : '.tsx';
 const quote = code.includes("from '") ? "'" : '"';
@@ -65,7 +68,7 @@ for (;;) {
   if (!match) break;
   rest = rest.slice(match[0].length);
   if (match.length === 3) {
-    const from = match[2].startsWith('./') ? `../${match[2].slice(2)}` : match[2].startsWith('../') ? `../${match[2]}` : match[2];
+    const from = inPlaceImports ? match[2] : match[2].startsWith('./') ? `../${match[2].slice(2)}` : match[2].startsWith('../') ? `../${match[2]}` : match[2];
     imports.push({ side: true, from, specifiers: [] });
     continue;
   }
@@ -85,8 +88,8 @@ for (;;) {
   }
   if (project.cnImport === 'cn' && entry.named.some((n) => n.local === 'cn') && entry.from !== 'cn' && entry.named.length === 1) entry.from = 'cn';
   // Les fichiers descendent d'un niveau (dans le dossier du composant) : ./shimmer devient ../shimmer
-  if (entry.from.startsWith('./')) entry.from = `../${entry.from.slice(2)}`;
-  else if (entry.from.startsWith('../')) entry.from = `../${entry.from}`;
+  if (!inPlaceImports && entry.from.startsWith('./')) entry.from = `../${entry.from.slice(2)}`;
+  else if (!inPlaceImports && entry.from.startsWith('../')) entry.from = `../${entry.from}`;
   imports.push(entry);
 }
 
@@ -140,16 +143,27 @@ if (!components.length) {
   process.exit(1);
 }
 const main = components.find((c) => kebab(c.name) === base) ?? components[0];
+// Contenu des chaînes retiré, sauf les expressions ${…} des gabarits (`${DASHBOARD_PATHS.HOME}`)
+const withoutStrings = (text) =>
+  text
+    // Réexport (export type { X } from '…') : il n'utilise pas l'import de X
+    .replace(/^export (type )?\{[^}]*\} from[^\n]*$/gm, '')
+    // Commentaires (JSDoc qui cite un composant) : ils n'utilisent rien
+    .replace(/\/\*[\s\S]*?\*\/|(^|[^:])\/\/[^\n]*/g, (comment, before) => before ?? '')
+    .replace(/(["'])(?:(?!\1)[^\\\n]|\\.)*\1|`(?:[^`\\]|\\.)*`/g, (literal) =>
+    literal.startsWith('`') ? ` ${[...literal.matchAll(/\$\{([^}]*)\}/g)].map((m) => m[1]).join(' ')} ` : '""',
+  );
 const uses = (text, identifier) => new RegExp(`(^|[^\\w$.])${identifier.replace('$', '\\$')}([^\\w$]|$)`).test(text);
 const bodyOf = (chunk) => chunk.text.split('\n').slice(1).join('\n');
 
 // Fichier de chaque déclaration
 for (const chunk of chunks) {
-  if (chunk.component) chunk.file = chunk === main ? base : kebab(chunk.name);
+  // Le fichier du composant principal porte le nom du dossier ; sans composant de ce nom, chacun porte le sien
+  if (chunk.component) chunk.file = chunk === main && kebab(main.name) === base ? base : kebab(chunk.name);
   else {
     const users = components.filter((c) => uses(c.text, chunk.name));
     chunk.owner = users.length === 1 ? users[0] : main;
-    chunk.file = chunk.owner === main ? base : kebab(chunk.owner.name);
+    chunk.file = chunk.owner.file ?? (chunk.owner === main && kebab(main.name) === base ? base : kebab(chunk.owner.name));
   }
 }
 const classOf = (component) => {
@@ -387,10 +401,12 @@ function addUtilities(selector, utilities, modifiers = {}) {
 }
 
 /** Nom de la partie à partir de la balise : DialogPrimitive.Close → close, XIcon → icon, span → span. */
+// Balise HTML qui dit déjà le rôle de la partie : <h4> est un titre, <p> une description, <img> une image
+const TAG_ROLES = { h1: 'title', h2: 'title', h3: 'title', h4: 'title', h5: 'title', h6: 'title', p: 'description', img: 'image', ul: 'list', ol: 'list', li: 'item', span: 'label', label: 'label' };
 function partName(tag) {
   const last = tag.split('.').pop();
   if (/Icon$/.test(last) || /^[A-Z]\w*Icon$/.test(last)) return 'icon';
-  return kebab(last);
+  return TAG_ROLES[last] ?? kebab(last);
 }
 
 if (!options['keep-classes']) {
@@ -537,7 +553,7 @@ for (const [file, list] of files) {
       continue;
     }
     // Le contenu des chaînes ne compte pas : event.key === 'ArrowLeft' n'utilise pas l'icône ArrowLeft
-    const code = body.replace(/(["'`])(?:(?!\1)[^\\\n]|\\.)*\1/g, '""');
+    const code = withoutStrings(body);
     const named = entry.named.filter((n) => uses(code, n.local));
     const keepDefault = entry.defaultName && uses(code, entry.defaultName);
     const keepNamespace = entry.namespace && new RegExp(`\\b${entry.namespace}\\.`).test(body);
@@ -551,51 +567,35 @@ for (const [file, list] of files) {
   for (const [identifier, otherFile] of definedIn) {
     // Le contenu des chaînes ne compte pas (« used within <FormField> » dans un message d'erreur)
     // ni le texte du JSX (<span>Toggle Sidebar</span>)
-    const code = body.replace(/(["'`])(?:(?!\1)[^\\\n]|\\.)*\1/g, '""').replace(/>[^<>{}]*</g, '><');
+    const code = withoutStrings(body).replace(/>[^<>{}]*</g, '><');
     if (otherFile === file || !uses(code, identifier)) continue;
     siblings.set(otherFile, [...(siblings.get(otherFile) ?? []), identifier]);
   }
   for (const [otherFile, names] of siblings) header.push(`import { ${names.sort().join(', ')} } from ${quote}./${otherFile}${quote}${semi}`);
   output.set(`${file}${ext}`, `${directive ? `${directive}\n\n` : ''}${header.join('\n')}\n\n${body}\n`);
 }
+// index.ts : l'API d'origine du fichier (ses exports), pas les parties internes devenues des fichiers à part
+const publicNames = (names) => (exported.size ? names.filter((n) => exported.has(n.replace(/^type /, ''))) : names);
 const indexLines = [...exportsOf]
+  .map(([file, names]) => [file, publicNames(names)])
+  .filter(([, names]) => names.length)
   .sort(([a], [b]) => (a === base ? -1 : b === base ? 1 : a.localeCompare(b)))
   .map(([file, names]) => `export { ${names.sort((a, b) => a.replace(/^type /, '').localeCompare(b.replace(/^type /, ''))).join(', ')} } from './${file}';`);
-output.set('index.ts', `${indexLines.join('\n')}\n`);
+// Sur place, l'index existant est complété : exports des parties déplacées, plus d'export d'un fichier disparu
+const indexFile = join(folder, 'index.ts');
+if (!inPlace || !existsSync(indexFile)) output.set('index.ts', `${indexLines.join('\n')}\n`);
+else {
+  const mainGone = !output.has(`${base}${ext}`);
+  const kept = readFileSync(indexFile, 'utf8')
+    .split('\n')
+    .filter((line) => line.trim() && !(mainGone && new RegExp(`from ['"]\\./${base}['"]`).test(line)));
+  const added = indexLines.filter((line) => !kept.some((k) => k.includes(line.match(/from '([^']+)'/)[1]) && k === line) && !(line.includes(`'./${base}'`) && !mainGone));
+  output.set('index.ts', `${[...kept, ...added].join('\n')}\n`);
+}
 
-// Couleurs de shadcn → tokens, d'après theme.css (`--card: var(--color-surface)` : bg-card → bg-surface), et reliefs
-// et rayons de shadcn → tokens quand ils existent. Une couleur sans correspondance reste telle quelle.
-const themeCss = project.theme ? readFileSync(project.theme, 'utf8') : '';
-const tokensCss = project.tokens ? readFileSync(project.tokens, 'utf8') : '';
-const rootBlock = themeCss.match(/:root\s*\{([^}]*)\}/)?.[1] ?? '';
-const colorMap = new Map([...rootBlock.matchAll(/--([\w-]+)\s*:\s*var\(--color-([\w-]+)\)/g)].map((m) => [m[1], m[2]]).filter(([from, to]) => from !== to));
-const hasToken = (name) => new RegExp(`--${name}\\s*:`).test(tokensCss);
-const SCALE_MAP = [
-  [/^shadow-(2xs|xs|sm)$/, 'shadow-card'],
-  [/^shadow(-md|-lg|-xl|-2xl)?$/, 'shadow-overlay'],
-  [/^rounded-md$/, 'rounded-control'],
-];
-let tokenized = 0;
-const toTokens = (utility) => {
-  const parts = utility.split(':');
-  let last = parts.pop();
-  const important = last.startsWith('!') ? '!' : '';
-  last = last.replace(/^!/, '');
-  let match = last.match(/^(-?)(bg|text|border(?:-[trblxyse])?|ring|ring-offset|fill|stroke|outline|divide|from|via|to|placeholder|decoration|caret|accent)-([\w-]+?)(\/\d+)?$/);
-  if (match && colorMap.has(match[3])) last = `${match[1]}${match[2]}-${colorMap.get(match[3])}${match[4] ?? ''}`;
-  else {
-    match = null;
-    for (const [pattern, token] of SCALE_MAP) {
-      if (pattern.test(last) && hasToken(token.replace(/^(shadow|rounded)-/, (_, kind) => (kind === 'shadow' ? 'shadow-' : 'radius-')))) {
-        last = token;
-        match = true;
-        break;
-      }
-    }
-  }
-  if (match) tokenized++;
-  return [...parts, `${important}${last}`].join(':');
-};
+// Couleurs, reliefs et rayons de shadcn → tokens, d'après theme.css (bg-card → bg-surface)
+const tokenizer = shadcnTokenizer(project);
+const toTokens = tokenizer.toTokens;
 
 // Premier jet de la feuille de style
 const cssLines = [`/* ${pascal(base)} : classes posées par le composant (premier jet de rehome.mjs, à relire). */`, '@layer components {'];
@@ -660,7 +660,8 @@ if (options['dry-run']) {
 } else {
   mkdirSync(folder, { recursive: true });
   for (const [file, content] of output) writeFileSync(join(folder, file), content);
-  rmSync(source);
+  // Sur place, le fichier principal vient d'être réécrit : rien à supprimer
+  if (!inPlace || !output.has(`${base}${ext}`)) rmSync(source);
   if (project.componentsCss && !options['keep-classes']) {
     const sheet = readFileSync(project.componentsCss, 'utf8');
     const target = relative(dirname(project.componentsCss), join(folder, `${base}.css`)).split('\\').join('/');
@@ -691,7 +692,13 @@ if (classMap.length) {
   console.log('\nClasses (rename to the conventions: default → primary, destructive → danger, short prefix such as btn):');
   for (const [where, cls] of classMap) console.log(`  ${cls.padEnd(28)} ${where}`);
 }
-if (tokenized) console.log(`\nColours, shadows and radii of shadcn rewritten with the tokens of theme.css: ${tokenized}. Check them, and the dark: variants left.`);
+if (tokenizer.count()) console.log(`\nColours, shadows and radii of shadcn rewritten with the tokens of theme.css: ${tokenizer.count()}. Check them, and the dark: variants left.`);
+// Parties sans rôle dans leur nom (…-div, …-label-2) : à renommer, ou à rendre au JSX si elles ne font que placer
+const unnamed = classMap.map(([, cls]) => cls).filter((cls) => /-(div|part|a|button)(-\d+)?$|-\d+$/.test(cls));
+if (unnamed.length) {
+  console.log(`\nParts named after their tag or numbered: give each a role name, or move a pure layout (flex, gap) back to utilities:`);
+  console.log(`  ${[...new Set(unnamed)].join(', ')}`);
+}
 if (todos.length) {
   console.log(`\nTODO in ${base}.css (${todos.length}): arbitrary values or variants to rewrite with the scale, a token or standard CSS:`);
   for (const todo of todos) console.log(`  ${todo}`);

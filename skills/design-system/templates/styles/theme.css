@@ -9,6 +9,8 @@
 @custom-variant dark (&:is(.dark *));
 /* Page ou onglet en cours d'un lien de navigation : aria-current: au lieu de aria-[current=page]: */
 @custom-variant aria-current (&[aria-current='page']);
+/* Appareil qui peut survoler : une action révélée au survol (can-hover:opacity-0) reste visible sur écran tactile */
+@custom-variant can-hover (@media (hover: hover));
 
 /*
  * Mises en page des écrans, nommées plutôt qu'écrites en valeurs arbitraires : colonnes des grilles (`grid-cols-*`),

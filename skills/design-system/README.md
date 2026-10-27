@@ -67,7 +67,8 @@ Aucun fichier existant n'est écrasé. Les dépendances à installer sont affich
 | `SKILL.md` | Méthode : repérer et choisir le mode, socle, tokens, composants, Storybook, migration, maintenance, contrôle |
 | `scripts/audit.mjs` | État des lieux, en lecture seule : couleurs en dur, palette, valeurs arbitraires, `data-*`, feuilles non importées, sélecteurs en double, histoires, documentation, classes répétées |
 | `scripts/scaffold.mjs` | Socle du design system, sans rien écraser |
-| `scripts/rehome.mjs` | Composant ajouté par la CLI de shadcn : rangé dans son dossier, réécrit en classes sémantiques, premier jet de son CSS |
+| `scripts/rehome.mjs` | Composant ajouté par la CLI de shadcn : rangé dans son dossier, réécrit en classes sémantiques, premier jet de son CSS ; découpe aussi un fichier qui contient plusieurs composants |
+| `scripts/retoken.mjs` | Classes de shadcn d'une application réécrites avec les tokens du design system |
 | `references/` | Mise en place, tokens, composants, Storybook, migration |
 | `templates/` | Gabarits : tokens, thème, classes, Storybook, pages de documentation, ESLint, conventions, mémoire, composant modèle (`button`) |
 
