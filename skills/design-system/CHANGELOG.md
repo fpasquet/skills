@@ -22,4 +22,7 @@
   - `rehome.mjs` traite les `className={`…`}` et écrit les déclarations avant l'`@apply`, pour qu'un variant
     (`sm:max-w-lg`) les remplace ;
   - gabarit `classes/overlay.css` (`overlay`, `popup`) et token `overlay`, communs aux calques de Radix ;
-  - le `viteFinal` du gabarit filtre les avertissements « use client » au build de Storybook.
+  - le `viteFinal` du gabarit filtre les avertissements « use client » au build de Storybook ;
+  - `rehome.mjs` réécrit les couleurs, ombres et rayons de shadcn avec les tokens, d'après la correspondance de
+    `theme.css` ; il ne prend plus les constantes en majuscules pour des composants, réexporte les types avec
+    `type` et ignore le contenu des chaînes pour garder un import.

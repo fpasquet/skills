@@ -120,7 +120,8 @@ for (let i = 0; i < lines.length; i++) {
 }
 for (const chunk of chunks) {
   chunk.text = chunk.lines.join('\n').replace(/\s+$/, '');
-  chunk.component = /^[A-Z]/.test(chunk.name) && (chunk.kind === 'function' || chunk.kind === 'const');
+  // PascalCase seulement : une constante en majuscules (SIDEBAR_WIDTH) n'est pas un composant
+  chunk.component = /^[A-Z](?![A-Z0-9_]*$)/.test(chunk.name) && (chunk.kind === 'function' || chunk.kind === 'const');
 }
 const components = chunks.filter((c) => c.component);
 if (!components.length) {
@@ -444,7 +445,7 @@ for (const [file, list] of files) {
   const body = list
     .map((chunk) => {
       const needsExport = chunk.component || exported.has(chunk.name) || chunks.some((other) => other.file !== file && uses(other.text, chunk.name));
-      if (needsExport) exportsOf.set(file, [...(exportsOf.get(file) ?? []), chunk.name]);
+      if (needsExport) exportsOf.set(file, [...(exportsOf.get(file) ?? []), chunk.kind === 'type' || chunk.kind === 'interface' ? `type ${chunk.name}` : chunk.name]);
       return needsExport && !/^export\s/.test(chunk.text.split('\n').find((l) => DECLARATION.test(l)) ?? '')
         ? chunk.text.replace(/^((?:\s*(?:\/\/|\/\*|\*).*\n)*)(?=(?:async\s+)?(?:function|const|let|type|interface|class|enum)\s)/, '$1export ')
         : chunk.text;
@@ -456,8 +457,10 @@ for (const [file, list] of files) {
       header.push(`import ${quote}${entry.from}${quote}${semi}`);
       continue;
     }
-    const named = entry.named.filter((n) => uses(body, n.local));
-    const keepDefault = entry.defaultName && uses(body, entry.defaultName);
+    // Le contenu des chaînes ne compte pas : event.key === 'ArrowLeft' n'utilise pas l'icône ArrowLeft
+    const code = body.replace(/(["'`])(?:(?!\1)[^\\\n]|\\.)*\1/g, '""');
+    const named = entry.named.filter((n) => uses(code, n.local));
+    const keepDefault = entry.defaultName && uses(code, entry.defaultName);
     const keepNamespace = entry.namespace && new RegExp(`\\b${entry.namespace}\\.`).test(body);
     if (!named.length && !keepDefault && !keepNamespace) continue;
     const clause = [keepNamespace ? `* as ${entry.namespace}` : keepDefault ? entry.defaultName : null, named.length ? `{ ${named.map((n) => n.text).join(', ')} }` : null]
@@ -476,12 +479,48 @@ for (const [file, list] of files) {
 }
 const indexLines = [...exportsOf]
   .sort(([a], [b]) => (a === base ? -1 : b === base ? 1 : a.localeCompare(b)))
-  .map(([file, names]) => `export { ${names.sort().join(', ')} } from './${file}';`);
+  .map(([file, names]) => `export { ${names.sort((a, b) => a.replace(/^type /, '').localeCompare(b.replace(/^type /, ''))).join(', ')} } from './${file}';`);
 output.set('index.ts', `${indexLines.join('\n')}\n`);
+
+// Couleurs de shadcn → tokens, d'après theme.css (`--card: var(--color-surface)` : bg-card → bg-surface), et reliefs
+// et rayons de shadcn → tokens quand ils existent. Une couleur sans correspondance reste telle quelle.
+const themeCss = project.theme ? readFileSync(project.theme, 'utf8') : '';
+const tokensCss = project.tokens ? readFileSync(project.tokens, 'utf8') : '';
+const rootBlock = themeCss.match(/:root\s*\{([^}]*)\}/)?.[1] ?? '';
+const colorMap = new Map([...rootBlock.matchAll(/--([\w-]+)\s*:\s*var\(--color-([\w-]+)\)/g)].map((m) => [m[1], m[2]]).filter(([from, to]) => from !== to));
+const hasToken = (name) => new RegExp(`--${name}\\s*:`).test(tokensCss);
+const SCALE_MAP = [
+  [/^shadow-(2xs|xs|sm)$/, 'shadow-card'],
+  [/^shadow(-md|-lg|-xl|-2xl)?$/, 'shadow-overlay'],
+  [/^rounded-md$/, 'rounded-control'],
+];
+let tokenized = 0;
+const toTokens = (utility) => {
+  const parts = utility.split(':');
+  let last = parts.pop();
+  const important = last.startsWith('!') ? '!' : '';
+  last = last.replace(/^!/, '');
+  let match = last.match(/^(-?)(bg|text|border(?:-[trblxyse])?|ring|ring-offset|fill|stroke|outline|divide|from|via|to|placeholder|decoration|caret|accent)-([\w-]+?)(\/\d+)?$/);
+  if (match && colorMap.has(match[3])) last = `${match[1]}${match[2]}-${colorMap.get(match[3])}${match[4] ?? ''}`;
+  else {
+    match = null;
+    for (const [pattern, token] of SCALE_MAP) {
+      if (pattern.test(last) && hasToken(token.replace(/^(shadow|rounded)-/, (_, kind) => (kind === 'shadow' ? 'shadow-' : 'radius-')))) {
+        last = token;
+        match = true;
+        break;
+      }
+    }
+  }
+  if (match) tokenized++;
+  return [...parts, `${important}${last}`].join(':');
+};
 
 // Premier jet de la feuille de style
 const cssLines = [`/* ${pascal(base)} : classes posées par le composant (premier jet de rehome.mjs, à relire). */`, '@layer components {'];
-for (const [selector, { apply, declarations, todo }] of css) {
+for (const [selector, rule] of css) {
+  rule.apply = rule.apply.map(toTokens);
+  const { apply, declarations, todo } = rule;
   if (!apply.length && !declarations.length && !todo.length) continue;
   cssLines.push(`  ${selector} {`);
   // Déclarations d'abord : un variant de l'@apply (sm:max-w-lg) doit pouvoir les remplacer
@@ -571,6 +610,7 @@ if (classMap.length) {
   console.log('\nClasses (rename to the conventions: default → primary, destructive → danger, short prefix such as btn):');
   for (const [where, cls] of classMap) console.log(`  ${cls.padEnd(28)} ${where}`);
 }
+if (tokenized) console.log(`\nColours, shadows and radii of shadcn rewritten with the tokens of theme.css: ${tokenized}. Check them, and the dark: variants left.`);
 if (todos.length) {
   console.log(`\nTODO in ${base}.css (${todos.length}): arbitrary values or variants to rewrite with the scale, a token or standard CSS:`);
   for (const todo of todos) console.log(`  ${todo}`);
