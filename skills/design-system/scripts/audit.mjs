@@ -81,7 +81,8 @@ const PALETTE = new RegExp(
 );
 // Fond « muted » de shadcn (bg-muted, bg-muted/50) quand les tokens font de muted la couleur du texte secondaire
 const MUTED_SURFACE = /^-?(bg|fill|stroke|border(-[trblxyse])?|from|via|to|ring|outline|divide)-muted(\/\d+)?$/;
-const mutedIsText = project.tokens ? /--color-muted\s*:/.test(read(project.tokens)) : false;
+// Seulement quand --color-muted est une couleur des tokens : `var(--muted)` (thème shadcn d'origine) reste un fond
+const mutedIsText = project.tokens ? /--color-muted\s*:(?!\s*var\(--muted\))/.test(read(project.tokens)) : false;
 const VISUAL = /^-?(bg|border|rounded|shadow|ring|divide|font|tracking|leading|text|uppercase|italic|underline|decoration|opacity)\b/;
 const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/;
 
@@ -364,4 +365,5 @@ if (options.json) {
   }
   if (!counts.error && !counts.warning && !counts.suggestion) console.log('\nNo problem found.');
 }
-process.exit(options.strict && counts.error ? 1 : 0);
+// exitCode plutôt que exit() : un rapport JSON envoyé dans un pipe serait coupé à 64 Ko
+process.exitCode = options.strict && counts.error ? 1 : 0;
