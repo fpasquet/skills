@@ -1,0 +1,55 @@
+/* Boutons : variantes et tailles posées par le composant Button (CVA), ou directement dans le JSX. */
+@layer components {
+  .btn {
+    @apply focus-ring inline-flex h-control shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-control border border-transparent px-3 font-medium whitespace-nowrap transition-colors select-none;
+  }
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    @apply cursor-not-allowed opacity-60;
+  }
+  .btn svg {
+    @apply pointer-events-none shrink-0;
+  }
+  .btn svg:not([class*='size-']) {
+    @apply size-4;
+  }
+  .btn-primary {
+    @apply bg-primary text-on-primary enabled:hover:bg-primary-hover;
+  }
+  .btn-outline {
+    @apply border-line-strong bg-surface text-ink enabled:hover:bg-surface-alt;
+  }
+  .btn-secondary {
+    @apply border-line-strong bg-surface-alt text-ink enabled:hover:bg-line;
+  }
+  .btn-ghost {
+    @apply text-muted enabled:hover:bg-surface-alt enabled:hover:text-ink;
+  }
+  .btn-danger {
+    @apply bg-danger text-on-danger enabled:hover:opacity-90 focus-visible:ring-danger/40;
+  }
+  .btn-link {
+    @apply h-auto px-0 text-ink underline decoration-line-strong underline-offset-2 hover:decoration-ink;
+  }
+  .btn-xs {
+    @apply h-6 gap-1 px-2 text-xs;
+  }
+  .btn-sm {
+    @apply h-8 gap-1 px-2.5 text-xs;
+  }
+  .btn-lg {
+    @apply h-12 gap-2.5 px-4 text-base;
+  }
+  .btn-icon {
+    @apply size-control px-0;
+  }
+  .btn-icon.btn-xs {
+    @apply size-6;
+  }
+  .btn-icon.btn-sm {
+    @apply size-8;
+  }
+  .btn-icon.btn-lg {
+    @apply size-12;
+  }
+}

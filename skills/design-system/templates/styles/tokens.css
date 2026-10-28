@@ -1,0 +1,104 @@
+/*
+ * Tokens du design system : {{Produit}}
+ * Source : {{specs validées le JJ/MM/AAAA | valeurs relevées dans le code par audit.mjs le JJ/MM/AAAA | charte fournie}}
+ *
+ * Bloc @theme de Tailwind v4, importé par la feuille d'entrée juste après @import "tailwindcss". Noms sémantiques
+ * (bg-primary, text-muted, rounded-card, h-control…), communs avec les maquettes du skill specs-ui : un projet qui a
+ * des specs importe directement specs/ui/tokens.css à la place de ce fichier.
+ * Valeurs en hexadécimal, une ligne par token, commentaire d'usage en fin de ligne : la page Tokens de Storybook
+ * les lit telles quelles. `static` : chaque variable est émise, même inutilisée, pour que la page les affiche toutes. Le mode sombre redéfinit les couleurs dans theme.css (.dark).
+ */
+@theme static {
+  /* Polices : servies par l'application (next/font, @fontsource…) et par Storybook (preview-head.html) */
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Surfaces */
+  --color-canvas: #f5f6f8;        /* fond de l'application */
+  --color-surface: #ffffff;       /* cartes, panneaux, barres */
+  --color-surface-alt: #eef1f4;   /* en-têtes de tableau, zones secondaires, survol */
+  --color-line: #dde2e8;          /* bordures et séparateurs */
+  --color-line-strong: #8a94a0;   /* bordures de champs et boutons secondaires (3:1 sur surface) */
+
+  /* Texte */
+  --color-ink: #17202a;           /* texte principal */
+  --color-muted: #5a6573;         /* texte secondaire, libellés, placeholders */
+
+  /* Navigation principale (barre latérale ou barre du haut) : identique à surface, ou sombre / colorée */
+  --color-nav: #ffffff;
+  --color-nav-ink: #17202a;       /* élément actif, nom du produit */
+  --color-nav-muted: #5a6573;     /* éléments inactifs, intitulés de groupe */
+  --color-nav-active: #e8eefb;    /* fond de l'élément actif */
+
+  /* Marque */
+  --color-primary: #2554c7;
+  --color-primary-hover: #1d4399;
+  --color-primary-soft: #e8eefb;  /* fonds sélectionnés, navigation active */
+  --color-on-primary: #ffffff;    /* texte posé sur primary */
+
+  /* États : la variante -soft sert de fond, la couleur pleine de texte ou d'icône */
+  --color-success: #1d7348;
+  --color-success-soft: #e2f3e9;
+  --color-warning: #8a5300;
+  --color-warning-soft: #fbefd6;
+  --color-danger: #b42318;
+  --color-danger-soft: #fce8e6;
+  --color-on-danger: #ffffff;     /* texte posé sur danger (bouton Supprimer) */
+  --color-info: #1d5ba3;
+  --color-info-soft: #e4effb;
+
+  /* Voile derrière les fenêtres et panneaux modaux */
+  --color-overlay: #10182880;
+
+  /*
+   * Échelles : les noms de Tailwind, restreints aux pas retenus. Chaque famille est remise à zéro puis redéclarée :
+   * une autre classe (p-5, text-[13px]) n'est pas générée et le lint la signale. Les tailles sont fixes : pas de
+   * token qui change selon l'écran (la variation s'écrit en md: ou dans la classe d'un composant).
+   */
+  --text-*: initial;
+  --text-xs: 0.75rem;             /* 12 px : badges, métadonnées */
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;            /* 14 px : texte courant de l'interface */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;              /* 16 px : texte courant d'un contenu */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;            /* 18 px : titres de carte */
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;             /* 20 px : titres de section */
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;             /* 24 px : titres d'écran */
+  --text-2xl--line-height: 2rem;
+
+  --spacing-*: initial;
+  --spacing-0: 0px;
+  --spacing-px: 1px;              /* filets */
+  --spacing-0\.5: 0.125rem;
+  --spacing-1: 0.25rem;
+  --spacing-1\.5: 0.375rem;
+  --spacing-2: 0.5rem;
+  --spacing-2\.5: 0.625rem;
+  --spacing-3: 0.75rem;
+  --spacing-3\.5: 0.875rem;        /* icônes des menus */
+  --spacing-4: 1rem;              /* icônes */
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-24: 6rem;
+  --spacing-32: 8rem;
+
+  /* Dimensions nommées d'après leur usage : h-control, size-control, h-row */
+  --spacing-control: 2.5rem;      /* hauteur des boutons et champs */
+  --spacing-row: 3rem;            /* hauteur des lignes de tableau et de liste */
+
+  /* Formes et relief : theme.css ramène les noms de shadcn (rounded-md, shadow-sm…) sur ces tokens */
+  --radius-*: initial;
+  --radius-control: 0.375rem;     /* rounded-control : boutons, champs */
+  --radius-card: 0.625rem;        /* rounded-card : cartes, modales, panneaux */
+  --shadow-*: initial;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-overlay: 0 12px 32px rgb(16 24 40 / 0.18);
+}
