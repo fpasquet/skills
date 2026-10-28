@@ -360,13 +360,14 @@ export function scaleChecker(project) {
   const families = Object.fromEntries(['spacing', 'text', 'radius', 'shadow'].filter(reset).map((family) => [family, declared(family)]));
   const SPACING = /^-?(?:p[xytrblse]?|m[xytrblse]?|gap(?:-[xy])?|space-[xy]|w|h|size|min-w|min-h|max-w|max-h|inset(?:-[xy])?|top|left|right|bottom|start|end|translate-[xy]|scroll-[mp][xytrblse]?|basis|indent)-(\d+(?:\.\d+)?|px)$/;
   const TEXT = /^text-(xs|sm|base|lg|xl|\dxl)$/;
-  const RADIUS = /^rounded(?:-[trblse]{1,2})?-(xs|sm|md|lg|xl|\dxl)$/;
+  // rounded sans suffixe : la clé implicite de la famille, retirée elle aussi par la remise à zéro
+  const RADIUS = /^rounded(?:-[trblse]{1,2})?(?:-(xs|sm|md|lg|xl|\dxl))?$/;
   const SHADOW = /^shadow-(2xs|xs|sm|md|lg|xl|2xl)$/;
   return (utility) => {
     const base = utility.split(':').pop().replace(/^!/, '');
     const check = (family, pattern, group) => {
       const m = families[family] && base.match(pattern);
-      return m && !families[family].has(m[group]) ? family : null;
+      return m && !families[family].has(m[group] ?? 'DEFAULT') ? family : null;
     };
     return check('spacing', SPACING, 1) ?? check('text', TEXT, 1) ?? check('radius', RADIUS, 1) ?? check('shadow', SHADOW, 1);
   };

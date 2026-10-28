@@ -88,3 +88,10 @@
     les classes des blocs partagés sur la page Classes et trouve `cn` sans `components.json` ; le fragment ESLint lint
     aussi les constantes de classes en camelCase (`menuClassName`) ; `rehome.mjs --keep-classes` range dans son propre
     fichier une table qui cite plusieurs composants (`mdxComponents`), au lieu d'un import circulaire.
+- Échelle restreinte appliquée aussi au monorepo du premier essai (pas utilisés gardés, pas rares arrondis après
+  comparaison des captures) :
+  - la fonction `--spacing(8)` de Tailwind demande la variable `--spacing` du thème, retirée par la remise à zéro :
+    build cassé ; `rehome.mjs` écrit `var(--spacing-8)` et l'audit signale l'appel (`off-scale`) ;
+  - `rounded` sans suffixe disparaît avec `--radius-*: initial` : signalé comme hors de l'échelle ;
+  - tailwind-merge 2, écrit pour Tailwind v3, signalé (`merge-config`), qui ne s'applique plus à une application
+    consommatrice d'un paquet du design system.

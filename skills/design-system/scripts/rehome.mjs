@@ -32,6 +32,9 @@ if (!appDir || !name || !isDir(appDir)) {
   process.exit(2);
 }
 const project = detectProject(appDir, options);
+// Échelle d'espacement restreinte (--spacing-*: initial) : plus de variable --spacing, donc plus de --spacing(n)
+const readIf = (file) => (file && existsSync(file) ? readFileSync(file, 'utf8') : '');
+const spacingRestricted = /--spacing-\*\s*:\s*initial/.test(`${readIf(project.tokens)}\n${readIf(project.theme)}`);
 const source = [join(project.ui, `${name}.tsx`), join(project.ui, `${name}.jsx`)].find(existsSync);
 // Fichier déjà dans son dossier (profiles-table/profiles-table.tsx) : découpé sur place, à côté de lui
 const inPlace = Boolean(source) && basename(dirname(source)) === name.split('/').pop();
@@ -417,10 +420,14 @@ function addUtilities(selector, utilities, modifiers = {}) {
       continue;
     }
     const target = rule(`${ancestor}${element}${selector}${suffix}`);
-    // Propriété arbitraire ([--cell-size:--spacing(8)]) : déclaration CSS telle quelle
+    // Propriété arbitraire ([--cell-size:--spacing(8)]) : déclaration CSS telle quelle ; avec une échelle restreinte,
+    // --spacing(8) (qui demande la variable --spacing du thème) devient le token du pas
     const property = base.match(/^\[(-{0,2}[a-z][\w-]*):(.+)\]$/);
     if (property && !kept.length) {
-      target.declarations.push(`${property[1]}: ${unescape(property[2])};`);
+      const value = unescape(property[2]).replace(/--spacing\(([\d.]+)\)/g, (call, step) =>
+        spacingRestricted ? `var(--spacing-${step.replace('.', '\\.')})` : call,
+      );
+      target.declarations.push(`${property[1]}: ${value};`);
       continue;
     }
     const arbitrary = base.match(/^(-?)([\w-]+?)-\[(.+)\]$/);

@@ -48,6 +48,8 @@ remise à zéro puis redéclarée dans les tokens.
   qui manque s'ajoute aux tokens avec son usage, jamais en valeur arbitraire.
 - `p-0` et `inset-0` demandent `--spacing-0` ; `leading-6` disparaît avec `--spacing` (l'interligne vient de la taille
   de texte, ou de `leading-tight`, `leading-normal`).
+- La fonction `--spacing(8)` des feuilles demande `--spacing` dans le thème : elle s'écrit `var(--spacing-8)`.
+  `rounded` sans suffixe disparaît aussi : `rounded-sm` ou `rounded-control`.
 - `--spacing` (l'unité) disparaît aussi : `tw-animate-css` en a besoin pour ses translations (`slide-in-from-top-2`). `theme.css` la redéclare dans `:root`, hors de `@theme`, pour que Tailwind ne régénère pas toute l'échelle.
 - Les largeurs (`max-w-xs`, `w-sm`) restent dans la famille `--container-*` de Tailwind : pas de collision. Une largeur
   d'écran ou de calque est une entrée nommée (`max-w-measure`, `w-popover`).

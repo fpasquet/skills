@@ -60,7 +60,8 @@ const twMerge = extendTailwindMerge({
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
 ```
 
-Les noms de Tailwind restreints (`text-sm`, `p-4`) n'ont rien à déclarer. L'audit vérifie la liste (`merge-config`). Le
+Les noms de Tailwind restreints (`text-sm`, `p-4`) n'ont rien à déclarer. tailwind-merge doit être en version 3 ou plus :
+la version 2 est écrite pour Tailwind v3. L'audit vérifie la version et la liste (`merge-config`). Le
 paquet `cn` de shadcn, que les styles récents de la CLI ajoutent et importent (`import { cn } from "cn"`), n'a pas
 cette configuration : `rehome.mjs` réécrit l'import vers la fonction du projet, et le paquet se retire.
 

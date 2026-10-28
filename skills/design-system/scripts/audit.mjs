@@ -160,6 +160,7 @@ function classLists(code) {
 }
 
 const offScale = scaleChecker(project);
+const spacingRestricted = /--spacing-\*\s*:\s*initial/.test(`${read(project.tokens)}\n${read(project.theme)}`);
 const repeated = new Map();
 for (const file of codeFiles) {
   const code = stripJsComments(read(file));
@@ -245,6 +246,10 @@ for (const file of cssFiles) {
     for (const match of css.matchAll(/@media[^{]*\b(?:min-width|max-width|width\s*[<>]=?)\s*:?\s*(\d+(?:\.\d+)?(?:px|rem|em))/g)) {
       add('breakpoint-literal', file, lineOf(css, match.index), match[0].trim());
     }
+  }
+  // --spacing(8) demande la variable --spacing du thème, retirée par une échelle restreinte : build cassé
+  if (spacingRestricted) {
+    for (const match of css.matchAll(/--spacing\(([^)]*)\)/g)) add('off-scale', file, lineOf(css, match.index), `${match[0]} → var(--spacing-${match[1].trim()})`);
   }
   for (const match of css.matchAll(/@apply\s+([^;]+);/g)) {
     for (const token of match[1].split(/\s+/).filter(Boolean)) {
@@ -438,7 +443,8 @@ if (reactMajor && reactMajor < 19 && isDir(project.ui)) {
 // ---------- cn() : tailwind-merge doit connaître les tokens des échelles ----------
 // Sans configuration, `text-compact` est pris pour une couleur : cn('text-compact', 'text-ink') supprime la taille, et
 // cn('h-control', 'h-row') garde les deux. La fonction de components.json (aliases.utils) les déclare.
-if (project.tokens) {
+// Une application qui consomme le paquet du design system : la fonction cn est celle du paquet, auditée avec lui
+if (project.tokens && !project.designSystemPackage) {
   const tokensCss = read(project.tokens);
   const TAILWIND_TEXT = /^(xs|sm|base|lg|xl|[2-9]xl)$/;
   const names = (family) => [...tokensCss.matchAll(new RegExp(`^\\s*--${family}-([a-z][\\w-]*)\\s*:`, 'gm'))].map((m) => m[1]).filter((n) => !n.includes('--'));
@@ -459,6 +465,9 @@ if (project.tokens) {
     codeFiles.find((file) => /export\s+(const|function)\s+cn\b/.test(read(file)));
   const helperText = read(helper);
   const configured = /extendTailwindMerge|extendTailwindMerge\(|twMergeConfig/.test(helperText);
+  // tailwind-merge 2 est écrit pour Tailwind v3 : il ne connaît ni la syntaxe ni les familles de la v4
+  const mergeVersion = readJsonc(join(project.root, 'node_modules', 'tailwind-merge', 'package.json'))?.version;
+  if (mergeVersion && Number(mergeVersion.split('.')[0]) < 3) add('merge-config', helper ?? project.root, 1, `tailwind-merge ${mergeVersion}: version 3 or later for Tailwind v4`);
   for (const name of custom) {
     const bare = name.replace(/^(text|spacing)-/, '');
     if (!configured || !new RegExp(`['"]${bare}['"]`).test(helperText)) add('merge-config', helper ?? project.tokens, 1, name);
