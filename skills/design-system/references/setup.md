@@ -64,7 +64,7 @@ Les composants vivent parfois dans un paquet partagé (`packages/ui`), que les a
 
 - `tags: ['autodocs']` une fois, dans `preview.tsx` ;
 - `a11y: { test: 'error' }` : une violation fait échouer l'histoire ;
-- `storySort` dans l'ordre des sections : `Design system`, `UI`, `Shared`, `Layouts`, `Features`, `Pages` ;
+- `storySort` dans l'ordre des sections : `Design system`, `UI` (par catégories), `Shared`, `Layouts`, `Features`, `Pages` ;
 - `withThemeByClassName({ themes: { Clair: '', Sombre: 'dark' } })` si le mode sombre existe ;
 - la feuille d'entrée importée en tête de `preview.tsx`.
 

@@ -72,7 +72,8 @@ décisions du design system : `{{memory}}`. Contrôle : `node <skill design-syst
 - **Le titre dit où est le fichier** : une section selon le rôle, puis les dossiers en anglais et en PascalCase, puis
   le composant. Six sections, dans cet ordre (`storySort`) :
   - `Design system/<Page>` : pages MDX de `{{docs}}` ;
-  - `UI/<Composant>` : `{{ui}}` ;
+  - `UI/<Catégorie>/<Composant>` : `{{ui}}`, par catégorie (`Actions`, `Forms`, `Overlays`, `Navigation`,
+    `Display`, `Feedback`) ;
   - `Shared/<Composant>` : `{{components}}` ;
   - `Layouts/<Nom>` pour les mises en page partagées, `Layouts/<Fonctionnalité>/<Nom>` pour celles d'une fonctionnalité ;
   - `Features/<Fonctionnalité>/<Groupe>/<Composant>` : contenus d'une fonctionnalité ;

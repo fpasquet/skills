@@ -48,3 +48,5 @@
     (`shadcn-alias`) ; `rehome.mjs` ajoute l'entrée `exports` d'un nouveau composant, vise par sa classe la partie
     d'un groupe nommé (`group/field`), traduit `[&>[data-slot=…]]` et `has-data-[…]`, réécrit `bg-muted` en
     fond du thème, et signale les `data-*` restés dans le JSX et les dépendances que la CLI a réécrites à plat.
+  - Storybook : histoires de `UI` par catégorie en anglais (`UI/Forms/Field`), ordre dans le `storySort` du gabarit ;
+    bouton icône à la hauteur des contrôles quand `h-control` diffère de celle de shadcn.

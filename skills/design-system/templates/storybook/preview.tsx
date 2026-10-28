@@ -11,11 +11,20 @@ const preview: Preview = {
     // Une violation d'accessibilité fait échouer le test de l'histoire (vitest, CI).
     a11y: { test: 'error' },
     options: {
-      // Sections dans l'ordre des rôles, puis titres par ordre alphabétique ; les histoires d'un fichier gardent
-      // leur ordre.
+      // Sections dans l'ordre des rôles, UI par catégories, puis titres par ordre alphabétique ; les histoires d'un
+      // fichier gardent leur ordre.
       storySort: {
         method: 'alphabetical',
-        order: ['Design system', ['Introduction', 'Tokens', 'Classes'], 'UI', 'Shared', 'Layouts', 'Features', 'Pages'],
+        order: [
+          'Design system',
+          ['Introduction', 'Tokens', 'Classes'],
+          'UI',
+          ['Actions', 'Forms', ['Field', '*'], 'Overlays', 'Navigation', 'Display', 'Feedback'],
+          'Shared',
+          'Layouts',
+          'Features',
+          'Pages',
+        ],
       },
     },
   },

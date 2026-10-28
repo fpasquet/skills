@@ -25,7 +25,7 @@ Un composant à plusieurs parties a un fichier par sous-composant (`dialog-conte
 
    Renommer dans le `.tsx` et le `.css` ensemble. **Garder les noms de variantes de l'API** (`variant="destructive"`) : seule la classe change.
 2. **Couleurs**. Les classes de shadcn (`bg-background`, `text-muted-foreground`, `bg-destructive`) fonctionnent grâce au thème, mais les tokens disent mieux l'intention (`bg-surface`, `text-muted`, `bg-danger`). La palette (`text-white`, `bg-black/50`) devient toujours un token (`text-on-danger`, un `--color-overlay`). On garde la nuance de la maquette, sans forcer l'opacité de shadcn.
-3. **Densité**. Les hauteurs passent aux tokens (`h-control`, `rounded-control`), et les tailles de texte à l'échelle ou aux tokens de texte.
+3. **Densité**. Les hauteurs passent aux tokens (`h-control`, `rounded-control`), et les tailles de texte à l'échelle ou aux tokens de texte. Quand `h-control` diffère de la hauteur de shadcn (36 px), le bouton icône (`size-9`) ne suit pas : dans un groupe de boutons, il reste plus petit que son voisin. Il prend alors `size-control`, au moins dans `button-group`.
 4. **TODO** : chaque valeur ou variante arbitraire se réécrit.
    - Une valeur de l'échelle devient sa classe : `ring-[3px]` → `ring-3`.
    - Une valeur de mise en page devient du CSS standard dans la feuille : `width: min(440px, calc(100vw - 2rem))`.

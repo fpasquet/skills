@@ -19,13 +19,15 @@ Une section selon le rôle, puis les dossiers en anglais et en PascalCase, puis 
 | Section | Dossier | Exemple |
 |---|---|---|
 | `Design system/<Page>` | pages MDX de `<docs>` | `Design system/Tokens` |
-| `UI/<Composant>` | `<ui>` | `UI/Button` |
+| `UI/<Catégorie>/<Composant>` | `<ui>` | `UI/Forms/Field` |
 | `Shared/<Composant>` | `<components>` | `Shared/UserMenu` |
 | `Layouts/<Nom>`, `Layouts/<Fonctionnalité>/<Nom>` | mises en page partagées ou d'une fonctionnalité | `Layouts/AppShell` |
 | `Features/<Fonctionnalité>/<Groupe>/<Composant>` | contenus d'une fonctionnalité | `Features/Billing/Invoices/InvoiceRow` |
 | `Pages/<Fonctionnalité>/<Écran>` | écrans, sans le suffixe `Screen` | `Pages/Billing/InvoiceList` |
 
 `storySort` (dans `preview.tsx`) range les sections dans cet ordre. L'audit vérifie la section de chaque titre (`story-section`).
+
+Les composants de `UI` se rangent par catégorie, nommée en anglais comme les sections : `Actions` (boutons, groupes, bascules), `Forms` (`Field` en tête, puis les contrôles), `Overlays` (fenêtres, menus, infobulles), `Navigation`, `Display` (cartes, badges, tableaux), `Feedback` (alertes, chargement, notifications). Un sous-dossier de registre est une catégorie de plus (`UI/Assistant/Message` pour `ai-elements`). Sans catégories, une cinquantaine de composants s'alignent en une seule liste. L'ordre des catégories se déclare dans `storySort`.
 
 ## Écrire une histoire
 
