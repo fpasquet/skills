@@ -50,3 +50,6 @@
     fond du thème, et signale les `data-*` restés dans le JSX et les dépendances que la CLI a réécrites à plat.
   - Storybook : histoires de `UI` par catégorie en anglais (`UI/Forms/Field`), ordre dans le `storySort` du gabarit ;
     bouton icône à la hauteur des contrôles quand `h-control` diffère de celle de shadcn.
+  - audit de la documentation : classes et tokens cités en exemple qui n'existent pas (`doc-unknown-name`), texte du
+    gabarit laissé à compléter (`doc-placeholder`) ; gabarit des conventions sans chemin du skill à la place d'une
+    commande, avec des exemples que le skill produit lui-même (`overlay.css`, `input`, `field-error`).

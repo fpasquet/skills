@@ -196,6 +196,8 @@ node <skill>/scripts/audit.mjs <app>     # aucune nouvelle erreur sur ce qui a �
 
 Lancer aussi les commandes du projet : lint, vérification de types, `build-storybook` et `test:stories`.
 
+Les conventions et les pages MDX viennent de gabarits : leurs exemples (classes, tokens, fichiers) doivent exister dans le projet. L'audit signale ceux qui n'existent pas (`doc-unknown-name`) et le texte laissé à compléter (`doc-placeholder`) ; une relecture reste nécessaire pour le reste (sections Storybook sans histoires, commandes qui ne s'appliquent pas).
+
 Dire à la personne ce qui a été contrôlé et ce qui ne l'a pas été. Une suggestion de l'audit (classes répétées, classes non documentées) se propose à la personne et ne s'applique pas d'office.
 
 ## Ressources

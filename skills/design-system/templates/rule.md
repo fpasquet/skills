@@ -1,7 +1,9 @@
 # Design system ({{app}})
 
 Conventions de l'interface : tokens, classes sémantiques, composants shadcn/ui sur Radix, Storybook. Mémoire et
-décisions du design system : `{{memory}}`. Contrôle : `node <skill design-system>/scripts/audit.mjs {{app}}`.
+décisions du design system : `{{memory}}`. Contrôles du dépôt : le lint et les histoires (`test:stories`). L'audit
+(`audit.mjs`) et le rangement des composants (`rehome.mjs`) sont des scripts du skill d'agent `design-system`, qui
+n'est pas forcément installé dans le dépôt.
 
 ## Trois couches
 
@@ -10,7 +12,7 @@ décisions du design system : `{{memory}}`. Contrôle : `node <skill design-syst
 2. **Thème et classes** : `{{styles}}/theme.css` (variables de shadcn/ui pointées sur les tokens, mode sombre `.dark`,
    entrées nommées des mises en page, `@custom-variant`) et les classes sémantiques (`@layer components`) : le CSS
    d'un composant **à côté de lui** (`{{ui}}/button/button.css` près de `button.tsx`), les classes sans composant
-   React dans `{{styles}}/classes/`, un fichier par famille (`tile.css`, `kbd.css`) ; `{{styles}}/components.css` les
+   React dans `{{styles}}/classes/`, un fichier par famille (`overlay.css` pour les calques) ; `{{styles}}/components.css` les
    importe tous, et une nouvelle feuille s'y ajoute.
 3. **Composants** : `{{ui}}` (shadcn/ui sur Radix), dont les variantes CVA posent les classes sémantiques :
    `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
@@ -22,7 +24,7 @@ décisions du design system : `{{memory}}`. Contrôle : `node <skill design-syst
   d'écrire un bloc, chercher s'il existe déjà dans `{{ui}}`, puis dans le catalogue de shadcn/ui : un contrôle de
   formulaire (liste, zone de texte, case, bascule…) passe par son composant, ajouté s'il manque, même pour un seul usage.
 - Un style répété (au moins deux fois, ou un motif du design system) devient une classe : `btn`, `btn-primary`,
-  `btn-sm`, `card`, `alert`, `form-input`, `form-error`, `badge-success`, `dialog`, `sheet`, `menu`, `tab`… Un
+  `btn-sm`, `card`, `alert`, `input`, `field-error`, `badge-success`, `dialog`, `sheet`, `menu`, `tabs-trigger`… Un
   ajustement ponctuel (marge, largeur, position) reste un utilitaire Tailwind dans le JSX.
 - `@apply` pour les cas simples ; CSS standard pour les sélecteurs complexes et les états. `focus-ring` est un
   `@utility` pour pouvoir être appliqué par `@apply`.
@@ -47,19 +49,19 @@ décisions du design system : `{{memory}}`. Contrôle : `node <skill design-syst
   `sheet-right`, `menu-item-danger`) ; un test cible un rôle ou un libellé accessible.
 - Un état se lit dans les attributs d'accessibilité ou les pseudo-classes : `[aria-selected='true']`,
   `[aria-expanded='true']`, `[aria-invalid='true']`, `[aria-disabled='true']`, `:focus`, `:disabled`.
-- Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture, avec `data-side` et
-  `data-align` pour leur direction. `data-placeholder` (Select) est le seul autre attribut de Radix lu, faute
-  d'équivalent ARIA.
+- Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture, avec `data-side` pour leur
+  direction. `data-placeholder` (Select) et `data-orientation` (Separator) sont les seuls autres attributs de Radix
+  lus, faute d'équivalent ARIA.
 
 ## Composants shadcn/ui
 
 - Un dossier par composant, dans `{{ui}}` comme dans `{{components}}` : `<composant>.tsx`, son `.css`, son histoire,
   et un `index.ts` qui ré-exporte ses noms, pour que l'import reste `{{uiAlias}}/<composant>`. Entre deux composants partagés,
   l'import passe par l'alias, jamais par un chemin relatif.
-- Ajout par la CLI de shadcn (version épinglée, dans `{{app}}`), qui crée le fichier à plat ; puis
-  `node <skill design-system>/scripts/rehome.mjs {{app}} <composant>` le **range** dans son dossier (un fichier par
-  sous-composant, `index.ts`, feuille importée par `components.css`, attributs `data-*` retirés) et prépare la
-  **réécriture** : classes sémantiques à nommer, premier jet du CSS à relire, TODO, textes à traduire.
+- Ajout par la CLI de shadcn (version épinglée, dans `{{app}}`), qui crée le fichier à plat. Il se range ensuite
+  dans son dossier (un fichier par sous-composant, `index.ts`, feuille importée par `components.css`, attributs
+  `data-*` retirés), et ses utilitaires deviennent des classes sémantiques : `rehome.mjs` du skill `design-system` le
+  fait, sinon à la main sur le modèle d'un composant existant.
 - Garder l'API de shadcn (noms des variantes, `asChild`, sous-composants) ; on peut ajouter des variantes (`success`,
   `warning`…), pas en retirer. Les textes visibles (« Close » des fenêtres) passent par les messages du projet.
 - `cn` vient d'un seul endroit ({{cn}}) ; CVA reste pour les variantes typées.

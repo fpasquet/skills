@@ -70,7 +70,7 @@ export const Variants: Story = { render: (args) => <div className="flex gap-2">�
 
 `<docs>/introduction.mdx`, `tokens.mdx` et `classes.mdx`, posées par `scaffold.mjs` :
 
-- **Introduction** : le parti pris visuel en deux phrases, les trois couches, les règles.
+- **Introduction** : le parti pris visuel en deux phrases, les trois couches, les règles. Le gabarit laisse le parti pris « À compléter » : l'écrire d'après le commentaire des tokens (l'audit signale le texte laissé, `doc-placeholder`).
 - **Tokens** : lus dans le fichier de tokens et dans le bloc `.dark` du thème (`?raw`). La page suit le fichier sans copie : rien à mettre à jour, sauf un nouveau groupe de tokens, qui demande une nouvelle section.
 - **Classes** : une section par famille, avec un exemple HTML dans `<Unstyled>` (sinon les styles de la documentation s'appliquent). Une nouvelle classe s'y ajoute dans le même changement. L'audit liste les oubliées (`undocumented-class`).
 

@@ -56,6 +56,8 @@ const RULES = {
   'arbitrary-apply': ['warning', '@apply with an arbitrary value: write standard CSS in a stylesheet'],
   'data-selector': ['warning', 'Selector on a data-* attribute other than data-state: use ARIA attributes or pseudo-classes'],
   'repeated-classes': ['suggestion', 'Class list repeated: candidate semantic class or shared component'],
+  'doc-unknown-name': ['warning', 'Class or token cited by the conventions or a documentation page, defined nowhere'],
+  'doc-placeholder': ['warning', 'Template text left to fill in the documentation (« À compléter »)'],
   'undocumented-class': ['suggestion', 'Semantic class missing from the Classes page of Storybook'],
 };
 // data-* permis dans les sélecteurs : ceux que Radix pose sans équivalent ARIA, et ceux d'une bibliothèque sans classe
@@ -359,6 +361,41 @@ if (classesPage) {
   for (const [name, where] of definedClasses) {
     if (names.some((other) => other !== name && name.startsWith(`${other}-`))) continue;
     if (!new RegExp(`(^|[^\\w-])${name}([^\\w-]|$)`).test(page)) add('undocumented-class', where.file, where.line, name);
+  }
+}
+
+// ---------- Documentation : exemples qui existent ----------
+// Les conventions et les pages MDX viennent de gabarits : leurs exemples (form-input, text-caption, max-w-measure)
+// doivent être remplacés par ceux du projet. Un nom cité entre accents graves est vérifié quand il a la forme d'une
+// classe sémantique (pas de préfixe d'utilitaire) ou d'un utilitaire tiré d'un token (text-caption → --text-caption)
+const conventionFiles = [join(project.repo, '.claude', 'rules', 'design-system.md'), join(project.repo, 'docs', 'design-system.md')].filter(existsSync);
+// Une application qui consomme le paquet du design system laisse ce contrôle à l'audit du paquet
+const docFiles = project.designSystemPackage ? [] : [...conventionFiles, ...walk(project.docs, ['.mdx'])];
+if (docFiles.length) {
+  const allCss = walk(project.repo, ['.css']).map((file) => stripCssComments(read(file))).join('\n');
+  const known = new Set([...allCss.matchAll(/\.([a-z][\w-]*)/g)].map((m) => m[1]));
+  const tokenNames = new Set([...`${read(project.tokens)}\n${read(project.theme)}`.matchAll(/--(?:color|text|container|spacing|radius|shadow|grid-template-columns|font)-([\w-]+)\s*:/g)].map((m) => m[1]));
+  const UTILITY = /^-?(bg|text|border|ring|outline|fill|stroke|rounded|shadow|h|w|min-w|min-h|max-w|max-h|size|p[xytrblse]?|m[xytrblse]?|gap(-[xy])?|grid|grid-cols|grid-rows|col|row|flex|items|justify|self|place|font|leading|tracking|space-[xy]|inset(-[xy])?|top|left|right|bottom|z|opacity|aria|data|group|peer|not|has|in|translate-[xy]|scale|rotate|animate|transition|duration|ease|line-clamp|truncate|whitespace|break|overflow|object|aspect|cursor|select|pointer-events|sr|focus|hover|active|disabled|placeholder|decoration|underline|list|divide|backdrop|blur|from|via|to|order|basis|grow|shrink|table|caption|align|content|columns|scrollbar)(-|$)/;
+  // Noms de Tailwind (échelle, mots-clés) que l'utilitaire peut prendre sans token
+  const TAILWIND_WORDS = /^(xs|sm|md|lg|xl|[2-9]xl|base|none|full|auto|screen|min|max|fit|px|prose|inner|current|inherit|transparent|black|white|left|right|center|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|svh|lvh|dvh|lg|subgrid)$/;
+  const isTokenUtility = (name) => {
+    const m = name.match(/^-?(?:bg|text|border|ring|outline|fill|stroke|rounded|shadow|h|w|min-w|min-h|max-w|max-h|size|gap|grid-cols|font)-([a-z][a-z-]*)$/);
+    return m ? !tokenNames.has(m[1]) && !TAILWIND_WORDS.test(m[1]) && !known.has(name) : false;
+  };
+  // Noms de dossiers et de fichiers du projet (design-system, ai-elements) : cités comme chemins, pas comme classes
+  const pathNames = new Set(codeFiles.concat(cssFiles).flatMap((file) => relative(project.repo, file).split(sep).map((part) => part.replace(/\.[\w.]+$/, ''))));
+  for (const file of docFiles) {
+    const text = read(file);
+    for (const m of text.matchAll(/_À compléter[^_\n]*_/g)) add('doc-placeholder', file, lineOf(text, m.index), m[0].slice(0, 60));
+    for (const m of text.matchAll(/`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`/g)) {
+      const name = m[1];
+      const semantic = !UTILITY.test(name) && !known.has(name) && !pathNames.has(name) && !/^(use|on|aria|data|eslint|prefers)-/.test(name);
+      // Un nom de paquet, d'option ou de fichier n'est pas une classe : seulement s'il apparaît comme classe ailleurs
+      // dans la page (className, liste de classes) ou s'il a la forme d'un utilitaire de token
+      if ((semantic && /^[a-z]+(-[a-z]+){0,2}$/.test(name) && definedClasses.size && !tokenNames.has(name)) || isTokenUtility(name)) {
+        add('doc-unknown-name', file, lineOf(text, m.index), name);
+      }
+    }
   }
 }
 
