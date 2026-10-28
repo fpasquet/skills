@@ -119,7 +119,7 @@ Puis remplacer les couleurs dans le code, lot par lot (étape 5). Détails, noms
 
 ## Étape 3 · Composants
 
-**Avant d'écrire un bloc**, chercher s'il existe dans `<ui>` et `<components>`, puis dans le catalogue de shadcn/ui : un contrôle de formulaire passe toujours par son composant.
+**Avant d'écrire un bloc**, chercher s'il existe dans `<ui>` et `<components>`, puis dans le catalogue de shadcn/ui : un contrôle de formulaire passe toujours par son composant, et un champ par `Field` (`references/components.md`, « Champs de formulaire »).
 
 Pour un composant de shadcn :
 

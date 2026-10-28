@@ -211,10 +211,15 @@ const ARBITRARY_CSS = {
 // Pseudo-classes de group-* et peer-* (group-hover:, peer-disabled:) ; aria-* au sens de Tailwind (valeur true)
 const PSEUDO = new Set(['hover', 'focus', 'focus-visible', 'focus-within', 'active', 'disabled', 'enabled', 'checked', 'invalid', 'required', 'placeholder-shown', 'first', 'last', 'open']);
 /** Condition d'un variant group-…/peer-… : data-[k=v], has-[…], aria-x, pseudo-classe. */
-function stateSelector(state) {
+function stateSelector(state, group) {
   let match;
-  // data-variant / data-size retirés par le script : la classe de modificateur du composant qui les posait
-  if ((match = state.match(/^data-\[(variant|size)=([^\]]+)\]$/)) && fileModifiers[match[1]]) return `.${fileModifiers[match[1]]}-${match[2]}`;
+  // data-variant / data-size retirés par le script : la classe de modificateur du composant qui les posait. Un groupe
+  // nommé d'après une autre partie (group-data-[variant=outline]/field-group, variante que FieldLegend pose) : aucune
+  // partie ne la porte, à revoir à la main
+  if ((match = state.match(/^data-\[(variant|size)=([^\]]+)\]$/)) && fileModifiers[match[1]]) {
+    const owner = group && markerOwners.get(group);
+    return owner && owner !== fileModifiers[match[1]] ? null : `.${fileModifiers[match[1]]}-${match[2]}`;
+  }
   if ((match = state.match(/^data-\[([\w-]+)=([^\]]+)\]$/))) return `[data-${match[1]}='${match[2]}']`;
   if ((match = state.match(/^data-\[([\w-]+)\]$/))) return `[data-${match[1]}]`;
   if ((match = state.match(/^aria-\[([\w-]+)=([^\]]+)\]$/))) return `[aria-${match[1]}='${match[2]}']`;
@@ -272,6 +277,13 @@ function unescape(value) {
 const fileModifiers = {};
 for (const chunk of chunks.filter((c) => c.component)) {
   for (const m of chunk.text.matchAll(/\sdata-(size|variant)=\{[\w.]+\}/g)) fileModifiers[m[1]] ??= classOf(chunk);
+}
+
+// Partie qui porte un marqueur nommé (group/field-group sur FieldGroup) : une condition data-variant du groupe ne vaut
+// que si c'est elle qui pose la variante
+const markerOwners = new Map();
+for (const chunk of chunks.filter((c) => c.component)) {
+  for (const m of chunk.text.matchAll(/(?<=["'`\s])(?:group|peer)\/([\w-]+)(?=["'`\s])/g)) markerOwners.set(m[1], classOf(chunk));
 }
 
 // [data-slot=x] dans un sélecteur arbitraire : la classe de la partie ; chaque classe ainsi visée est notée pour
@@ -334,6 +346,13 @@ function addUtilities(selector, utilities, modifiers = {}) {
       // data-slot retiré par le script : la partie se désigne par sa classe
       if ((match = variant.match(/^data-\[slot=([\w-]+)\]$/)) && targetedSlots.add(slotClass(match[1]))) suffix = suffix.endsWith(' > *') ? `${suffix.slice(0, -1)}.${slotClass(match[1])}` : `${suffix} .${slotClass(match[1])}`;
       else if ((match = variant.match(/^has-data-\[slot=([\w-]+)\]$/)) && targetedSlots.add(slotClass(match[1]))) suffix += `:has(.${slotClass(match[1])})`;
+      // has-data-[state=checked]: un descendant porte l'état (Radix)
+      else if ((match = variant.match(/^has-data-\[([\w-]+)=([^\]]+)\]$/))) {
+        // data-variant / data-size retirés du JSX : la classe de modificateur de la partie qui les posait
+        const modifier = /^(variant|size)$/.test(match[1]) && fileModifiers[match[1]];
+        if (/^(variant|size)$/.test(match[1]) && !modifier) unsupported = true;
+        else suffix += modifier ? `:has(.${modifier}-${match[2]})` : `:has([data-${match[1]}='${match[2]}'])`;
+      }
       else if (variant === '*') suffix += ' > *';
       // in-data-[side=left]: un ancêtre porte l'attribut ; [[data-side=left][data-state=collapsed]_&]: idem, sélecteur libre
       else if ((match = variant.match(/^in-(.+)$/)) && stateSelector(match[1])) ancestor += `${stateSelector(match[1]).replace(/^:/, '*:')} `;
@@ -341,13 +360,13 @@ function addUtilities(selector, utilities, modifiers = {}) {
       // *:[span]: les enfants qui sont des span
       else if ((match = variant.match(/^\[([a-z]+)\]$/)) && suffix.endsWith(' > *')) suffix = `${suffix.slice(0, -1)}${match[1]}`;
       // group-data-[disabled=true]/input-group: → .group\/input-group[data-disabled='true'] .partie ; peer-disabled: → .peer:disabled ~ .partie
-      else if ((match = variant.match(/^(group|peer)-(.+?)(?:\/([\w-]+))?$/)) && stateSelector(match[2])) {
+      else if ((match = variant.match(/^(group|peer)-(.+?)(?:\/([\w-]+))?$/)) && stateSelector(match[2], match[3])) {
         const marker = `.${match[1]}${match[3] ? `\\/${match[3]}` : ''}`;
         const combinator = match[1] === 'peer' ? ' ~ ' : ' ';
         // peer-data-[a]:peer-data-[b]: les deux conditions sur le même pair (ou le même groupe)
         if (ancestor.endsWith(combinator) && ancestor.slice(0, -combinator.length).split(/[ ~]+/).pop().startsWith(marker)) {
-          ancestor = `${ancestor.slice(0, -combinator.length)}${stateSelector(match[2])}${combinator}`;
-        } else ancestor += `${marker}${stateSelector(match[2])}${combinator}`;
+          ancestor = `${ancestor.slice(0, -combinator.length)}${stateSelector(match[2], match[3])}${combinator}`;
+        } else ancestor += `${marker}${stateSelector(match[2], match[3])}${combinator}`;
       }
       // [a&]: le composant rendu comme lien ; [.border-b]: le composant qui porte aussi cette classe
       else if ((match = variant.match(/^\[([a-z]+)&\]$/))) element = match[1];
@@ -357,7 +376,7 @@ function addUtilities(selector, utilities, modifiers = {}) {
       else if ((match = variant.match(/^data-\[([\w-]+)\]$/))) suffix += `[data-${match[1]}]`;
       else if ((match = variant.match(/^aria-\[([\w-]+)=([^\]]+)\]$/))) suffix += `[aria-${match[1]}='${match[2]}']`;
       else if ((match = variant.match(/^has-\[(.+)\]$/))) suffix += `:has(${slotsToClasses(unescape(match[1])).replace(/^>/, '> ')})`;
-      else if ((match = variant.match(/^\[&(.+)\]$/))) suffix += unescape(match[1]).replace(/^>/, ' > ').replace(/^([^ :[.])/, ' $1');
+      else if ((match = variant.match(/^\[&(.+)\]$/))) suffix += slotsToClasses(unescape(match[1])).replace(/^>/, ' > ').replace(/^([^ :[.])/, ' $1');
       else if (/[[\]]|^(group|peer|in|\*|supports)/.test(variant)) unsupported = true;
       else kept.push(variant);
     }
@@ -612,6 +631,38 @@ else {
 const tokenizer = shadcnTokenizer(project);
 const toTokens = tokenizer.toTokens;
 
+// Groupe ou pair nommé (group/field sur la partie `field`) : les sélecteurs visent la classe de la partie, et le
+// marqueur quitte le JSX quand plus aucun utilitaire resté dans le TSX ne le nomme (@md/field-group:, group-hover/x:)
+const namedMarkers = new Map();
+for (const content of output.values()) {
+  for (const literal of content.matchAll(/(["'`])([^"'`\n]*)\1/g)) {
+    const tokens = literal[2].trim().split(/\s+/);
+    const owner = tokens.find((t) => /^[a-z][\w-]*$/.test(t));
+    for (const token of tokens) {
+      const named = token.match(/^(group|peer)\/([\w-]+)$/);
+      if (named && owner) namedMarkers.set(token, owner);
+    }
+  }
+}
+for (const [marker, owner] of namedMarkers) {
+  const escaped = `.${marker.replace('/', '\\/')}`;
+  // Renommés sur place : l'ordre des règles, donc la cascade, ne change pas
+  const renamed = [...css].map(([selector, value]) => [selector.split(escaped).join(`.${owner}`), value]);
+  css.clear();
+  for (const [selector, value] of renamed) {
+    const target = rule(selector);
+    target.apply.push(...value.apply);
+    target.declarations.push(...value.declarations);
+    target.todo.push(...value.todo);
+  }
+  const name = marker.split('/')[1];
+  const stillNamed = [...output].some(([file, content]) => /\.[jt]sx$/.test(file) && new RegExp(`/${name}[:\\]]`).test(content));
+  if (stillNamed) continue;
+  for (const [file, content] of output) {
+    if (/\.[jt]sx$/.test(file)) output.set(file, content.replace(new RegExp(`(["'\`][^"'\`\n]*?) ${marker.replace('/', '\\/')}(?=[ "'\`])`, 'g'), '$1'));
+  }
+}
+
 // Premier jet de la feuille de style
 const cssLines = [`/* ${pascal(base)} : classes posées par le composant (premier jet de rehome.mjs, à relire). */`, '@layer components {'];
 for (const [selector, rule] of css) {
@@ -701,13 +752,33 @@ if (options['dry-run']) {
 const packageJson = join(project.root, 'package.json');
 const sourcePath = `./${relative(project.root, source).split('\\').join('/')}`;
 const pkgText = readFileSync(packageJson, 'utf8');
-const exportUpdated = pkgText.includes(`"${sourcePath}"`);
-if (exportUpdated && !options['dry-run']) {
-  writeFileSync(packageJson, pkgText.replace(`"${sourcePath}"`, `"./${relative(project.root, join(folder, 'index.ts')).split('\\').join('/')}"`));
+const indexPath = `./${relative(project.root, join(folder, 'index.ts')).split('\\').join('/')}`;
+let exportUpdated = pkgText.includes(`"${sourcePath}"`);
+if (exportUpdated && !options['dry-run']) writeFileSync(packageJson, pkgText.replace(`"${sourcePath}"`, `"${indexPath}"`));
+// Nouveau composant d'un paquet qui exporte ses composants un à un : son entrée, sur le modèle des autres, à sa place
+// dans l'ordre alphabétique (sans elle, `import … from '@acme/ui/components/field'` ne se résout pas)
+const pkgExports = JSON.parse(pkgText).exports;
+const uiPrefix = `./${relative(project.root, project.ui).split('\\').join('/')}/`;
+const sibling = pkgExports && typeof pkgExports === 'object' && Object.entries(pkgExports).find(([key, value]) => typeof value === 'string' && value.startsWith(uiPrefix) && !key.includes('*'));
+if (!exportUpdated && sibling && !Object.values(pkgExports).includes(indexPath)) {
+  const keyPrefix = sibling[0].slice(0, sibling[0].length - sibling[1].slice(uiPrefix.length).replace(/(\/index)?\.[jt]sx?$/, '').length);
+  const key = `${keyPrefix}${name}`;
+  const entries = Object.entries(pkgExports);
+  const at = entries.findIndex(([k]) => k.startsWith(keyPrefix) && k.localeCompare(key) > 0);
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+  const last = entries.filter(([k]) => k.startsWith(keyPrefix)).at(-1)[0];
+  const updated =
+    at >= 0
+      ? pkgText.replace(new RegExp(`^(\\s*)"${escape(entries[at][0])}"`, 'm'), (m, indent) => `${indent}"${key}": "${indexPath}",\n${m}`)
+      : pkgText.replace(new RegExp(`^(\\s*)("${escape(last)}"\\s*:\\s*"[^"]*")(,?)`, 'm'), (m, indent, entry, comma) => `${indent}${entry},\n${indent}"${key}": "${indexPath}"${comma}`);
+  if (updated && updated !== pkgText) {
+    if (!options['dry-run']) writeFileSync(packageJson, updated);
+    exportUpdated = true;
+  }
 }
 
 console.log(`${options['dry-run'] ? 'Would move' : 'Moved'} ${rel(project, source)} → ${relFolder}/ (${[...output.keys()].join(', ')})`);
-if (exportUpdated) console.log(`package.json exports: ${sourcePath} → ${relFolder}/index.ts`);
+if (exportUpdated) console.log(`package.json exports: ${relFolder}/index.ts`);
 if (classMap.length) {
   console.log('\nClasses (rename to the conventions: default → primary, destructive → danger, short prefix such as btn):');
   for (const [where, cls] of classMap) console.log(`  ${cls.padEnd(28)} ${where}`);
@@ -732,6 +803,25 @@ const missingTargets = [...targetedSlots].filter((cls) => !new RegExp(`['"\` ]${
 if (missingTargets.length) {
   console.log('\nClasses targeted by the stylesheet but set by no part (the data-slot had no class): add them to the part:');
   for (const cls of missingTargets) console.log(`  .${cls}`);
+}
+// Autres attributs data-* restés dans le JSX (data-orientation, data-invalid) : un état lu par la feuille passe en
+// classe de modificateur ou en aria-* ; data-testid et ceux d'une bibliothèque restent
+const dataAttributes = [];
+for (const [file, content] of output) {
+  if (!/\.[jt]sx$/.test(file)) continue;
+  for (const match of content.matchAll(/\sdata-(?!testid\b)([\w-]+)=(\{[^}]*\}|"[^"]*"|'[^']*')/g)) dataAttributes.push(`${file}: data-${match[1]}=${match[2]}`);
+}
+if (dataAttributes.length) {
+  console.log('\nData attributes left in the JSX: a state the stylesheet reads becomes a modifier class or an aria-* attribute:');
+  for (const attribute of dataAttributes) console.log(`  ${attribute}`);
+}
+// Dépendances de registre réécrites par la CLI à plat (label.tsx) à côté de leur dossier déjà rangé (label/)
+const duplicates = isDir(project.ui)
+  ? walk(project.ui, ['.tsx', '.jsx']).filter((file) => dirname(file) === project.ui && isDir(file.replace(/\.[jt]sx$/, '')) && file !== source)
+  : [];
+if (duplicates.length) {
+  console.log('\nComponents the CLI wrote again next to their rehomed folder (registry dependencies): delete them, or report their changes by hand:');
+  for (const file of duplicates) console.log(`  ${rel(project, file)}`);
 }
 if (slotUsers.length) {
   console.log('\nCode that targets the removed data-slot attributes: select the class instead:');

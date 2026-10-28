@@ -43,3 +43,8 @@
   - promotion de composants de l'application dans le design system : `rehome.mjs` laisse dans le JSX les classes
     que les feuilles du projet définissent déjà (`field-trigger`), ne pose la classe racine que sur le `cn(…)` qui
     transmet `className`, traite `disabled && …` et signale les ternaires de classes.
+  - formulaires sur le `Field` de shadcn, avec un contexte qui relie libellé, aide et erreur au contrôle
+    (`references/components.md`) ; l'audit vérifie que le tsconfig résout les alias de `components.json`
+    (`shadcn-alias`) ; `rehome.mjs` ajoute l'entrée `exports` d'un nouveau composant, vise par sa classe la partie
+    d'un groupe nommé (`group/field`), traduit `[&>[data-slot=…]]` et `has-data-[…]`, réécrit `bg-muted` en
+    fond du thème, et signale les `data-*` restés dans le JSX et les dépendances que la CLI a réécrites à plat.

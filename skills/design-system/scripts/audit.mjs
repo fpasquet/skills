@@ -24,7 +24,7 @@
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
-import { detectProject, isDir, lintConfigText, parseArgs, read, rel, walk } from './project.mjs';
+import { detectProject, isDir, lintConfigText, parseArgs, read, readJsonc, rel, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['json', 'strict']);
 if (!positional[0] || !isDir(positional[0])) {
@@ -44,6 +44,7 @@ const RULES = {
   'css-import-missing': ['error', 'components.css imports a file that does not exist'],
   'duplicate-selector': ['error', 'Selector declared twice in the same context: the second one silently wins'],
   'muted-redefined': ['error', '--color-muted redefined by the theme: in the tokens it is the secondary text colour'],
+  'shadcn-alias': ['error', 'components.json alias that tsconfig does not resolve: the shadcn CLI refuses to add components'],
   'muted-background': ['error', 'bg-muted is a shadcn background, but muted is the text colour of the tokens: use bg-surface-alt'],
   'flat-component': ['warning', 'Component file at the root of ui/: move it to its folder (rehome.mjs)'],
   'missing-index': ['warning', 'Component folder without index.ts re-exporting its names'],
@@ -71,6 +72,22 @@ const stripJsComments = (code) =>
     string ?? match.replace(/[^\n]/g, ' '),
   );
 const inside = (file, dir) => dir && (file === dir || file.startsWith(dir + sep));
+
+// ---------- components.json ----------
+// La CLI de shadcn résout chaque alias par les chemins du tsconfig : une clé exacte (@acme/ui/utils) ou un préfixe
+// (@acme/ui/* pour @acme/ui/components). @acme/ui/components/* ne résout pas @acme/ui/components : dans un paquet du
+// monorepo, la CLI s'arrête alors sur « Could not resolve the following aliases »
+if (project.componentsJson?.aliases) {
+  const paths = readJsonc(join(project.root, 'tsconfig.json'))?.compilerOptions?.paths;
+  if (paths) {
+    const resolves = (alias) => Object.keys(paths).some((key) => key === alias || (key.endsWith('/*') && alias.startsWith(key.slice(0, -1))));
+    const missing = Object.entries(project.componentsJson.aliases).filter(([, alias]) => typeof alias === 'string' && !resolves(alias));
+    if (missing.length) {
+      const scope = missing[0][1].split('/').slice(0, missing[0][1].startsWith('@') ? 2 : 1).join('/');
+      add('shadcn-alias', join(project.root, 'tsconfig.json'), 1, `${missing.map(([key, alias]) => `${key} (${alias})`).join(', ')}: add "${scope}/*": ["./src/*"] to compilerOptions.paths`);
+    }
+  }
+}
 
 // ---------- Fichiers ----------
 const codeFiles = walk(project.src, ['.tsx', '.jsx', '.ts', '.js', '.mdx']).filter((f) => !f.endsWith('.d.ts'));

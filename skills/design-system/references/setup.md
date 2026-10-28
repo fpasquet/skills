@@ -45,7 +45,8 @@ Les composants vivent parfois dans un paquet partagé (`packages/ui`), que les a
 
 - `components.json` y déclare des alias au nom du paquet. Les scripts retrouvent les dossiers par le champ `exports` du `package.json`.
 - `audit.mjs` lancé sur une application qui consomme le paquet suit l'`@import` du paquet pour trouver les tokens, et dit où lancer l'audit des composants (ligne `package`).
-- `rehome.mjs` réécrit l'entrée `exports` du composant (`./src/components/button.tsx` → `./src/components/button/index.ts`) : les imports des applications ne changent pas.
+- La CLI de shadcn résout les alias de `components.json` par les chemins du `tsconfig.json` du paquet. Il faut donc un chemin préfixe, `"@acme/ui/*": ["./src/*"]` : `"@acme/ui/components/*"` ne résout pas `@acme/ui/components`, et la CLI s'arrête sur « Could not resolve the following aliases ». L'audit le vérifie (`shadcn-alias`).
+- `rehome.mjs` réécrit l'entrée `exports` du composant (`./src/components/button.tsx` → `./src/components/button/index.ts`), ou l'ajoute pour un nouveau composant, sur le modèle des autres : les imports des applications ne changent pas.
 - Storybook et ses histoires vivent dans le paquet, avec `@storybook/react-vite` quand `next` n'y est qu'une dépendance de pair.
 - Les polices viennent de chaque application (`next/font` dans l'une, Google Fonts dans l'autre). Les tokens les nomment avec une valeur de repli, `--font-sans: var(--font-inter, "Inter"), ui-sans-serif, …`, pour qu'une application sans la variable garde la bonne famille.
 - Les changements du thème touchent toutes les applications : leurs tests et leur lint se lancent avec ceux du paquet.

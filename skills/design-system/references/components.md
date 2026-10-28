@@ -41,7 +41,7 @@ Un composant à plusieurs parties a un fichier par sous-composant (`dialog-conte
 12. **Histoire** : une histoire par variante ou par état, avec les textes du produit (`storybook.md`).
 13. Formater (Prettier du projet), puis `eslint <ui>/<composant>` et `audit.mjs <app> --rule duplicate-selector`.
 
-La CLI de shadcn crée parfois plusieurs fichiers (un composant et ses dépendances, comme `button` pour `dialog`). Lancer `rehome.mjs` pour chacun. Un composant déjà rangé est simplement réimporté par son alias (`@/shared/ui/button`).
+La CLI de shadcn crée parfois plusieurs fichiers (un composant et ses dépendances, comme `button` pour `dialog`). Lancer `rehome.mjs` pour chacun. Une dépendance déjà rangée est pourtant réécrite à plat (`label.tsx` à côté de `label/`) : `rehome.mjs` la signale, il suffit de la supprimer. Le composant rangé la réimporte par son alias (`@/shared/ui/label`).
 
 ### Mise à jour d'un composant de shadcn
 
@@ -54,7 +54,7 @@ Relancer la CLI : comme le dossier existe, `rehome.mjs` refuse et laisse le fich
 | Ce que c'est | Ce que ça devient |
 |---|---|
 | Un motif d'interface (carte, encadré, champ avec son libellé et son erreur, étapes numérotées) | Un composant de `<ui>` (ou de `<components>` s'il en assemble plusieurs), avec sa classe |
-| Un style répété sans structure (pastille, touche du clavier, lien d'onglet) | Une classe dans `<styles>/classes/<famille>.css`, importée par `components.css` |
+| Un style répété sans structure (pastille, lien d'onglet) ; une touche du clavier est le `Kbd` de shadcn | Une classe dans `<styles>/classes/<famille>.css`, importée par `components.css` |
 | Une liste qui recopie une classe existante (`bg-surface border border-line rounded-card p-4`) | Cette classe (`card p-4`), ou le composant (`<Card>`) |
 | Un placement ponctuel (`flex items-center gap-2`, marges) | Il reste en utilitaires dans le JSX |
 
@@ -63,6 +63,25 @@ Un composant maison suit les mêmes règles qu'un composant de shadcn :
 - un dossier, `index.ts`, sa feuille et son histoire ;
 - des variantes en classes de modificateur ;
 - une API qui imite celle de shadcn (`variant`, `size`, `asChild` par `Slot` de Radix quand le composant peut devenir un lien).
+
+## Champs de formulaire
+
+Un champ s'écrit avec le `Field` de shadcn :
+
+- `FieldLabel`, le contrôle, puis `FieldDescription` et `FieldError` ;
+- les champs s'empilent dans un `FieldGroup` ;
+- une section titrée est un `FieldSet` avec sa `FieldLegend` ;
+- une case ou un interrupteur suivi de son libellé est un `Field orientation="horizontal"`.
+
+Le `Form` de shadcn n'évolue plus. Avec react-hook-form, on écrit `<Controller>` puis `<Field invalid={fieldState.invalid}>`, et `<FieldError errors={[fieldState.error]} />`.
+
+Le `Field` de shadcn laisse chaque formulaire relier son libellé, son aide et son erreur au contrôle (`htmlFor`, `id`, `aria-describedby`). Pour ne pas le refaire à la main dans chaque champ, on ajoute à l'API, sans rien en retirer, un contexte posé par `Field` :
+
+- **`FieldControl`** (un `Slot`) donne au contrôle son `id`, `aria-invalid` et `aria-describedby`. Ce dernier ne cite que l'aide et l'erreur affichées : elles se déclarent au contexte. `FieldLabel` reçoit `htmlFor`.
+- **`useField()`** sert au contrôle que `FieldControl` ne peut pas envelopper. Un éditeur riche, par exemple, est un contenteditable qu'un `<label>` ne nomme pas : il pose lui-même `aria-labelledby`.
+- **`invalid` et `disabled`** (le `data-invalid` et le `data-disabled` de shadcn) deviennent des props de `Field` et des classes de modificateur. L'astérisque d'un champ obligatoire est `FieldLabel required`.
+
+Un contrôle maison doit transmettre `id` et `aria-*` à l'élément que le libellé nomme. C'est le cas d'une combobox, d'un sélecteur de date, ou d'un conteneur qui enveloppe l'un d'eux : sans cela, le contrôle reste sans nom. Un `<Label>` sans `htmlFor` posé à côté d'un contrôle est le même défaut. Une histoire par contrôle, avec son libellé, le fait voir au contrôle d'accessibilité.
 
 ## Classes sémantiques : écrire la feuille
 
