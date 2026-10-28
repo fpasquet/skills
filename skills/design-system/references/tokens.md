@@ -14,13 +14,53 @@ Les noms sont sémantiques, communs avec les maquettes du skill `specs-ui` (`tem
 | Navigation | `nav`, `nav-ink`, `nav-muted`, `nav-active` | barre latérale ou du haut |
 | Marque | `primary`, `primary-hover`, `primary-soft`, `on-primary` | actions principales, sélection ; texte posé sur `primary` |
 | États | `success`, `warning`, `danger`, `info`, chacun avec `-soft`, plus `on-danger` | la couleur pleine pour le texte ou l'icône, `-soft` pour le fond |
-| Texte | `text-caption`, `text-compact`… | tailles hors de l'échelle de Tailwind seulement |
+| Échelles | `text-*`, `spacing-*`, `radius-*`, `shadow-*` | noms de Tailwind, restreints aux pas retenus (section suivante) |
 | Formes | `radius-control`, `radius-card` | boutons et champs ; cartes, fenêtres, panneaux |
-| Densité | `spacing-control`, `spacing-row` | hauteur des contrôles ; hauteur des lignes |
+| Dimensions | `spacing-control`, `spacing-row` | hauteur des contrôles ; hauteur des lignes : nommées d'après leur usage |
 | Relief | `shadow-card`, `shadow-overlay` | cartes ; menus, fenêtres, panneaux |
 | Polices | `font-sans`, `font-display`, `font-mono` | texte, titres, code et identifiants |
 
 Ajouter un token quand une valeur revient et porte un sens (`--color-overlay` pour le voile des fenêtres), pas pour une valeur isolée. Un nom dit l'usage, jamais la valeur (`surface-alt`, pas `gray-50`).
+
+## Échelles restreintes
+
+Les échelles (espaces, tailles de texte, rayons, ombres) gardent les noms de Tailwind, connus de l'équipe, des agents
+et des composants de shadcn (`p-4`, `gap-2`, `text-sm`). Mais seuls les pas retenus existent : chaque famille est
+remise à zéro puis redéclarée dans les tokens.
+
+```css
+@theme {
+  --spacing-*: initial;
+  --spacing-0: 0px;
+  --spacing-px: 1px;
+  --spacing-1\.5: 0.375rem;      /* point échappé dans le nom */
+  --spacing-4: 1rem;
+  --spacing-control: 2.5rem;     /* dimension nommée d'après son usage */
+  --text-*: initial;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+}
+```
+
+- Le bloc des tokens est un `@theme static` : Tailwind émet alors chaque variable, même inutilisée, et la page Tokens
+  peut toutes les afficher (sinon un pas que personne n'utilise encore apparaît vide).
+- Une classe hors de l'échelle (`p-5`, `w-64`) n'est plus générée : le lint la signale (classe inconnue). Une valeur
+  qui manque s'ajoute aux tokens avec son usage, jamais en valeur arbitraire.
+- `p-0` et `inset-0` demandent `--spacing-0` ; `leading-6` disparaît avec `--spacing` (l'interligne vient de la taille
+  de texte, ou de `leading-tight`, `leading-normal`).
+- `--spacing` (l'unité) disparaît aussi : `tw-animate-css` en a besoin pour ses translations (`slide-in-from-top-2`). `theme.css` la redéclare dans `:root`, hors de `@theme`, pour que Tailwind ne régénère pas toute l'échelle.
+- Les largeurs (`max-w-xs`, `w-sm`) restent dans la famille `--container-*` de Tailwind : pas de collision. Une largeur
+  d'écran ou de calque est une entrée nommée (`max-w-measure`, `w-popover`).
+- `theme.css` ramène les noms de shadcn sur les tokens (`rounded-md` → contrôle, `shadow-lg` → calque) : les
+  composants de la CLI gardent leurs classes. `rehome.mjs` signale celles qui sortent de l'échelle.
+- On n'invente pas d'échelle nommée (`p-m`, `gap-xs`) : un second vocabulaire, inconnu de shadcn et des agents, qui
+  se heurte aux noms de Tailwind (`--spacing-xs` détourne `max-w-xs`). Un projet qui en a une la convertit (pas à pas
+  vers les noms de Tailwind), en arrondissant avec l'accord de la personne les pas qui n'existent pas.
+
+**Pas de token responsive.** Une taille ne change pas selon l'écran : `text-heading-xl` qui vaudrait 40 px sur mobile et
+64 px sur bureau ne se lit pas dans le JSX, suit la fenêtre et pas la place du composant (un titre de carte étroite
+grossit sur bureau), et se combine mal avec `md:`. La variation s'écrit dans le JSX (`text-2xl md:text-4xl`) ou dans
+la classe sémantique d'un composant (`.heading-xl { @apply text-4xl md:text-6xl; }`), visible dans sa feuille.
 
 ## Tirer les tokens du code existant
 
@@ -33,8 +73,8 @@ Ajouter un token quand une valeur revient et porte un sens (`--color-overlay` po
 
 Pour les tailles de texte, les rayons et les hauteurs, on part aussi des valeurs arbitraires relevées par `--rule arbitrary-class` :
 
-- une valeur de l'échelle de Tailwind devient sa classe (`text-[14px]` → `text-sm`, `w-[720px]` → `w-180`) ;
-- une valeur récurrente hors échelle devient un token (`text-[13px]` → `--text-compact`) ;
+- une valeur de l'échelle devient sa classe (`text-[14px]` → `text-sm`) ;
+- une valeur récurrente hors échelle devient un pas de plus, ou un token nommé d'après son usage (`text-[13px]` → `--text-compact`, `w-[720px]` → `max-w-dialog`) ;
 - une valeur isolée se rapproche de l'échelle, avec l'accord de la personne.
 
 ## Specs du skill `specs-ui`

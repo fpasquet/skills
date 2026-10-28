@@ -14,6 +14,11 @@ Une migration se fait **par lots**. Chaque lot compile, passe le lint et garde l
    - **fin** : lint en `error`, `audit --strict` en CI si souhaité.
 4. Faire valider le plan et l'ordre par la personne avant le premier lot.
 
+L'accessibilité reste bloquante (`a11y: { test: 'error' }` dans `preview.tsx`). Les histoires des composants pas encore
+migrés reçoivent `parameters: { a11y: { test: 'todo' } }` dans leur meta, et chaque lot le retire des siennes en
+corrigeant leurs violations. Ne pas passer tout `preview.tsx` en `todo` : vitest n'affiche alors aucune violation, et
+le lot croit ses composants accessibles sans l'avoir vérifié.
+
 Pour chaque lot : réécrire, puis lancer `eslint <dossiers du lot>`, `audit.mjs <app> --rule <règles visées>`, les histoires touchées et la vérification de types. Mettre ensuite à jour la mémoire (lot terminé, compteurs) et faire un commit, par exemple `refactor(ui): buttons and badges on semantic classes`.
 
 ## Depuis shadcn/ui d'origine
@@ -37,6 +42,36 @@ C'est le cas le plus fréquent : les composants viennent de la CLI, à plat, ave
 - **`accent` de shadcn** : il sert au survol des menus. Le pointer sur le token qui a ce rôle dans la maquette (`primary-soft` ou `surface-alt`).
 - **Rayons et ombres** : garder l'échelle de shadcn (`--radius-md: calc(var(--radius) - 2px)`) et ramener les ombres de Tailwind aux deux reliefs des tokens (`--shadow-sm: var(--shadow-card)`, `--shadow-lg: var(--shadow-overlay)`), pour que les composants pas encore migrés gardent leur rendu.
 - **Composants inutilisés** : avant le premier lot, lister les exports que rien n'importe, même indirectement, et proposer de les retirer avec leurs dépendances. Moins de composants, c'est moins de lots.
+
+## Depuis un design system maison en Tailwind v4
+
+Composants rangés par niveaux (Atomic design : `Atoms`, `Molecules`, `Organisms`), tokens nommés d'après la palette
+(`primary-dark`, `light-grey`), échelles nommées (`p-m`, `gap-xs`), tailles de texte qui changent selon l'écran.
+
+- **Tokens** : `audit.mjs` les trouve dans `theme.css` (ligne `tokens … in theme.css`). Ils passent dans `tokens.css` avec
+  les noms du vocabulaire, d'après leur usage relevé dans le code (une couleur de bouton et de lien est `primary`, même
+  si elle s'appelait `info`) ; `theme.css` ne garde que les variables de shadcn. Les fusions et les renommages se
+  valident avec la personne, puis un script les applique à tout le code, couleurs avant échelles.
+- **Échelles nommées** : chaque pas devient le pas de Tailwind de même valeur (`p-m` 24 px → `p-6`), dans une échelle
+  restreinte (`tokens.md`). Un pas qui n'existe pas chez Tailwind s'arrondit avec l'accord de la personne. La
+  configuration de tailwind-merge (`setup.md`) perd alors les noms de l'ancienne échelle.
+- **Tailles qui changent selon l'écran** (`:root` redéfini dans un `@media`, signalé par `responsive-token`) : la
+  taille de chaque palier vient de l'échelle, et la variation va dans un utilitaire de rôle
+  (`@utility heading-xl { @apply text-4xl md:text-6xl; }`), posé par les composants Text et Heading et par `@apply`
+  dans les feuilles du contenu rédigé.
+- **Niveaux** : les composants d'interface vont dans `<ui>/<composant>/` (kebab-case, comme la CLI de shadcn), les blocs
+  dans `<components>/<bloc>/`. Les équivalents de shadcn (`Divider` → `Separator`, `Kbd`, `Skeleton`, `Breadcrumb`,
+  `Pagination`) s'ajoutent par la CLI, puis le composant du projet s'y fond en gardant l'API de shadcn. Un fichier
+  d'export commun (`export * from './Atoms'`) disparaît : chaque import passe par l'alias du composant.
+- **Storybook 7** : les pages `.stories.mdx` ne sont plus lues à partir de la version 8 (« No matching indexer »).
+  Les pages de documentation de l'ancien système (tokens, typographie) sont remplacées par Introduction, Tokens et
+  Classes. Les imports passent à `@storybook/react-vite`, `storybook/actions`, `storybook/test`, `storybook/theming`.
+  `parameters.viewport.defaultViewport` et `parameters.backgrounds.default` sont ignorés sans erreur : une histoire
+  « mobile » s'affiche en largeur de bureau. Ils deviennent `globals: { viewport: { value: 'mobile' } }` (vue déclarée
+  dans `preview.tsx`) et un décorateur qui pose le fond (`bg-brand`).
+- **vitest 1** : `@storybook/addon-vitest` demande vitest 4 ou plus, donc Vite 6.4 ou plus. Deux corrections reviennent
+  dans les tests : `vi.mock` au premier niveau du fichier (plus dans un `describe`), et `vi.spyOn(window, 'matchMedia')`,
+  qui demande une fonction existante (à poser dans le fichier de mise en place des tests, jsdom n'en a pas).
 
 ## Depuis Tailwind v3
 

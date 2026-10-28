@@ -53,3 +53,38 @@
   - audit de la documentation : classes et tokens cités en exemple qui n'existent pas (`doc-unknown-name`), texte du
     gabarit laissé à compléter (`doc-placeholder`) ; gabarit des conventions sans chemin du skill à la place d'une
     commande, avec des exemples que le skill produit lui-même (`overlay.css`, `input`, `field-error`).
+- Éprouvée aussi sur un blog Vite rendu côté serveur, au design system maison (Atomic design, tokens nommés d'après la
+  palette, échelles nommées, Storybook 7), sur Base UI :
+  - **échelles restreintes** : les noms de Tailwind (`p-4`, `text-sm`), chaque famille remise à zéro dans les tokens
+    puis seuls les pas retenus redéclarés ; pas d'échelle nommée (`p-m`) ni de token qui change selon l'écran
+    (`references/tokens.md`) ; la page Tokens liste chaque échelle avec sa classe, un aperçu, sa valeur en rem et en
+    pixels ; l'audit signale les pas hors de l'échelle (`off-scale`), les tokens redéfinis à un point de rupture
+    (`responsive-token`) et les échelles non restreintes (`unrestricted-scale`) ; `rehome.mjs` met en TODO les
+    classes de shadcn qui en sortent ;
+  - **Base UI** : style `base-*` de `components.json` repéré, gabarits (conventions, pages, calques) écrits avec
+    `render`, `data-open` et `data-closed` ; `rehome.mjs` traduit les variantes de `shadcn/tailwind.css`
+    (`data-open:`, `data-horizontal:`, `data-checked:`) et réimporte `cn` depuis la fonction du projet ;
+  - **`cn`** : tailwind-merge prenait une taille de texte des tokens pour une couleur (`cn('text-compact',
+    'text-ink')` supprimait la taille) ; `references/setup.md` donne la configuration, l'audit la vérifie
+    (`merge-config`) ;
+  - repérage d'une feuille d'entrée hors des emplacements habituels (`src/styles.css` qui importe la feuille de
+    Tailwind) et de tokens rangés dans `theme.css` ; `scaffold.mjs` voit les `@import` d'une feuille importée, ne
+    double plus l'import du thème et propose `@base-ui/react` plutôt que `radix-ui` ;
+  - l'audit signale une couleur en dur dans une variable locale d'un composant, ignore les noms de paquets cités par
+    la documentation, lit le titre d'une histoire dans son meta (pas la prop `title` d'un composant), compte les
+    histoires dont l'accessibilité ne bloque pas (`a11y-todo`) et ne demande pas de documenter les classes du HTML
+    externe ;
+  - migration : accessibilité en `todo` histoire par histoire, jamais globale (vitest n'affiche rien) ; montée de
+    Storybook 7, vitest 1 et Vite 5 (`references/migration.md`) ; fragment ESLint avec `externalClasses`, sans lint
+    des classes dans les tests ; `rehome.mjs` importe les feuilles dans l'ordre alphabétique ; `--spacing` redéclaré
+    hors de `@theme` pour les animations de `tw-animate-css`.
+  - recette du blog lancé : les composants actuels de shadcn reçoivent la `ref` en prop (React 19) et la perdent en
+    React 18 (règle `react18-ref`, `forwardRef` documenté) ; points de rupture écrits en dur dans les feuilles
+    (`breakpoint-literal`) ; donnée exportée par un fichier d'histoires et affichée comme une histoire
+    (`story-export`) ; paramètres de Storybook 7 ignorés par la version 10 (`defaultViewport`) ;
+  - page Tokens : tokens en `@theme static` (sinon un pas inutilisé s'affiche vide), aperçu de texte borné, colonne
+    Sombre seulement avec un mode sombre ; classes génériques importées avant les feuilles des composants ;
+  - l'audit ignore les fichiers que le lint ignore (icônes générées), connaît les utilitaires `@utility`, ne demande pas
+    les classes des blocs partagés sur la page Classes et trouve `cn` sans `components.json` ; le fragment ESLint lint
+    aussi les constantes de classes en camelCase (`menuClassName`) ; `rehome.mjs --keep-classes` range dans son propre
+    fichier une table qui cite plusieurs composants (`mdxComponents`), au lieu d'un import circulaire.

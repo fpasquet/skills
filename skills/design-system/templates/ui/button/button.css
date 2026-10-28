@@ -35,10 +35,10 @@
     @apply h-6 gap-1 px-2 text-xs;
   }
   .btn-sm {
-    @apply h-7 gap-1 px-2.5 text-xs;
+    @apply h-8 gap-1 px-2.5 text-xs;
   }
   .btn-lg {
-    @apply h-11 gap-2.5 px-4 text-base;
+    @apply h-12 gap-2.5 px-4 text-base;
   }
   .btn-icon {
     @apply size-control px-0;
@@ -47,9 +47,9 @@
     @apply size-6;
   }
   .btn-icon.btn-sm {
-    @apply size-7;
+    @apply size-8;
   }
   .btn-icon.btn-lg {
-    @apply size-10;
+    @apply size-12;
   }
 }

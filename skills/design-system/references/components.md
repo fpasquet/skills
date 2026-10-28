@@ -33,7 +33,7 @@ Un composant à plusieurs parties a un fichier par sous-composant (`dialog-conte
    - Une variable de Radix s'écrit en CSS : `height: var(--radix-select-trigger-height)`.
 5. **Calques** (fenêtre, panneau, menu, popover, infobulle, liste) : le voile prend la classe `overlay` et le calque flottant la classe `popup` (`<styles>/classes/overlay.css`, posée par `scaffold.mjs`), au lieu de répéter les animations de shadcn dans chaque feuille. La boîte d'une fenêtre est `dialog`, et AlertDialog reprend ses classes.
 6. **Classes restées dans le TSX** : une liste conditionnelle (`position === 'popper' && '…'`) devient une classe de modificateur posée par la condition (`position === 'popper' && 'select-content-popper'`). `rehome.mjs` le fait seul pour `variant === 'grid' && …`, `isOpen && …` et les props booléennes courantes (`disabled && …`) ; une ternaire (que le compte rendu signale) ou un objet d'états (`statusStyles[status]`) se réécrit à la main. Une classe tirée d'une prop s'écrit en entier (`{ right: 'sheet-right', left: 'sheet-left' }[side]`) : le lint ne reconnaît pas `` `sheet-${side}` ``.
-7. **États** : un sélecteur `[data-disabled]` ou `[data-highlighted]` devient `[aria-disabled='true']`, `:focus` ou `[aria-selected='true']`, selon ce que pose la primitive Radix (le vérifier dans sa documentation). Restent `[data-state='open' | 'closed']` et `[data-side]`, pour les animations, et `[data-placeholder]` du Select, sans équivalent ARIA. Une case ou un interrupteur se lit dans `[aria-checked='true']`. Une classe conditionnelle remplace un attribut que le composant posait lui-même (`data-error` → `form-label-error`).
+7. **États** : un sélecteur `[data-disabled]` ou `[data-highlighted]` devient `[aria-disabled='true']`, `:focus` ou `[aria-selected='true']`, selon ce que pose la primitive (le vérifier dans sa documentation). Restent `[data-state='open' | 'closed']` (Radix) ou `[data-open]` et `[data-closed]` (Base UI), et `[data-side]`, pour les animations, et `[data-placeholder]` du Select, sans équivalent ARIA. Une case ou un interrupteur se lit dans `[aria-checked='true']`. Une classe conditionnelle remplace un attribut que le composant posait lui-même (`data-error` → `form-label-error`).
 8. **Focus** : `focus-ring` (utilitaire du design system) au lieu des anneaux de shadcn.
 9. **Animations** : le script ajoute la règle `prefers-reduced-motion`. La vérifier, et l'ajouter pour toute animation écrite à la main.
 10. **Calques ouverts dans une histoire** : Radix masque le reste de la page (`aria-hidden`), Storybook compris, et axe le signale (`aria-hidden-focus`). Limiter le contrôle de l'histoire au calque (`parameters: { a11y: { context: '[role="listbox"]' } }`) plutôt que désactiver la règle.
@@ -42,6 +42,26 @@ Un composant à plusieurs parties a un fichier par sous-composant (`dialog-conte
 13. Formater (Prettier du projet), puis `eslint <ui>/<composant>` et `audit.mjs <app> --rule duplicate-selector`.
 
 La CLI de shadcn crée parfois plusieurs fichiers (un composant et ses dépendances, comme `button` pour `dialog`). Lancer `rehome.mjs` pour chacun. Une dépendance déjà rangée est pourtant réécrite à plat (`label.tsx` à côté de `label/`) : `rehome.mjs` la signale, il suffit de la supprimer. Le composant rangé la réimporte par son alias (`@/shared/ui/label`).
+
+### Composants de shadcn sur Base UI
+
+Un `components.json` en style `base-*` (`base-nova`…) donne des composants sur Base UI. La relecture est la même, avec
+ces différences :
+
+- **Polymorphisme** : la prop `render` (`<Button render={<a href="…" />}>`) au lieu d'`asChild`. Un composant maison
+  l'obtient avec `useRender` de `@base-ui/react/use-render`. Un bouton rendu comme lien reçoit `nativeButton={false}`.
+- **Variantes de `shadcn/tailwind.css`** : la CLI écrit `data-open:`, `data-closed:`, `data-horizontal:`,
+  `data-checked:`, `data-disabled:`, déclarées par une feuille de shadcn que le projet n'importe pas. `rehome.mjs` les
+  réécrit en sélecteurs : `[data-open]`, `[data-orientation='horizontal']`, `[aria-checked='true']`,
+  `[aria-disabled='true']`.
+- **Animations** : `[data-open]` et `[data-closed]`, ou les transitions `[data-starting-style]` et `[data-ending-style]`.
+  `classes/overlay.css` est posé dans sa version Base UI.
+- **`cn`** : importé du paquet `cn`. `rehome.mjs` le réécrit vers la fonction du projet (`setup.md`, « `cn` et
+  tailwind-merge »).
+- **React 18** : les composants actuels de shadcn (Base UI comme Radix) reçoivent la `ref` en prop, comme le permet
+  React 19. En React 18, une fonction ne la reçoit pas : le champ d'une autocomplétion (downshift) ou le déclencheur
+  d'un calque la perd, sans erreur au build. Un contrôle ou un déclencheur s'écrit alors avec `React.forwardRef`
+  (l'audit le signale : `react18-ref`).
 
 ### Mise à jour d'un composant de shadcn
 
@@ -62,7 +82,7 @@ Un composant maison suit les mêmes règles qu'un composant de shadcn :
 
 - un dossier, `index.ts`, sa feuille et son histoire ;
 - des variantes en classes de modificateur ;
-- une API qui imite celle de shadcn (`variant`, `size`, `asChild` par `Slot` de Radix quand le composant peut devenir un lien).
+- une API qui imite celle de shadcn (`variant`, `size`, et `asChild` par `Slot` de Radix, ou `render` par `useRender` de Base UI, quand le composant peut devenir un lien).
 
 ## Champs de formulaire
 
@@ -88,7 +108,7 @@ Un contrôle maison doit transmettre `id` et `aria-*` à l'élément que le libe
 ```css
 @layer components {
   .badge {
-    @apply inline-flex items-center gap-1 rounded-control px-1.5 text-caption font-medium;
+    @apply inline-flex items-center gap-1 rounded-control px-1.5 text-xs font-medium;
   }
   .badge-success {
     @apply bg-success-soft text-success;

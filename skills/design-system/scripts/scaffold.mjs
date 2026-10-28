@@ -17,7 +17,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { detectProject, isDir, lintConfigText, parseArgs, read, rel } from './project.mjs';
+import { cssImports, detectProject, isDir, lintConfigText, parseArgs, read, rel } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run']);
 if (!positional[0] || !isDir(positional[0])) {
@@ -52,15 +52,33 @@ function write(file, content) {
   written.push(rel(project, file));
   return true;
 }
+/** Feuilles importées par une feuille, sur trois niveaux. */
+function sheetsOf(file) {
+  const sheets = [];
+  for (let level = [file], depth = 0; level.length && depth < 3; depth++) {
+    level = level.flatMap((sheet) => cssImports(sheet)).filter((sheet) => existsSync(sheet) && !sheets.includes(sheet));
+    sheets.push(...level);
+  }
+  return sheets;
+}
 const fill = (text, values) => text.replace(/\{\{(\w+)\}\}/g, (match, key) => (key in values ? values[key] : match));
 
 // ---------- Tokens ----------
 const specsTokens = join(project.repo, 'specs', 'ui', 'tokens.css');
 // Couleurs déclarées par la feuille d'entrée elle-même (shadcn d'origine) : ce ne sont pas encore des tokens
 const tokensInEntry = project.tokens && project.tokens === project.entry;
-const tokens = (!tokensInEntry && project.tokens) || (existsSync(specsTokens) ? specsTokens : join(project.styles, 'tokens.css'));
+// Tokens rangés dans theme.css (design system maison) : ils iront dans <styles>/tokens.css à l'étape 2, que les pages et
+// les conventions citent déjà
+const tokens = project.tokensInTheme
+  ? join(project.styles, 'tokens.css')
+  : (!tokensInEntry && project.tokens) || (existsSync(specsTokens) ? specsTokens : join(project.styles, 'tokens.css'));
 const tokensFromSpecs = tokens === specsTokens;
-if (!existsSync(tokens) && write(tokens, template('styles/tokens.css'))) {
+if (project.tokensInTheme) {
+  notes.push(
+    `${rel(project, project.theme)} holds the tokens of the project: at step 2, move them to ${rel(project, join(project.styles, 'tokens.css'))} with the names of references/tokens.md (restricted scales, no responsive token), and keep in theme.css only the shadcn variables of templates/styles/theme.css.`,
+  );
+}
+if (!project.tokensInTheme && !existsSync(tokens) && write(tokens, template('styles/tokens.css'))) {
   notes.push(
     tokensInEntry
       ? `${rel(project, tokens)}: template values. ${rel(project, project.entry)} declares the colours itself (:root, .dark, @theme inline): move their values into the tokens with the names of references/tokens.md, point the shadcn variables of theme.css at them, then delete them from the entry (step 2).`
@@ -83,12 +101,28 @@ const values = {
   docs: fromRepo(project.docs),
   app: fromRepo(project.root),
   darkTokens,
+  // Primitives des composants : Radix (asChild, data-state) ou Base UI (render, data-open / data-closed)
+  ...(project.primitives === 'base'
+    ? {
+        primitives: 'Base UI',
+        asChild: 'prop `render`',
+        stateAttributes:
+          "- Seuls `data-open` et `data-closed`, posés par Base UI, servent aux animations d'ouverture et de fermeture\n  (avec `data-starting-style` et `data-ending-style` pour les transitions), et `data-side` pour leur direction.\n  `data-placeholder` (Select) et `data-orientation` (Separator) sont les seuls autres attributs de Base UI lus,\n  faute d'équivalent ARIA.",
+        stateAttributesShort: "Seuls `data-open` et `data-closed`, posés par Base UI, servent aux animations d'ouverture et de fermeture.",
+      }
+    : {
+        primitives: 'Radix',
+        asChild: '`asChild`',
+        stateAttributes:
+          "- Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture, avec `data-side` pour leur\n  direction. `data-placeholder` (Select) et `data-orientation` (Separator) sont les seuls autres attributs de Radix\n  lus, faute d'équivalent ARIA.",
+        stateAttributesShort: "Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture.",
+      }),
 };
 write(theme, fill(template('styles/theme.css'), values));
 write(componentsCss, fill(template('styles/components.css'), { ...values, ui: posix(relative(project.root, project.ui)) }));
 write(join(dirname(componentsCss), 'utilities.css'), template('styles/utilities.css'));
-// Voile des fenêtres et apparition des calques flottants, communs aux composants de Radix
-write(join(dirname(componentsCss), 'classes', 'overlay.css'), template('styles/classes/overlay.css'));
+// Voile des fenêtres et apparition des calques flottants, communs aux composants de Radix ou de Base UI
+write(join(dirname(componentsCss), 'classes', 'overlay.css'), template(`styles/classes/${project.primitives === 'base' ? 'overlay-base' : 'overlay'}.css`));
 
 // ---------- Feuille d'entrée ----------
 // Une bibliothèque qui n'a `next` qu'en dépendance de pair se documente avec Vite
@@ -110,8 +144,11 @@ if (!existsSync(entry)) {
   if (/@tailwind\s+(base|components|utilities)/.test(css)) {
     notes.push(`${rel(project, entry)} is a Tailwind v3 entry (@tailwind …): migrate it to v4 first (references/migration.md), then rerun scaffold.mjs.`);
   } else {
-    const imported = [...css.matchAll(/@import\s+['"]([^'"]+)['"]/g)].map((m) => (m[1].startsWith('.') ? resolve(dirname(entry), m[1]) : m[1]));
-    const missing = wanted.filter(([target]) => !imported.includes(target));
+    // Feuilles importées par l'entrée, ou par une feuille qu'elle importe (index.css qui importe Tailwind)
+    const imported = [entry, ...sheetsOf(entry)].flatMap((file) =>
+      [...read(file).matchAll(/@import\s+['"]([^'"]+)['"]/g)].map((m) => (m[1].startsWith('.') ? resolve(dirname(file), m[1]) : m[1])),
+    );
+    const missing = wanted.filter(([target], index) => !imported.includes(target) && wanted.findIndex(([other]) => other === target) === index);
     if (missing.length) {
       // Après le dernier @import existant : l'ordre tailwindcss → tokens → thème → classes est gardé
       const lastImport = [...css.matchAll(/^@import[^\n]*$/gm)].at(-1);
@@ -125,6 +162,14 @@ if (!existsSync(entry)) {
       }
     }
   }
+}
+
+// ---------- cn ----------
+// tailwind-merge ne connaît pas les noms propres aux tokens (text-compact, h-control) : la fonction du projet les déclare
+if (/^\s*--(text-(?!(xs|sm|base|lg|xl|[2-9]xl)\b)[a-z][\w-]*|spacing-[a-z][\w-]*)\s*:/m.test(read(tokens) || tokensCss)) {
+  notes.push(
+    `cn: declare the token names of the scales to tailwind-merge (extendTailwindMerge) in ${project.componentsJson?.aliases?.utils ?? 'the cn function'}, see references/setup.md ("cn et tailwind-merge"); audit rule merge-config.`,
+  );
 }
 
 // ---------- Storybook ----------
@@ -217,7 +262,7 @@ const provided = (name) =>
   (name === 'eslint-plugin-better-tailwindcss' && lintReady) ||
   (name === '@tailwindcss/vite' && hasPostcssTailwind);
 const missingDeps = (list) => Object.entries(list).filter(([name]) => !provided(name)).map(([name, version]) => `${name}@${version}`);
-const deps = missingDeps(versions.dependencies);
+const deps = missingDeps({ ...versions.dependencies, ...versions.primitives[project.primitives] });
 const devDeps = missingDeps({ ...versions.devDependencies, ...versions.framework[isNext ? 'next' : 'vite'] });
 
 // Catalogue pnpm (`catalog:` dans package.json) : les versions s'ajoutent à pnpm-workspace.yaml, pas au paquet
@@ -230,7 +275,7 @@ const catalog = Object.fromEntries(
 // Une version du dépôt plus ancienne que celle des gabarits (majeure en dessous) : à trancher avant d'installer
 const major = (version) => Number(String(version).replace(/^[^\d]*/, '').split('.')[0]);
 const resolvedVersion = (name) => (project.deps[name]?.startsWith('catalog:') ? catalog[name] : project.deps[name]);
-for (const [name, version] of Object.entries({ ...versions.dependencies, ...versions.devDependencies })) {
+for (const [name, version] of Object.entries({ ...versions.dependencies, ...versions.primitives[project.primitives], ...versions.devDependencies })) {
   const current = resolvedVersion(name) ?? catalog[name];
   if (current && major(current) < major(version)) {
     notes.push(

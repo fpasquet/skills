@@ -6,9 +6,9 @@
  * (bg-primary, text-muted, rounded-card, h-control…), communs avec les maquettes du skill specs-ui : un projet qui a
  * des specs importe directement specs/ui/tokens.css à la place de ce fichier.
  * Valeurs en hexadécimal, une ligne par token, commentaire d'usage en fin de ligne : la page Tokens de Storybook
- * les lit telles quelles. Le mode sombre redéfinit les couleurs dans theme.css (.dark).
+ * les lit telles quelles. `static` : chaque variable est émise, même inutilisée, pour que la page les affiche toutes. Le mode sombre redéfinit les couleurs dans theme.css (.dark).
  */
-@theme {
+@theme static {
   /* Polices : servies par l'application (next/font, @fontsource…) et par Storybook (preview-head.html) */
   --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Public Sans", ui-sans-serif, system-ui, sans-serif;
@@ -51,15 +51,54 @@
   /* Voile derrière les fenêtres et panneaux modaux */
   --color-overlay: #10182880;
 
-  /* Tailles de texte hors de l'échelle de Tailwind (xs 12, sm 14, base 16, lg 18, xl 20 px y sont déjà) */
-  --text-caption: 0.6875rem;      /* 11 px : métadonnées, aides sous un champ */
-  --text-compact: 0.8125rem;      /* 13 px : texte courant en densité compacte */
+  /*
+   * Échelles : les noms de Tailwind, restreints aux pas retenus. Chaque famille est remise à zéro puis redéclarée :
+   * une autre classe (p-5, text-[13px]) n'est pas générée et le lint la signale. Les tailles sont fixes : pas de
+   * token qui change selon l'écran (la variation s'écrit en md: ou dans la classe d'un composant).
+   */
+  --text-*: initial;
+  --text-xs: 0.75rem;             /* 12 px : badges, métadonnées */
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;            /* 14 px : texte courant de l'interface */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;              /* 16 px : texte courant d'un contenu */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;            /* 18 px : titres de carte */
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;             /* 20 px : titres de section */
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;             /* 24 px : titres d'écran */
+  --text-2xl--line-height: 2rem;
 
-  /* Formes, densité, relief */
+  --spacing-*: initial;
+  --spacing-0: 0px;
+  --spacing-px: 1px;              /* filets */
+  --spacing-0\.5: 0.125rem;
+  --spacing-1: 0.25rem;
+  --spacing-1\.5: 0.375rem;
+  --spacing-2: 0.5rem;
+  --spacing-2\.5: 0.625rem;
+  --spacing-3: 0.75rem;
+  --spacing-3\.5: 0.875rem;        /* icônes des menus */
+  --spacing-4: 1rem;              /* icônes */
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-24: 6rem;
+  --spacing-32: 8rem;
+
+  /* Dimensions nommées d'après leur usage : h-control, size-control, h-row */
+  --spacing-control: 2.5rem;      /* hauteur des boutons et champs */
+  --spacing-row: 3rem;            /* hauteur des lignes de tableau et de liste */
+
+  /* Formes et relief : theme.css ramène les noms de shadcn (rounded-md, shadow-sm…) sur ces tokens */
+  --radius-*: initial;
   --radius-control: 0.375rem;     /* rounded-control : boutons, champs */
   --radius-card: 0.625rem;        /* rounded-card : cartes, modales, panneaux */
-  --spacing-control: 2.5rem;      /* h-control : hauteur des boutons et champs */
-  --spacing-row: 3rem;            /* h-row : hauteur des lignes de tableau et de liste */
+  --shadow-*: initial;
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06);
   --shadow-overlay: 0 12px 32px rgb(16 24 40 / 0.18);
 }

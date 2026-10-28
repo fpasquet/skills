@@ -135,6 +135,22 @@ function fromPackageAlias(root, pkg, alias) {
 }
 
 const hasThemeColors = (css) => /@theme\b[^{]*\{[\s\S]*?--color-[\w-]+\s*:/.test(css);
+const SHADCN_VARIABLES = /^\s*--(background|card|popover|primary-foreground)\s*:/m;
+
+/**
+ * Feuille d'entrée hors des emplacements habituels (`src/styles.css` d'une application Vite) : la feuille qui importe
+ * Tailwind, ou celle qui l'importe à son tour (l'application importe la feuille la plus haute).
+ */
+function findEntry(src) {
+  const sheets = walk(src, ['.css']);
+  let entry = sheets.find((file) => /@import\s+['"]tailwindcss['"]/.test(read(file)));
+  for (let depth = 0; entry && depth < 3; depth++) {
+    const parent = sheets.find((file) => cssImports(file).includes(entry));
+    if (!parent) break;
+    entry = parent;
+  }
+  return entry ?? null;
+}
 
 /**
  * Chemins du design system de l'application. `overrides` vient de la ligne de commande
@@ -167,20 +183,25 @@ export function detectProject(appDir, overrides = {}) {
     join(src, 'styles', 'globals.css'),
     join(src, 'globals.css'),
   ].filter(Boolean);
-  const entry = option('entry') ?? entryCandidates.find((file) => existsSync(file)) ?? null;
+  const entry = option('entry') ?? entryCandidates.find((file) => existsSync(file)) ?? findEntry(src);
 
-  // Les feuilles importées par l'entrée, sur deux niveaux : tokens, thème, classes
-  const imported = entry ? cssImports(entry) : [];
-  const nested = imported.flatMap((file) => cssImports(file));
-  const sheets = [...imported, ...nested].filter((file) => existsSync(file));
+  // Les feuilles importées par l'entrée, sur trois niveaux : tokens, thème, classes
+  const sheets = [];
+  for (let level = entry ? [entry] : [], depth = 0; level.length && depth < 3; depth++) {
+    level = level.flatMap((file) => cssImports(file)).filter((file) => existsSync(file) && !sheets.includes(file));
+    sheets.push(...level);
+  }
   const byName = (name) => sheets.find((file) => file.endsWith(`/${name}`)) ?? null;
 
+  const theme = byName('theme.css');
+  // Tokens rangés dans theme.css, sans variables de shadcn : design system maison, à séparer du thème (étape 2)
+  const tokensInTheme = Boolean(theme && hasThemeColors(read(theme)) && !SHADCN_VARIABLES.test(read(theme)));
   const tokens =
     option('tokens') ??
     byName('tokens.css') ??
     sheets.find((file) => hasThemeColors(read(file)) && !file.endsWith('/theme.css')) ??
+    (tokensInTheme ? theme : null) ??
     (entry && hasThemeColors(read(entry)) ? entry : null);
-  const theme = byName('theme.css');
   const componentsCss = byName('components.css');
   const styles = option('styles') ?? (theme ? dirname(theme) : join(src, 'styles'));
   const docs = option('docs') ?? join(src, 'design-system');
@@ -205,6 +226,7 @@ export function detectProject(appDir, overrides = {}) {
     layouts,
     entry,
     tokens,
+    tokensInTheme: tokens === theme && tokensInTheme,
     theme,
     componentsCss,
     styles,
@@ -212,6 +234,9 @@ export function detectProject(appDir, overrides = {}) {
     storybook: existsSync(join(root, '.storybook')) ? join(root, '.storybook') : null,
     componentsJson,
     deps,
+    // Primitives des composants : Base UI (style « base-* » de components.json, ou paquet installé), sinon Radix
+    primitives:
+      componentsJson?.style?.startsWith('base-') || (!componentsJson?.style && (deps['@base-ui/react'] || deps['@base-ui-components/react'])) ? 'base' : 'radix',
     // Dépendance de pair seulement (bibliothèque de composants qui accepte `next` sans en dépendre)
     peerOnly: (name) => Boolean(pkg.peerDependencies?.[name] && !pkg.dependencies?.[name] && !pkg.devDependencies?.[name]),
     // Import de `cn` : le paquet officiel `cn` de shadcn s'il est installé, sinon l'alias utils de components.json
@@ -322,4 +347,27 @@ export function shadcnTokenizer(project) {
     return [...parts, `${important}${last}`].join(':');
   };
   return { toTokens, count: () => count };
+}
+
+/**
+ * Échelles restreintes : une famille remise à zéro dans les tokens (`--spacing-*: initial`) ne garde que les pas
+ * redéclarés (tokens et thème). Renvoie la famille d'un utilitaire hors de l'échelle (`p-5` → `spacing`), sinon null.
+ */
+export function scaleChecker(project) {
+  const css = `${read(project.tokens)}\n${read(project.theme)}`;
+  const reset = (family) => new RegExp(`--${family}-\\*\\s*:\\s*initial`).test(css);
+  const declared = (family) => new Set([...css.matchAll(new RegExp(`--${family}-([\\w\\\\.-]+?)\\s*:`, 'g'))].map((m) => m[1].replace('\\.', '.')));
+  const families = Object.fromEntries(['spacing', 'text', 'radius', 'shadow'].filter(reset).map((family) => [family, declared(family)]));
+  const SPACING = /^-?(?:p[xytrblse]?|m[xytrblse]?|gap(?:-[xy])?|space-[xy]|w|h|size|min-w|min-h|max-w|max-h|inset(?:-[xy])?|top|left|right|bottom|start|end|translate-[xy]|scroll-[mp][xytrblse]?|basis|indent)-(\d+(?:\.\d+)?|px)$/;
+  const TEXT = /^text-(xs|sm|base|lg|xl|\dxl)$/;
+  const RADIUS = /^rounded(?:-[trblse]{1,2})?-(xs|sm|md|lg|xl|\dxl)$/;
+  const SHADOW = /^shadow-(2xs|xs|sm|md|lg|xl|2xl)$/;
+  return (utility) => {
+    const base = utility.split(':').pop().replace(/^!/, '');
+    const check = (family, pattern, group) => {
+      const m = families[family] && base.match(pattern);
+      return m && !families[family].has(m[group]) ? family : null;
+    };
+    return check('spacing', SPACING, 1) ?? check('text', TEXT, 1) ?? check('radius', RADIUS, 1) ?? check('shadow', SHADOW, 1);
+  };
 }

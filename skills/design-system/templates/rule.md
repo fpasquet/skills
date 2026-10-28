@@ -1,6 +1,6 @@
 # Design system ({{app}})
 
-Conventions de l'interface : tokens, classes sémantiques, composants shadcn/ui sur Radix, Storybook. Mémoire et
+Conventions de l'interface : tokens, classes sémantiques, composants shadcn/ui sur {{primitives}}, Storybook. Mémoire et
 décisions du design system : `{{memory}}`. Contrôles du dépôt : le lint et les histoires (`test:stories`). L'audit
 (`audit.mjs`) et le rangement des composants (`rehome.mjs`) sont des scripts du skill d'agent `design-system`, qui
 n'est pas forcément installé dans le dépôt.
@@ -14,7 +14,7 @@ n'est pas forcément installé dans le dépôt.
    d'un composant **à côté de lui** (`{{ui}}/button/button.css` près de `button.tsx`), les classes sans composant
    React dans `{{styles}}/classes/`, un fichier par famille (`overlay.css` pour les calques) ; `{{styles}}/components.css` les
    importe tous, et une nouvelle feuille s'y ajoute.
-3. **Composants** : `{{ui}}` (shadcn/ui sur Radix), dont les variantes CVA posent les classes sémantiques :
+3. **Composants** : `{{ui}}` (shadcn/ui sur {{primitives}}), dont les variantes CVA posent les classes sémantiques :
    `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
 
 ## Classes sémantiques
@@ -32,10 +32,14 @@ n'est pas forcément installé dans le dépôt.
   jamais de valeur en dur, jamais la palette de Tailwind (`bg-gray-100`, `text-white`). Les couleurs d'état (succès,
   attente, échec, information) ne servent qu'aux états.
 - **Aucune valeur arbitraire** de Tailwind (`w-[720px]`, `text-[13px]`, `grid-cols-[…]`, `rounded-[3px]`) ni
-  variante arbitraire (`aria-[current=page]:`, `[&>svg]:`) : une taille vient de l'échelle de Tailwind (`w-180`,
-  `max-w-160`) ou d'un token (`text-caption`), une mise en page d'écran d'une entrée nommée du thème
-  (`grid-cols-content-aside`, `max-w-measure`), une variante d'un `@custom-variant` (`aria-current:`). Dans une
-  feuille de style, du CSS standard plutôt qu'un `@apply` à valeur arbitraire.
+  variante arbitraire (`aria-[current=page]:`, `[&>svg]:`) : une taille vient des échelles des tokens (noms de
+  Tailwind restreints aux pas retenus : `p-4`, `gap-2`, `text-sm`, listés sur la page Tokens de Storybook) ou d'une
+  dimension nommée d'après son usage (`h-control`), une mise en page d'écran d'une entrée nommée du thème
+  (`grid-cols-content-aside`, `max-w-measure`), une variante d'un `@custom-variant` (`aria-current:`). Une classe
+  hors de l'échelle (`p-5`) n'existe pas : un pas qui manque s'ajoute aux tokens. Dans une feuille de style, du CSS
+  standard plutôt qu'un `@apply` à valeur arbitraire.
+- Une taille ne change pas selon l'écran dans les tokens : la variation s'écrit dans le JSX (`md:`) ou dans la classe
+  d'un composant.
 - Une animation d'ouverture s'arrête sous `prefers-reduced-motion`, dans la feuille du composant animé.
 - Attention : `muted` est, dans les tokens, la couleur du texte secondaire (`text-muted`) ; l'équivalent shadcn est
   `muted-foreground`. Ne pas redéfinir `--color-muted`, et écrire le fond secondaire `bg-surface-alt`, jamais
@@ -49,9 +53,7 @@ n'est pas forcément installé dans le dépôt.
   `sheet-right`, `menu-item-danger`) ; un test cible un rôle ou un libellé accessible.
 - Un état se lit dans les attributs d'accessibilité ou les pseudo-classes : `[aria-selected='true']`,
   `[aria-expanded='true']`, `[aria-invalid='true']`, `[aria-disabled='true']`, `:focus`, `:disabled`.
-- Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture, avec `data-side` pour leur
-  direction. `data-placeholder` (Select) et `data-orientation` (Separator) sont les seuls autres attributs de Radix
-  lus, faute d'équivalent ARIA.
+{{stateAttributes}}
 
 ## Composants shadcn/ui
 
@@ -62,7 +64,7 @@ n'est pas forcément installé dans le dépôt.
   dans son dossier (un fichier par sous-composant, `index.ts`, feuille importée par `components.css`, attributs
   `data-*` retirés), et ses utilitaires deviennent des classes sémantiques : `rehome.mjs` du skill `design-system` le
   fait, sinon à la main sur le modèle d'un composant existant.
-- Garder l'API de shadcn (noms des variantes, `asChild`, sous-composants) ; on peut ajouter des variantes (`success`,
+- Garder l'API de shadcn (noms des variantes, {{asChild}}, sous-composants) ; on peut ajouter des variantes (`success`,
   `warning`…), pas en retirer. Les textes visibles (« Close » des fenêtres) passent par les messages du projet.
 - `cn` vient d'un seul endroit ({{cn}}) ; CVA reste pour les variantes typées.
 

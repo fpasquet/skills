@@ -15,24 +15,34 @@ const PALETTE =
  * @param {boolean} [options.oneComponentPerFile] react/no-multi-comp ; demande le greffon react, déjà enregistré par
  *   eslint-config-next (sinon l'enregistrer avant)
  * @param {'error' | 'warn'} [options.level] 'warn' pendant une migration, 'error' ensuite
+ * @param {string[]} [options.externalClasses] expressions des classes posées par du HTML qui n'appartient pas au
+ *   design system (contenu markdown, formulaire d'un service tiers) : connues du lint sans être des classes Tailwind
  * @returns {import('eslint').Linter.Config[]}
  */
-export function designSystem({ entryPoint, oneComponentPerFile = true, level = 'error' }) {
+export function designSystem({ entryPoint, oneComponentPerFile = true, level = 'error', externalClasses = [] }) {
   return [
     {
       files: ['**/*.{ts,tsx,js,jsx}'],
+      // Les tests comparent du HTML rendu (const LINK_CLASS = 'class="…"') : ce ne sont pas des listes de classes
+      ignores: ['**/*.{test,spec}.{ts,tsx,js,jsx}'],
       plugins: { 'better-tailwindcss': betterTailwindcss },
       settings: {
         // detectComponentClasses : les classes sémantiques de @layer components sont des classes connues
         'better-tailwindcss': {
           entryPoint,
           detectComponentClasses: true,
-          // Constantes de classes (MENU_BUTTON_CLASS_NAME, SIZE_CLASS…) lintées aussi : sinon elles cachent des valeurs arbitraires
+          // Constantes de classes (MENU_BUTTON_CLASS_NAME, menuClassName…) lintées aussi : sinon elles cachent des valeurs arbitraires
           selectors: [
             ...getDefaultSelectors(),
             {
               kind: 'variable',
               name: '^[A-Z][A-Z0-9_]*_(CLASS|CLASSES|CLASS_NAME|CLASS_NAMES)$',
+              match: [{ type: 'strings' }, { type: 'objectValues' }],
+            },
+            // Même chose en camelCase : const menuClassName = '…', avatarClasses = { … }
+            {
+              kind: 'variable',
+              name: '^[a-z][A-Za-z0-9]*(Class|Classes|ClassName|ClassNames)$',
               match: [{ type: 'strings' }, { type: 'objectValues' }],
             },
           ],
@@ -45,7 +55,7 @@ export function designSystem({ entryPoint, oneComponentPerFile = true, level = '
         'better-tailwindcss/no-conflicting-classes': level,
         'better-tailwindcss/no-deprecated-classes': level,
         'better-tailwindcss/no-duplicate-classes': level,
-        'better-tailwindcss/no-unknown-classes': level,
+        'better-tailwindcss/no-unknown-classes': [level, { ignore: externalClasses }],
         'better-tailwindcss/no-unnecessary-whitespace': level,
         // Ni valeur ni variante arbitraire : l'échelle de Tailwind, un token, une classe sémantique ou un
         // @custom-variant à la place.

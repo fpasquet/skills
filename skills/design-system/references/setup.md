@@ -10,7 +10,7 @@ Une version plus récente s'adopte sur une branche : build de Storybook, histoir
 
 | Rôle | Paquets |
 |---|---|
-| Composants | `radix-ui` (paquet unique), `class-variance-authority`, `cn` (paquet officiel de shadcn), `lucide-react` |
+| Composants | `radix-ui` (paquet unique) ou `@base-ui/react` (style `base-*` de `components.json`), `class-variance-authority`, `cn` (paquet officiel de shadcn), `lucide-react` |
 | Styles | `tailwindcss`, `tw-animate-css` (animations des composants Radix) ; Next.js : `@tailwindcss/postcss` ; Vite : `@tailwindcss/vite` |
 | Storybook | `storybook`, `@storybook/addon-docs`, `@storybook/addon-a11y`, `@storybook/addon-themes`, `@storybook/addon-vitest` ; Next.js : `@storybook/nextjs-vite` ; Vite : `@storybook/react-vite` |
 | Histoires dans le navigateur | `vitest`, `@vitest/browser`, `@vitest/browser-playwright`, `playwright` (ou `@playwright/test`) |
@@ -38,6 +38,31 @@ Ordre des imports : Tailwind, animations, tokens, thème, classes. Le script ajo
 - **Vite** : polices par `@fontsource/*` ou Google Fonts dans `index.html`.
 - `@source '../../node_modules/<paquet>/dist/*.js'` pour une bibliothèque qui pose des classes Tailwind elle-même (rendu Markdown…).
 - Une entrée Tailwind v3 (`@tailwind base;`) se migre d'abord (`migration.md`) : le script ne la touche pas.
+
+## `cn` et tailwind-merge
+
+`cn` fusionne les classes avec tailwind-merge, qui ne connaît que les noms de Tailwind. Une taille de texte des tokens
+(`text-compact`) est prise pour une couleur : `cn('text-compact', 'text-ink')` supprime la taille. Une dimension nommée
+(`h-control`) n'entre en conflit avec rien : `cn('h-control', className)` garde les deux hauteurs, et la feuille décide.
+La fonction de `aliases.utils` déclare donc les noms des tokens, et les utilitaires de texte (`@utility body-s`) :
+
+```ts
+import { clsx, type ClassValue } from 'clsx';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: { text: ['compact'], spacing: ['control', 'row'] },
+    classGroups: { 'font-size': ['body-s', 'body-m'] },
+  },
+});
+
+export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
+```
+
+Les noms de Tailwind restreints (`text-sm`, `p-4`) n'ont rien à déclarer. L'audit vérifie la liste (`merge-config`). Le
+paquet `cn` de shadcn, que les styles récents de la CLI ajoutent et importent (`import { cn } from "cn"`), n'a pas
+cette configuration : `rehome.mjs` réécrit l'import vers la fonction du projet, et le paquet se retire.
 
 ## Design system dans un paquet du monorepo
 
@@ -80,6 +105,9 @@ Les composants vivent parfois dans un paquet partagé (`packages/ui`), que les a
 - **Messages** : un décorateur enveloppe l'histoire dans le fournisseur du projet. Avec next-intl, c'est `<NextIntlClientProvider locale timeZone formats messages>`, avec tous les messages assemblés comme dans l'application.
 - **`viteFinal` du gabarit** : JSX en mode automatique, même quand `tsconfig.json` est en `"jsx": "preserve"` (Next.js, paquet partagé qui en hérite). Sans cela : « React is not defined ». Il pré-optimise aussi le runtime JSX. Sinon, Vite le découvre pendant le premier lancement des histoires, recharge la page, et les tests échouent à chaque cache vide, donc toujours en CI.
 - **Avertissements « use client »** des composants Radix et de shadcn au build : le `viteFinal` du gabarit les filtre (`MODULE_LEVEL_DIRECTIVE`, `SOURCEMAP_ERROR`).
+- **TypeScript** : Storybook 10 ne se résout qu'en `"moduleResolution": "bundler"` (ou `node16`), et les pages de
+  documentation s'écrivent en JSX automatique (`"jsx": "react-jsx"`) : un `tsconfig.json` en `"moduleResolution": "node"`
+  ou `"jsx": "react"` se met à jour.
 - Les histoires importent le type `Meta` du framework (`@storybook/nextjs-vite` ou `@storybook/react-vite`). Le modèle `templates/ui/button/button.stories.tsx` importe `@storybook/react-vite` : à adapter.
 
 Un dépôt piloté par un `Makefile` reçoit aussi une cible `storybook`, avec sa ligne dans l'aide (`make storybook`, `pnpm --filter=<paquet> storybook` dans un monorepo). `scaffold.mjs` la propose.

@@ -13,7 +13,7 @@ _À compléter : le parti pris visuel en deux phrases (couleurs, densité, forme
    (`{{ui}}/button/button.css`), les classes sans composant dans `{{styles}}/classes` ; `{{styles}}/components.css` les
    rassemble (`btn`, `btn-primary`, `card`, `form-input`, `badge-success`…), à la manière de daisyUI (page _Classes_).
    Les ajustements ponctuels restent en utilitaires Tailwind dans le JSX.
-3. **Composants** : `{{ui}}` (shadcn/ui sur Radix). Leurs variantes typées (CVA) posent ces classes :
+3. **Composants** : `{{ui}}` (shadcn/ui sur {{primitives}}). Leurs variantes typées (CVA) posent ces classes :
    `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
 
 ## Règles
@@ -21,6 +21,6 @@ _À compléter : le parti pris visuel en deux phrases (couleurs, densité, forme
 - Un style répété va dans une classe sémantique ; un ajustement ponctuel reste un utilitaire.
 - Les couleurs passent par les tokens (`bg-surface`, `text-muted`) ou les variables de shadcn (`bg-background`).
 - Aucune valeur arbitraire (`w-[720px]`, `text-[13px]`) : l'échelle de Tailwind, un token ou une entrée nommée du thème.
-- Le focus clavier est toujours visible (`focus-ring`) ; les rôles et attributs ARIA viennent des primitives Radix.
+- Le focus clavier est toujours visible (`focus-ring`) ; les rôles et attributs ARIA viennent des primitives {{primitives}}.
 
-La barre d'outils bascule entre le thème clair et le thème sombre ; l'onglet _Accessibility_ contrôle chaque histoire.
+L'onglet _Accessibility_ contrôle chaque histoire ; quand le mode sombre existe, la barre d'outils bascule de thème.

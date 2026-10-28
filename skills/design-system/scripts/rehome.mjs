@@ -23,7 +23,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
-import { cssImports, detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, shadcnTokenizer, walk } from './project.mjs';
+import { cssImports, detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, scaleChecker, shadcnTokenizer, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run', 'keep-classes']);
 const [appDir, name] = positional;
@@ -87,6 +87,8 @@ for (;;) {
     }
   }
   if (project.cnImport === 'cn' && entry.named.some((n) => n.local === 'cn') && entry.from !== 'cn' && entry.named.length === 1) entry.from = 'cn';
+  // Styles récents de la CLI : `cn` importé du paquet, alors que le projet a sa fonction (aliases.utils de components.json)
+  else if (project.cnImport !== 'cn' && entry.from === 'cn') entry.from = project.cnImport;
   // Les fichiers descendent d'un niveau (dans le dossier du composant) : ./shimmer devient ../shimmer
   if (!inPlaceImports && entry.from.startsWith('./')) entry.from = `../${entry.from.slice(2)}`;
   else if (!inPlaceImports && entry.from.startsWith('../')) entry.from = `../${entry.from}`;
@@ -162,7 +164,14 @@ for (const chunk of chunks) {
   if (chunk.component) chunk.file = chunk === main && kebab(main.name) === base ? base : kebab(chunk.name);
   else {
     const users = components.filter((c) => uses(c.text, chunk.name));
-    chunk.owner = users.length === 1 ? users[0] : main;
+    // Déclaration qu'aucun composant n'utilise mais qui en cite plusieurs (table des composants d'un rendu MDX) :
+    // son propre fichier, sinon chacun importerait l'autre
+    const cited = users.length ? [] : components.filter((c) => uses(chunk.text, c.name));
+    if (cited.length > 1) {
+      chunk.file = kebab(chunk.name);
+      continue;
+    }
+    chunk.owner = users.length === 1 ? users[0] : (cited[0] ?? main);
     chunk.file = chunk.owner.file ?? (chunk.owner === main && kebab(main.name) === base ? base : kebab(chunk.owner.name));
   }
 }
@@ -211,8 +220,22 @@ const ARBITRARY_CSS = {
 // Pseudo-classes de group-* et peer-* (group-hover:, peer-disabled:) ; aria-* au sens de Tailwind (valeur true)
 const PSEUDO = new Set(['hover', 'focus', 'focus-visible', 'focus-within', 'active', 'disabled', 'enabled', 'checked', 'invalid', 'required', 'placeholder-shown', 'first', 'last', 'open']);
 /** Condition d'un variant group-…/peer-… : data-[k=v], has-[…], aria-x, pseudo-classe. */
+// Variantes déclarées par shadcn/tailwind.css (styles récents de la CLI, Radix comme Base UI), que le projet n'importe
+// pas : réécrites en sélecteurs sur les attributs que posent les primitives, ARIA d'abord
+const SHADCN_VARIANTS = {
+  'data-horizontal': "[data-orientation='horizontal']",
+  'data-vertical': "[data-orientation='vertical']",
+  'data-open': project.primitives === 'base' ? '[data-open]' : "[data-state='open']",
+  'data-closed': project.primitives === 'base' ? '[data-closed]' : "[data-state='closed']",
+  'data-checked': "[aria-checked='true']",
+  'data-unchecked': "[aria-checked='false']",
+  'data-selected': "[aria-selected='true']",
+  'data-disabled': "[aria-disabled='true']",
+  'data-active': ":is([aria-selected='true'], [aria-current='page'])",
+};
 function stateSelector(state, group) {
   let match;
+  if (SHADCN_VARIANTS[state]) return SHADCN_VARIANTS[state];
   // data-variant / data-size retirés par le script : la classe de modificateur du composant qui les posait. Un groupe
   // nommé d'après une autre partie (group-data-[variant=outline]/field-group, variante que FieldLegend pose) : aucune
   // partie ne la porte, à revoir à la main
@@ -377,6 +400,7 @@ function addUtilities(selector, utilities, modifiers = {}) {
       else if ((match = variant.match(/^aria-\[([\w-]+)=([^\]]+)\]$/))) suffix += `[aria-${match[1]}='${match[2]}']`;
       else if ((match = variant.match(/^has-\[(.+)\]$/))) suffix += `:has(${slotsToClasses(unescape(match[1])).replace(/^>/, '> ')})`;
       else if ((match = variant.match(/^\[&(.+)\]$/))) suffix += slotsToClasses(unescape(match[1])).replace(/^>/, ' > ').replace(/^([^ :[.])/, ' $1');
+      else if (SHADCN_VARIANTS[variant]) suffix += SHADCN_VARIANTS[variant];
       else if (/[[\]]|^(group|peer|in|\*|supports)/.test(variant)) unsupported = true;
       else kept.push(variant);
     }
@@ -665,8 +689,12 @@ for (const [marker, owner] of namedMarkers) {
 
 // Premier jet de la feuille de style
 const cssLines = [`/* ${pascal(base)} : classes posées par le composant (premier jet de rehome.mjs, à relire). */`, '@layer components {'];
+// Échelle restreinte des tokens : un pas absent (gap-1.5 sans --spacing-1\.5) ne serait pas généré, et l'@apply casserait
+const offScale = scaleChecker(project);
 for (const [selector, rule] of css) {
   rule.apply = rule.apply.map(toTokens);
+  for (const utility of rule.apply.filter(offScale)) rule.todo.push(`${utility} (hors de l'échelle ${offScale(utility)})`);
+  rule.apply = rule.apply.filter((utility) => !offScale(utility));
   const { apply, declarations, todo } = rule;
   if (!apply.length && !declarations.length && !todo.length) continue;
   cssLines.push(`  ${selector} {`);
@@ -738,10 +766,17 @@ if (options['dry-run']) {
     const target = relative(dirname(project.componentsCss), join(folder, `${base}.css`)).split('\\').join('/');
     const line = `@import '${target.startsWith('.') ? target : `./${target}`}';`;
     if (!sheet.includes(line)) {
-      const uiImports = [...sheet.matchAll(new RegExp(`^@import ['"][^'"]*/${relative(project.src, project.ui).split('\\').join('/')}/[^\\n]*$`, 'gm'))];
-      // Après le dernier composant importé, sinon sous le commentaire « Composants » du gabarit
+      // Feuilles des composants, relatives à components.css (../ui/button/button.css)
+      const uiPrefix = relative(dirname(project.componentsCss), project.ui).split('\\').join('/');
+      const uiImports = [...sheet.matchAll(/^@import ['"]([^'"]+)['"];?[^\n]*$/gm)].filter((m) => m[1].replace(/^\.\//, '').startsWith(`${uiPrefix}/`));
+      // Dans l'ordre alphabétique des composants importés, sinon sous le commentaire « Composants » du gabarit
+      const next = uiImports.find((m) => m[0] > line);
       const after = uiImports.at(-1) ?? sheet.match(/^\/\* Composants[^\n]*$/m);
-      const updated = after ? `${sheet.slice(0, after.index + after[0].length)}\n${line}${sheet.slice(after.index + after[0].length)}` : `${sheet.trimEnd()}\n${line}\n`;
+      const updated = next
+        ? `${sheet.slice(0, next.index)}${line}\n${sheet.slice(next.index)}`
+        : after
+          ? `${sheet.slice(0, after.index + after[0].length)}\n${line}${sheet.slice(after.index + after[0].length)}`
+          : `${sheet.trimEnd()}\n${line}\n`;
       writeFileSync(project.componentsCss, updated);
     }
   }
@@ -832,5 +867,7 @@ if (texts.length) {
   for (const text of texts) console.log(`  ${text}`);
 }
 console.log(
-  `\nNext: review ${base}.css (shadcn colours → tokens if needed), write ${base}.stories.tsx, run the formatter and the linter${project.componentsCss || options['keep-classes'] ? '' : ', import the stylesheet (no components.css found)'}.`,
+  options['keep-classes']
+    ? '\nNext: update the imports of the split file if needed, run the formatter and the linter.'
+    : `\nNext: review ${base}.css (shadcn colours → tokens if needed), write ${base}.stories.tsx, run the formatter and the linter${project.componentsCss ? '' : ', import the stylesheet (no components.css found)'}.`,
 );

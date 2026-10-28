@@ -24,7 +24,7 @@
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
-import { detectProject, isDir, lintConfigText, parseArgs, read, readJsonc, rel, walk } from './project.mjs';
+import { detectProject, isDir, lintConfigText, parseArgs, read, readJsonc, rel, scaleChecker, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['json', 'strict']);
 if (!positional[0] || !isDir(positional[0])) {
@@ -38,11 +38,17 @@ const minClasses = Number(options['min-classes'] ?? 4);
 const RULES = {
   'hardcoded-color': ['error', 'Hard-coded colour: use a token (bg-surface, text-muted) or a shadcn variable'],
   'palette-class': ['error', 'Tailwind palette colour: use a token class instead'],
+  'responsive-token': ['warning', 'Token redefined at a breakpoint: sizes are fixed, the variation goes in the JSX (md:) or in a component class'],
+  'unrestricted-scale': ['suggestion', 'Tailwind scale not restricted: reset the family in the tokens (--spacing-*: initial) and redeclare the steps used'],
+  'off-scale': ['error', 'Step outside the restricted scale of the tokens: not generated; use a step of the scale or add one to the tokens'],
   'arbitrary-class': ['error', 'Arbitrary value or variant: Tailwind scale, token, named theme entry or @custom-variant'],
   'data-attribute': ['error', 'data-slot / data-variant / data-size: use a modifier class (btn-primary)'],
   'css-not-imported': ['error', 'Component stylesheet not imported by components.css: its classes are not loaded'],
   'css-import-missing': ['error', 'components.css imports a file that does not exist'],
   'duplicate-selector': ['error', 'Selector declared twice in the same context: the second one silently wins'],
+  'merge-config': ['error', 'tailwind-merge does not know a token of the scales: cn() drops it (text-compact taken for a colour); extend it with extendTailwindMerge'],
+  'breakpoint-literal': ['warning', 'Media query on a literal width: use the breakpoint tokens (@variant md, theme(--breakpoint-md))'],
+  'react18-ref': ['warning', 'Control written for React 19 (ref as a prop): in React 18 its ref is dropped, wrap it in forwardRef'],
   'muted-redefined': ['error', '--color-muted redefined by the theme: in the tokens it is the secondary text colour'],
   'shadcn-alias': ['error', 'components.json alias that tsconfig does not resolve: the shadcn CLI refuses to add components'],
   'muted-background': ['error', 'bg-muted is a shadcn background, but muted is the text colour of the tokens: use bg-surface-alt'],
@@ -52,9 +58,11 @@ const RULES = {
   'multi-component-file': ['warning', 'Several components in one file: one file per component (sub-components too)'],
   'relative-component-import': ['warning', 'Relative import between shared components: import through the @/ alias'],
   'reduced-motion': ['warning', 'Animation without a prefers-reduced-motion rule in the same stylesheet'],
+  'story-export': ['warning', 'Named export of a stories file that is not a story: Storybook shows it as one; shared story data goes in src/stories/'],
+  'a11y-todo': ['warning', 'Accessibility of these stories reported without failing (a11y test todo): fix them, then remove it'],
   'story-section': ['warning', 'Story title outside the section of its folder (UI/, Shared/, Layouts/, Features/, Pages/)'],
   'arbitrary-apply': ['warning', '@apply with an arbitrary value: write standard CSS in a stylesheet'],
-  'data-selector': ['warning', 'Selector on a data-* attribute other than data-state: use ARIA attributes or pseudo-classes'],
+  'data-selector': ['warning', 'Selector on a data-* attribute other than the open/close state of the primitives: use ARIA attributes or pseudo-classes'],
   'repeated-classes': ['suggestion', 'Class list repeated: candidate semantic class or shared component'],
   'doc-unknown-name': ['warning', 'Class or token cited by the conventions or a documentation page, defined nowhere'],
   'doc-placeholder': ['warning', 'Template text left to fill in the documentation (« À compléter »)'],
@@ -62,7 +70,9 @@ const RULES = {
 };
 // data-* permis dans les sélecteurs : ceux que Radix pose sans équivalent ARIA, et ceux d'une bibliothèque sans classe
 // stable, déclarés par --allow-data (streamdown pour data-streamdown='link')
-const allowedData = ['state', 'side', 'align', 'orientation', 'placeholder', ...String(options['allow-data'] ?? '').split(',').filter(Boolean)];
+// Base UI marque l'ouverture et les transitions par data-open, data-closed, data-starting-style et data-ending-style
+const baseUiData = project.primitives === 'base' ? ['open', 'closed', 'starting-style', 'ending-style'] : [];
+const allowedData = ['state', 'side', 'align', 'orientation', 'placeholder', ...baseUiData, ...String(options['allow-data'] ?? '').split(',').filter(Boolean)];
 const dataSelector = new RegExp(`\\[data-(?!(${allowedData.join('|')})\\b)[\\w-]+`);
 const findings = Object.fromEntries(Object.keys(RULES).map((id) => [id, []]));
 const add = (id, file, line, detail) => findings[id].push({ file: rel(project, file), line, detail });
@@ -92,7 +102,13 @@ if (project.componentsJson?.aliases) {
 }
 
 // ---------- Fichiers ----------
-const codeFiles = walk(project.src, ['.tsx', '.jsx', '.ts', '.js', '.mdx']).filter((f) => !f.endsWith('.d.ts'));
+// Fichiers générés que le lint ignore (icônes de svgr…) : ni lus ni comptés par l'audit
+const lintIgnores = [...lintConfigText(project).matchAll(/ignores\s*:\s*\[([\s\S]*?)\]/g)]
+  .flatMap((m) => [...m[1].replace(/\/\/[^\n]*/g, '').matchAll(/['"`]([^'"`]+)['"`]/g)].map((g) => g[1]))
+  .filter((glob) => !/^\*\*\/\*\.|node_modules|dist|coverage|storybook-static/.test(glob))
+  .map((glob) => new RegExp(`^${glob.replace(/[.+^${}()|]/g, '\\$&').replace(/\*\*\/?/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*')}$`));
+const ignoredByLint = (file) => lintIgnores.some((pattern) => pattern.test(relative(project.root, file).split(sep).join('/')));
+const codeFiles = walk(project.src, ['.tsx', '.jsx', '.ts', '.js', '.mdx']).filter((f) => !f.endsWith('.d.ts') && !ignoredByLint(f));
 const cssFiles = walk(project.src, ['.css']);
 if (project.tokens && !cssFiles.includes(project.tokens)) cssFiles.push(project.tokens);
 const shared = [...new Set([project.ui, project.components, project.layouts])].filter((dir) => isDir(dir));
@@ -143,6 +159,7 @@ function classLists(code) {
   return lists;
 }
 
+const offScale = scaleChecker(project);
 const repeated = new Map();
 for (const file of codeFiles) {
   const code = stripJsComments(read(file));
@@ -155,6 +172,7 @@ for (const file of codeFiles) {
       if (token.includes('[')) add('arbitrary-class', file, lineOf(code, index), token);
       else if (PALETTE.test(base)) add('palette-class', file, lineOf(code, index), token);
       else if (mutedIsText && MUTED_SURFACE.test(base)) add('muted-background', file, lineOf(code, index), token);
+      else if (offScale(token)) add('off-scale', file, lineOf(code, index), token);
     }
     // Une liste qui ne fait que placer (flex, gap, marges) reste en utilitaires : seules comptent celles qui habillent
     if (!isStory && classes.length >= minClasses && classes.some((token) => VISUAL.test(token.split(':').pop()))) {
@@ -212,13 +230,20 @@ function definedBy(prelude) {
 for (const file of cssFiles) {
   const css = stripCssComments(read(file));
   const isTokens = file === project.tokens;
-  // Déclarations : une couleur en dur hors d'une variable (--x: #…) est une erreur
+  // Déclarations : une couleur en dur est une erreur, variable locale d'un composant comprise (--x: #…) ; seuls les
+  // tokens et le thème (bloc .dark) déclarent des valeurs
   if (!isTokens) {
     for (const match of css.matchAll(/(^|[;{\s])([a-z-]+)\s*:\s*([^;{}]+);/g)) {
-      if (match[2].startsWith('--') || match[2] === 'apply') continue;
+      if ((match[2].startsWith('--') && file === project.theme) || match[2] === 'apply') continue;
       if (COLOR_LITERAL.test(match[3]) && !/^url\(/.test(match[3].trim())) {
         add('hardcoded-color', file, lineOf(css, match.index), `${match[2]}: ${match[3].trim()}`);
       }
+    }
+  }
+  // Point de rupture écrit en dur (48rem, 1001px) : il ne suit pas les tokens, et diffère s'ils sont redéfinis
+  if (!isTokens && file !== project.theme) {
+    for (const match of css.matchAll(/@media[^{]*\b(?:min-width|max-width|width\s*[<>]=?)\s*:?\s*(\d+(?:\.\d+)?(?:px|rem|em))/g)) {
+      add('breakpoint-literal', file, lineOf(css, match.index), match[0].trim());
     }
   }
   for (const match of css.matchAll(/@apply\s+([^;]+);/g)) {
@@ -227,6 +252,7 @@ for (const file of cssFiles) {
       if (token.includes('[')) add('arbitrary-apply', file, lineOf(css, match.index), token);
       else if (PALETTE.test(base)) add('palette-class', file, lineOf(css, match.index), token);
       else if (mutedIsText && MUTED_SURFACE.test(base)) add('muted-background', file, lineOf(css, match.index), token);
+      else if (offScale(token)) add('off-scale', file, lineOf(css, match.index), token);
     }
   }
   // Règles : contexte (at-rules et règles parentes) + sélecteur
@@ -251,7 +277,10 @@ for (const file of cssFiles) {
           // border-b est un utilitaire ; dans .group[data-disabled] .label ou .card-content .calendar, l'ancêtre est
           // le contexte, pas la classe définie
           for (const cls of definedBy(prelude)) {
-            if (!definedClasses.has(cls)) definedClasses.set(cls, { file, line: lineOf(css, i) });
+            // Une classe du design system reprise par un bloc partagé (.card.post-card-dark) garde sa définition
+            const known = definedClasses.get(cls);
+            const inBlock = (f) => project.components !== project.ui && inside(f, project.components);
+            if (!known || (inBlock(known.file) && !inBlock(file))) definedClasses.set(cls, { file, line: lineOf(css, i) });
           }
         }
       }
@@ -344,22 +373,112 @@ function expectedSection(file) {
   if (path.startsWith('features/')) return 'Features';
   return null;
 }
+/** Titre du fichier d'histoires : `<Meta title>` d'une page MDX, ou clé `title` au premier niveau de l'objet meta
+ * (pas la prop `title` d'un composant dans `args`). Sans titre, Storybook le tire du chemin : rien à vérifier. */
+function storyTitle(code) {
+  const mdx = code.match(/<Meta[^>]*\btitle\s*=\s*["'`]([^"'`]+)["'`]/);
+  if (mdx) return mdx[1];
+  const start = code.search(/\bconst meta\b[^=]*=\s*\{|\bexport default\s*\{/);
+  if (start < 0) return null;
+  let depth = 0;
+  for (let i = code.indexOf('{', start); i < code.length; i++) {
+    const char = code[i];
+    if (char === '{' || char === '[' || char === '(') depth++;
+    else if (char === '}' || char === ']' || char === ')') {
+      if (--depth === 0) return null;
+    } else if (depth === 1 && /\btitle\s*:/y.test(code.slice(i, i + 40)) && /[\s,{]/.test(code[i - 1])) {
+      return code.slice(i).match(/^title\s*:\s*["'`]([^"'`]+)["'`]/)?.[1] ?? null;
+    }
+  }
+  return null;
+}
 for (const file of codeFiles) {
   if (!/\.stories\.[jt]sx?$|\.mdx$/.test(file)) continue;
   const code = read(file);
-  const title = code.match(/\btitle\s*[:=]\s*["'`]([^"'`]+)["'`]/)?.[1];
+  // Donnée exportée par un fichier d'histoires (const postCardArgs) : Storybook en fait une histoire de plus
+  if (/\.stories\.[jt]sx?$/.test(file) && !/excludeStories/.test(code)) {
+    for (const m of code.matchAll(/^export const ([a-z]\w*)/gm)) add('story-export', file, lineOf(code, m.index), m[1]);
+  }
+  const todo = code.match(/a11y\s*:\s*\{[^}]*test\s*:\s*['"]todo['"]/);
+  if (todo) add('a11y-todo', file, lineOf(code, todo.index), 'todo');
+  const title = storyTitle(code);
   const section = expectedSection(file);
   if (title && section && !title.startsWith(`${section}/`)) add('story-section', file, lineOf(code, code.indexOf(title)), `"${title}" → ${section}/…`);
 }
 
+// ---------- Échelles des tokens ----------
+for (const file of [project.tokens, project.theme].filter((f, i, all) => f && all.indexOf(f) === i)) {
+  const css = stripCssComments(read(file));
+  for (const m of css.matchAll(/@media[^{]*\{\s*:root\s*\{([^}]*)\}/g)) {
+    for (const v of m[1].matchAll(/(--[\w-]+)\s*:/g)) add('responsive-token', file, lineOf(css, m.index), v[1]);
+  }
+}
+if (project.tokens) {
+  const css = `${read(project.tokens)}\n${read(project.theme)}`;
+  for (const family of ['spacing', 'text']) {
+    if (!new RegExp(`--${family}-\\*\\s*:\\s*initial`).test(css)) add('unrestricted-scale', project.tokens, 1, `--${family}-*`);
+  }
+}
+
+// ---------- React 18 : les composants de shadcn reçoivent la ref en prop (React 19) ----------
+// En React 18, une fonction ne reçoit pas `ref` : le champ d'une combobox (downshift, react-hook-form) ou le déclencheur
+// d'un calque perd la sienne, sans erreur au build
+const reactMajor = Number(String(project.deps.react ?? '').replace(/^[^\d]*/, '').split('.')[0]);
+if (reactMajor && reactMajor < 19 && isDir(project.ui)) {
+  for (const file of codeFiles.filter((f) => inside(f, project.ui) && f.endsWith('.tsx') && !/\.(stories|test)\.tsx$/.test(f))) {
+    const code = read(file);
+    // Props du composant lui-même (pas d'une prop) : un contrôle natif, ou la primitive d'un contrôle ou d'un déclencheur
+    const control = code.match(
+      /\}\s*:\s*(?:React\.)?ComponentProps<'(input|textarea|button|select)'>|\}\s*:\s*\w*(Input|Textarea|Button|Select|Checkbox|Switch|Radio|Toggle|Trigger)\w*Primitive(\.\w+)?\.Props\b/,
+    );
+    if (control && /export (function|const) [A-Z]/.test(code) && !/forwardRef/.test(code)) add('react18-ref', file, lineOf(code, control.index), control[0]);
+  }
+}
+
+// ---------- cn() : tailwind-merge doit connaître les tokens des échelles ----------
+// Sans configuration, `text-compact` est pris pour une couleur : cn('text-compact', 'text-ink') supprime la taille, et
+// cn('h-control', 'h-row') garde les deux. La fonction de components.json (aliases.utils) les déclare.
+if (project.tokens) {
+  const tokensCss = read(project.tokens);
+  const TAILWIND_TEXT = /^(xs|sm|base|lg|xl|[2-9]xl)$/;
+  const names = (family) => [...tokensCss.matchAll(new RegExp(`^\\s*--${family}-([a-z][\\w-]*)\\s*:`, 'gm'))].map((m) => m[1]).filter((n) => !n.includes('--'));
+  const custom = [
+    ...names('text').filter((n) => !TAILWIND_TEXT.test(n)).map((n) => `text-${n}`),
+    ...names('spacing').filter((n) => n !== 'px').map((n) => `spacing-${n}`),
+  ];
+  // Alias de l'application (@/lib/utils) ou du paquet du design system (@acme/ui/utils → src/utils)
+  const pkgName = readJsonc(join(project.root, 'package.json'))?.name;
+  const alias = project.cnImport.startsWith('@/')
+    ? project.cnImport.slice(2)
+    : pkgName && project.cnImport.startsWith(`${pkgName}/`)
+      ? project.cnImport.slice(pkgName.length + 1)
+      : null;
+  // Sans components.json : le fichier du projet qui exporte `cn`
+  const helper =
+    (alias && ['.ts', '.tsx', '.js', '/index.ts'].map((ext) => join(project.src, `${alias}${ext}`)).find(existsSync)) ||
+    codeFiles.find((file) => /export\s+(const|function)\s+cn\b/.test(read(file)));
+  const helperText = read(helper);
+  const configured = /extendTailwindMerge|extendTailwindMerge\(|twMergeConfig/.test(helperText);
+  for (const name of custom) {
+    const bare = name.replace(/^(text|spacing)-/, '');
+    if (!configured || !new RegExp(`['"]${bare}['"]`).test(helperText)) add('merge-config', helper ?? project.tokens, 1, name);
+  }
+}
+
 // ---------- Documentation : classes absentes de la page Classes ----------
 const classesPage = walk(project.docs, ['.mdx']).find((file) => /classes/i.test(basename(file)));
+// Classes posées par du HTML qui n'appartient pas au design system (markdown, service tiers) : `externalClasses` du lint
+const externalBlock = lintConfigText(project).match(/externalClasses\s*:\s*\[([\s\S]*?)\]\s*,?\s*\}/)?.[1] ?? '';
+const externalClasses = [...externalBlock.replace(/\/\/[^\n]*/g, '').matchAll(/['"`]([^'"`]+)['"`]/g)].map((m) => new RegExp(`^(?:${m[1]})$`));
 if (classesPage) {
   const page = read(classesPage);
   // Classes racines seulement : btn-primary est documentée avec btn
   const names = [...definedClasses.keys()];
   for (const [name, where] of definedClasses) {
     if (names.some((other) => other !== name && name.startsWith(`${other}-`))) continue;
+    if (externalClasses.some((pattern) => pattern.test(name))) continue;
+    // Classes d'un bloc partagé : documentées par l'histoire du bloc, pas par la page Classes du design system
+    if (project.components !== project.ui && inside(where.file, project.components)) continue;
     if (!new RegExp(`(^|[^\\w-])${name}([^\\w-]|$)`).test(page)) add('undocumented-class', where.file, where.line, name);
   }
 }
@@ -373,7 +492,8 @@ const conventionFiles = [join(project.repo, '.claude', 'rules', 'design-system.m
 const docFiles = project.designSystemPackage ? [] : [...conventionFiles, ...walk(project.docs, ['.mdx'])];
 if (docFiles.length) {
   const allCss = walk(project.repo, ['.css']).map((file) => stripCssComments(read(file))).join('\n');
-  const known = new Set([...allCss.matchAll(/\.([a-z][\w-]*)/g)].map((m) => m[1]));
+  // Classes des feuilles, et utilitaires déclarés par @utility (body-s, focus-ring)
+  const known = new Set([...allCss.matchAll(/\.([a-z][\w-]*)|@utility\s+([a-z][\w-]*)/g)].map((m) => m[1] ?? m[2]));
   const tokenNames = new Set([...`${read(project.tokens)}\n${read(project.theme)}`.matchAll(/--(?:color|text|container|spacing|radius|shadow|grid-template-columns|font)-([\w-]+)\s*:/g)].map((m) => m[1]));
   const UTILITY = /^-?(bg|text|border|ring|outline|fill|stroke|rounded|shadow|h|w|min-w|min-h|max-w|max-h|size|p[xytrblse]?|m[xytrblse]?|gap(-[xy])?|grid|grid-cols|grid-rows|col|row|flex|items|justify|self|place|font|leading|tracking|space-[xy]|inset(-[xy])?|top|left|right|bottom|z|opacity|aria|data|group|peer|not|has|in|translate-[xy]|scale|rotate|animate|transition|duration|ease|line-clamp|truncate|whitespace|break|overflow|object|aspect|cursor|select|pointer-events|sr|focus|hover|active|disabled|placeholder|decoration|underline|list|divide|backdrop|blur|from|via|to|order|basis|grow|shrink|table|caption|align|content|columns|scrollbar)(-|$)/;
   // Noms de Tailwind (échelle, mots-clés) que l'utilitaire peut prendre sans token
@@ -384,11 +504,17 @@ if (docFiles.length) {
   };
   // Noms de dossiers et de fichiers du projet (design-system, ai-elements) : cités comme chemins, pas comme classes
   const pathNames = new Set(codeFiles.concat(cssFiles).flatMap((file) => relative(project.repo, file).split(sep).map((part) => part.replace(/\.[\w.]+$/, ''))));
+  // Nom de paquet (dépendance, paquet installé, lien vers sa page, ligne qui parle d'une bibliothèque) : pas une classe
+  const isPackage = (name, text, index) => {
+    const line = text.slice(text.lastIndexOf('\n', index) + 1, text.indexOf('\n', index) >>> 0);
+    return Boolean(project.deps[name]) || existsSync(join(project.root, 'node_modules', name)) || text.startsWith('](', index + name.length + 2) || /librar|package|paquet|biblioth|npm/i.test(line);
+  };
   for (const file of docFiles) {
     const text = read(file);
     for (const m of text.matchAll(/_À compléter[^_\n]*_/g)) add('doc-placeholder', file, lineOf(text, m.index), m[0].slice(0, 60));
     for (const m of text.matchAll(/`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`/g)) {
       const name = m[1];
+      if (isPackage(name, text, m.index)) continue;
       const semantic = !UTILITY.test(name) && !known.has(name) && !pathNames.has(name) && !/^(use|on|aria|data|eslint|prefers)-/.test(name);
       // Un nom de paquet, d'option ou de fichier n'est pas une classe : seulement s'il apparaît comme classe ailleurs
       // dans la page (className, liste de classes) ou s'il a la forme d'un utilitaire de token
@@ -409,7 +535,9 @@ const storiesCount = codeFiles.filter((f) => /\.stories\.[jt]sx?$/.test(f)).leng
 const preview = project.storybook ? walk(project.storybook, ['.ts', '.tsx', '.js', '.jsx']).map(read).join('\n') : '';
 const layout = {
   entry: rel(project, project.entry),
-  tokens: project.tokens ? `${rel(project, project.tokens)} (${tokensCount} tokens)` : 'none',
+  tokens: project.tokens
+    ? `${rel(project, project.tokens)} (${tokensCount} tokens${project.tokensInTheme ? ', in theme.css: move them to tokens.css' : ''})`
+    : 'none',
   theme: rel(project, project.theme),
   components: project.componentsCss ? `${rel(project, project.componentsCss)} (${(read(project.componentsCss).match(/@import/g) ?? []).length} imports)` : 'none',
   ui: isDir(project.ui) ? `${rel(project, project.ui)} (${uiCount} component folders)` : 'none',
@@ -419,7 +547,9 @@ const layout = {
   storybook: project.storybook ? `${storiesCount} stories, a11y ${/a11y[\s\S]{0,80}test:\s*['"]error['"]/.test(preview) ? 'blocking' : 'not blocking'}` : 'none',
   lint: /better-tailwindcss/.test(lint)
     ? `better-tailwindcss${/no-restricted-classes/.test(lint) ? ', arbitrary values blocked' : ', arbitrary values allowed'}${/no-unknown-classes/.test(lint) ? ', unknown classes' : ''}`
-    : 'no Tailwind class lint',
+    : /eslint-plugin-tailwindcss/.test(lint)
+      ? 'eslint-plugin-tailwindcss: replace it with the better-tailwindcss fragment (references/setup.md)'
+      : 'no Tailwind class lint',
   shadcn: project.componentsJson ? `style ${project.componentsJson.style ?? '?'}, cn from ${project.cnImport}` : 'no components.json',
 };
 

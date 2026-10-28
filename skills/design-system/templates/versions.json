@@ -6,8 +6,7 @@
   "dependencies": {
     "class-variance-authority": "0.7.1",
     "cn": "0.4.0",
-    "lucide-react": "1.57.0",
-    "radix-ui": "1.8.1"
+    "lucide-react": "1.57.0"
   },
   "devDependencies": {
     "tailwindcss": "4.3.3",
@@ -31,6 +30,14 @@
     "vite": {
       "@storybook/react-vite": "10.6.5",
       "@tailwindcss/vite": "4.3.3"
+    }
+  },
+  "primitives": {
+    "radix": {
+      "radix-ui": "1.8.1"
+    },
+    "base": {
+      "@base-ui/react": "1.9.0"
     }
   }
 }

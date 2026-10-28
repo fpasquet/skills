@@ -26,6 +26,9 @@
 }
 
 :root {
+  /* Unité de l'échelle hors de @theme : tw-animate-css calcule ses translations avec var(--spacing), que la remise à
+     zéro des tokens (--spacing-*: initial) retire ; déclarée dans @theme, elle régénérerait toute l'échelle (p-5…) */
+  --spacing: 0.25rem;
   --background: var(--color-canvas);
   --foreground: var(--color-ink);
   --card: var(--color-surface);

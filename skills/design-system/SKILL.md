@@ -3,11 +3,11 @@ name: design-system
 description: >
   Crée, maintient ou migre le design system d'une application React avec Tailwind CSS v4 : tokens en source
   unique, thème shadcn/ui pointé sur les tokens, classes sémantiques (btn, btn-primary, card) posées par les
-  variantes CVA des composants shadcn/ui sur Radix, sans data-slot, un dossier par composant avec son CSS et
+  variantes CVA des composants shadcn/ui sur Radix ou Base UI, sans data-slot, un dossier par composant avec son CSS et
   son histoire, Storybook (pages Tokens et Classes, accessibilité bloquante) et lint des classes (ni valeur
   arbitraire ni couleur de la palette). Tire les tokens et les classes du code existant, range et réécrit les
   composants ajoutés par la CLI de shadcn, et mesure l'écart aux conventions par un audit. Utiliser dès que la
-  personne parle de design system, de tokens, de Storybook, de shadcn/ui, de Radix, de classes sémantiques,
+  personne parle de design system, de tokens, de Storybook, de shadcn/ui, de Radix, de Base UI, de classes sémantiques,
   de thème ou de mode sombre, d'uniformiser l'interface, de migrer des styles (Tailwind v3, CSS modules,
   bibliothèque de composants) ou d'ajouter un composant d'interface partagé, même sans dire « design system ».
 metadata:
@@ -21,7 +21,7 @@ Ce skill met en place et fait vivre le design system d'une application React (Ne
 
 1. des **tokens** en source unique (bloc `@theme` de Tailwind v4) ;
 2. un **thème shadcn/ui** pointé sur ces tokens, et des **classes sémantiques** (`btn`, `btn-primary`, `card`) dans `@layer components`, le CSS de chaque composant à côté de lui ;
-3. des **composants shadcn/ui sur Radix**, dont les variantes CVA posent ces classes : `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
+3. des **composants shadcn/ui sur Radix ou Base UI** (style `base-*` de `components.json`), dont les variantes CVA posent ces classes : `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
 
 Storybook documente le tout : pages Tokens et Classes, une histoire par état, et un contrôle d'accessibilité qui bloque. Le lint garde les classes propres.
 
@@ -111,6 +111,9 @@ Détails, Next.js ou Vite, CI : `references/setup.md`.
 - **À partir des specs** : importer `specs/ui/tokens.css`.
 - **Toujours** :
   - une ligne par token, en hexadécimal, avec un commentaire d'usage (la page Tokens les affiche) ;
+  - des échelles restreintes : les noms de Tailwind (`p-4`, `text-sm`), famille remise à zéro puis seuls les pas retenus redéclarés, jamais une échelle nommée (`p-m`) ;
+  - des tailles fixes : pas de token qui change selon l'écran, la variation s'écrit en `md:` ou dans la classe d'un composant ;
+  - `cn` configuré avec les tokens des échelles (`extendTailwindMerge`, `references/setup.md`) ;
   - des contrastes AA vérifiés ;
   - le mode sombre dans le bloc `.dark` de `theme.css`, seulement si la personne le veut ;
   - les mises en page d'écran en entrées nommées du thème, jamais en valeurs arbitraires.
@@ -167,7 +170,7 @@ Détails : `references/storybook.md`.
 ## Étape 5 · Migrer (mode migrer)
 
 1. Faire l'inventaire avec `audit.mjs <app> --json`, et lister les sources à migrer (`references/migration.md`).
-2. Découper en **lots** : socle et tokens, puis composants de `<ui>`, puis composants partagés, puis une fonctionnalité à la fois. Écrire le plan dans la mémoire. Depuis shadcn d'origine, le lot des tokens renomme aussi les fonds `bg-muted` en `bg-surface-alt` dans tout le code qui importe le thème. Proposer aussi de retirer les composants que rien n'importe (`references/migration.md`).
+2. Découper en **lots** (lint en `warn`, histoires pas encore migrées en `a11y: { test: 'todo' }`, jusqu'au dernier) : socle et tokens, puis composants de `<ui>`, puis composants partagés, puis une fonctionnalité à la fois. Écrire le plan dans la mémoire. Depuis shadcn d'origine, le lot des tokens renomme aussi les fonds `bg-muted` en `bg-surface-alt` dans tout le code qui importe le thème. Proposer aussi de retirer les composants que rien n'importe (`references/migration.md`).
 3. Pour chaque lot, dans un commit qui compile, passe le lint du lot et garde les histoires vertes :
    - réécrire le lot ;
    - lancer `eslint <dossier>`, puis `audit.mjs <app> --rule …` ;
@@ -204,7 +207,7 @@ Dire à la personne ce qui a été contrôlé et ce qui ne l'a pas été. Une su
 
 | Fichier | Rôle |
 |---|---|
-| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`), avertissements, suggestions ; `--json`, `--strict` |
+| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, pas hors de l'échelle, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`, configuration de `cn`), avertissements, suggestions ; `--json`, `--strict` |
 | `scripts/scaffold.mjs` | Socle sans rien écraser : tokens, thème, classes, Storybook, vitest, ESLint, conventions, mémoire ; dépendances à installer |
 | `scripts/rehome.mjs` | Composant de shadcn rangé (un fichier par sous-composant, `index.ts`), classes sémantiques et premier jet du CSS ; avec `--keep-classes`, découpe aussi un fichier d'application qui contient plusieurs composants |
 | `scripts/retoken.mjs` | Classes de shadcn réécrites avec les tokens dans le code d'une application (`bg-card` → `bg-surface`), d'après `theme.css` ; peut être relancé |
