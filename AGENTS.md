@@ -6,7 +6,7 @@ Instructions pour les agents qui modifient ce dépôt. La documentation destiné
 
 Catalogue de skills d'agents, installés avec le CLI [`skills`](https://github.com/vercel-labs/skills) (`npx skills add`). Les skills suivent la [spécification Agent Skills](https://agentskills.io/specification) et ne dépendent d'aucun agent en particulier.
 
-Les trois skills forment une chaîne : `specs-ui` (specs maquettées) → `prototype-ui` (prototype cliquable) → `requirements-doc` (cahier des charges, document pour l'équipe de développement). Les deux derniers lisent le projet produit par le premier.
+Les trois skills forment une chaîne : `specs-ui` (specs maquettées) → `prototype-ui` (prototype cliquable) → `requirements-doc` (cahier des charges, document pour l'équipe de développement). Les deux derniers lisent le projet produit par le premier. `design-system` travaille dans le code de l'application (tokens, classes sémantiques, shadcn/ui, Storybook) ; il importe les tokens des specs quand elles existent, et marche aussi sans elles.
 
 ## Invariants
 

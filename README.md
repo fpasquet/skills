@@ -1,6 +1,6 @@
 # skills
 
-> Skills d'agents pour concevoir une application **avant les développements** : specs UI maquettées, prototype cliquable, puis cahier des charges pour l'équipe de développement.
+> Skills d'agents pour concevoir une application **avant les développements** : specs UI maquettées, prototype cliquable, puis cahier des charges pour l'équipe de développement. **Pendant les développements**, un design system React (tokens, classes sémantiques, shadcn/ui, Storybook) reprend l'identité des specs dans le code.
 
 Un _skill_ est un ensemble d'instructions réutilisables qui étend les capacités d'un agent : un dossier, un fichier `SKILL.md`, et au besoin des références, des gabarits et des scripts. Ce dépôt s'installe avec le CLI [`skills`](https://github.com/vercel-labs/skills), qui suit la [spécification Agent Skills](https://agentskills.io) et sait installer vers la plupart des agents de code (Claude Code, Cursor, Codex, opencode…).
 
@@ -79,8 +79,9 @@ Une nouvelle version d'un skill se réimporte de la même façon. Claude Code su
 | [`specs-ui`](skills/specs-ui/README.md)                     | 3.6.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
 | [`prototype-ui`](skills/prototype-ui/README.md)             | 2.4.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
 | [`requirements-doc`](skills/requirements-doc/README.md) | 2.3.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
+| [`design-system`](skills/design-system/README.md)       | 1.0.0   | Design system React : tokens, classes sémantiques, shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
 
-Chaque skill publie son résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et garde une copie locale.
+Les trois skills de conception publient leur résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et gardent une copie locale. `design-system` travaille dans le code de l'application : il s'utilise depuis Claude Code ou un autre agent de code, pas depuis le chat.
 
 ## 🔗 La chaîne de travail
 
@@ -103,6 +104,10 @@ mon-projet/
 ```
 
 `prototype-ui` et `requirements-doc` lisent `specs/ui/` ; le cahier des charges reprend aussi le prototype s'il existe. Chaque dossier garde une mémoire courte (`CONTEXTE.md`, `PROTOTYPE.md`, `REQUIREMENTS.md`) avec les URL des artifacts publiés : une nouvelle session reprend là où la précédente s'est arrêtée, et met à jour les mêmes artifacts. Un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) se range avec `migrate-layout.mjs` du skill `specs-ui`.
+
+### Le design system de l'application
+
+`design-system` installe dans l'application les tokens des specs (`specs/ui/tokens.css`, importés sans copie), un thème shadcn/ui pointé sur ces tokens, des classes sémantiques et Storybook. Il marche aussi sans specs : il tire alors les tokens et les classes du code existant, ou migre un design system en place.
 
 ### Pendant les développements
 

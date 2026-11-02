@@ -1,0 +1,4 @@
+/* Anneau de focus commun, visible au clavier seulement (utilitaire : réutilisable par @apply). */
+@utility focus-ring {
+  @apply outline-none focus-visible:ring-3 focus-visible:ring-ring/40;
+}
