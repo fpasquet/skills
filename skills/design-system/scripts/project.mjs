@@ -5,6 +5,8 @@
  * déduisent de `components.json` (alias de shadcn/ui, feuille d'entrée de Tailwind), de `tsconfig.json` (alias `@/`)
  * et des `@import` de la feuille d'entrée ; une option de la ligne de commande les remplace.
  */
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
@@ -372,3 +374,58 @@ export function scaleChecker(project) {
     return check('spacing', SPACING, 1) ?? check('text', TEXT, 1) ?? check('radius', RADIUS, 1) ?? check('shadow', SHADOW, 1);
   };
 }
+
+// ---------- Tokens copiés depuis les specs ----------
+// Les specs (skill specs-ui) vivent dans un dépôt à part : l'application en garde une copie, précédée d'un en-tête
+// de provenance, qu'on ne modifie jamais à la main.
+
+/** Fichier de tokens d'un projet de specs : son dossier (`<projet>/ui`) ou le fichier lui-même. */
+export function specsTokensFile(path) {
+  const file = resolve(path);
+  return isDir(file) ? join(file, 'tokens.css') : file;
+}
+
+/** Fichier de tokens qui appartient à un projet de specs (à côté de `sources/site.json`). */
+export const isSpecsTokens = (file) => Boolean(file) && existsSync(join(dirname(file), 'sources', 'site.json'));
+
+/** Empreinte du contenu, insensible à la mise en forme (espaces, guillemets) qu'un formateur peut changer. */
+export const tokensHash = (text) =>
+  createHash('sha256')
+    .update(text.replace(/\s+/g, '').replaceAll("'", '"'))
+    .digest('hex')
+    .slice(0, 16);
+
+/** Provenance lisible : dépôt git (owner/repo, d'après origin) et chemin dans ce dépôt, sinon le nom du fichier. */
+export function sourceLabel(file) {
+  const git = (...args) => {
+    try {
+      return execFileSync('git', ['-C', dirname(file), ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch {
+      return null;
+    }
+  };
+  const top = git('rev-parse', '--show-toplevel');
+  if (!top) return file.split(sep).slice(-3).join('/');
+  // Deux derniers segments de l'URL : ni identifiants ni hôte
+  const remote = git('remote', 'get-url', 'origin')?.replace(/\.git$/, '').split(/[/:]/).filter(Boolean).slice(-2).join('/');
+  const path = relative(top, file).split(sep).join('/');
+  return `${remote || top.split(sep).at(-1)} · ${path}`;
+}
+
+/** Contenu de la copie : en-tête de provenance, puis le fichier des specs tel quel. */
+export function tokensCopy(sourceFile) {
+  const text = read(sourceFile);
+  return `/*\n * Copie des tokens des specs (skill specs-ui) : ne pas modifier ici.\n * Une couleur, une police ou un rayon se change dans les specs, puis tokens.mjs (skill design-system) recopie ce fichier.\n * Source : ${sourceLabel(sourceFile)} · sha256:${tokensHash(text)}\n */\n${text}`;
+}
+
+/** En-tête d'une copie : { source, hash, body, edited }, ou null si le fichier n'est pas une copie des specs. */
+export function parseTokensCopy(text) {
+  const match = text.match(/^\/\*\s*\n\s*\* Copie des tokens des specs[\s\S]*?\* Source : (.+?) · sha256:([0-9a-f]{16})\s*\n\s*\*\/\n/);
+  if (!match) return null;
+  const body = text.slice(match[0].length);
+  return { source: match[1], hash: match[2], body, edited: tokensHash(body) !== match[2] };
+}
+
+/** Noms des tokens déclarés (`--color-surface`…), hors blocs remis à zéro (`--spacing-*`). */
+export const tokenNames = (css) => new Set([...css.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((m) => m[1]));
+

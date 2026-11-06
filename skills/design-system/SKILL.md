@@ -12,7 +12,7 @@ description: >
   bibliothèque de composants) ou d'ajouter un composant d'interface partagé, même sans dire « design system ».
 metadata:
   author: fpasquet
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Design system React : tokens, classes sémantiques, shadcn/ui, Storybook
@@ -77,7 +77,7 @@ Deux rédacteurs ne touchent jamais les mêmes fichiers. **Seul le modèle princ
    - **créer** : ni tokens ni classes sémantiques, des couleurs et des listes d'utilitaires répétées dans le JSX ;
    - **migrer** : un design system existe, mais suit d'autres conventions (Tailwind v3, shadcn d'origine avec ses utilitaires et ses `data-slot`, CSS Modules, styled-components, bibliothèque de composants) ;
    - **maintenir** : le socle suit déjà ces conventions.
-5. Un projet qui a des specs du skill `specs-ui` (`specs/ui/tokens.css`) a déjà ses tokens. L'application **importe** ce fichier et ne le copie jamais : une couleur se change dans les specs.
+5. Un projet qui a des specs du skill `specs-ui` a déjà ses tokens. Les specs vivent dans un dépôt de specs, à part : l'application en garde une **copie** avec sa provenance (`tokens.mjs`), qu'on ne modifie jamais à la main. Une couleur se change dans les specs, puis se recopie. Ancienne disposition, `specs/ui/tokens.css` dans le dépôt de l'application : il est importé tel quel, jusqu'au déplacement des specs.
 
 ## Étape 1 · Poser le socle (créer, migrer)
 
@@ -108,7 +108,14 @@ Détails, Next.js ou Vite, CI : `references/setup.md`.
 ## Étape 2 · Tokens
 
 - **À partir de l'existant** : `audit.mjs <app> --rule hardcoded-color --limit 0 --json`, puis `--rule palette-class`. Regrouper les valeurs par usage (fond, surface, bordure, texte, texte secondaire, marque, états), et proposer les tokens du vocabulaire commun (`canvas`, `surface`, `line`, `ink`, `muted`, `primary`, `success`…) avec leur valeur actuelle. Faire valider avec **AskUserQuestion** les fusions de valeurs proches et les couleurs d'état.
-- **À partir des specs** : importer `specs/ui/tokens.css`.
+- **À partir des specs** : `scaffold.mjs <app> --specs <projet>/ui` copie les tokens des specs dans `<styles>/tokens.css`, en tête un commentaire de provenance (dépôt, chemin, empreinte). Ensuite :
+
+  ```sh
+  node <skill>/scripts/tokens.mjs <app> --from <projet>/ui            # recopie après une évolution des specs
+  node <skill>/scripts/tokens.mjs <app> --check [--from <projet>/ui]  # à jour ? modifiée à la main ? (--strict en CI)
+  ```
+
+  Le script liste les tokens ajoutés et retirés. Il refuse de remplacer un fichier qui n'est pas une copie des specs, ou une copie modifiée à la main, sans `--force` : comparer d'abord. `<projet>/ui` se lit depuis le dossier courant, en général le clone du dépôt de specs à côté de l'application ; noter son chemin dans la mémoire.
 - **Toujours** :
   - une ligne par token, en hexadécimal, avec un commentaire d'usage (la page Tokens les affiche) ;
   - des échelles restreintes : les noms de Tailwind (`p-4`, `text-sm`), famille remise à zéro puis seuls les pas retenus redéclarés, jamais une échelle nommée (`p-m`) ;
@@ -181,7 +188,7 @@ Détails : `references/storybook.md`.
 
 Chaque ajout se fait dans un seul changement, qui contient le code, sa feuille, la documentation et la mémoire :
 
-- **un token** : le fichier de tokens (ou les specs), le bloc `.dark` s'il existe, une décision datée dans la mémoire ; la page Tokens suit seule ;
+- **un token** : le fichier de tokens, ou les specs puis `tokens.mjs` quand les tokens en sont une copie, le bloc `.dark` s'il existe, une décision datée dans la mémoire ; la page Tokens suit seule ;
 - **une classe** : la feuille du composant, ou un fichier de `classes/` importé par `components.css`, plus une section de la page Classes ;
 - **un composant de shadcn** : étape 3 ;
 - **une variante** : on ajoute à l'API de shadcn, on n'en retire rien ;
@@ -207,10 +214,11 @@ Dire à la personne ce qui a été contrôlé et ce qui ne l'a pas été. Une su
 
 | Fichier | Rôle |
 |---|---|
-| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, pas hors de l'échelle, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`, configuration de `cn`), avertissements, suggestions ; `--json`, `--strict` |
+| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, pas hors de l'échelle, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`, configuration de `cn`, copie des tokens des specs modifiée), avertissements, suggestions ; `--json`, `--strict` |
 | `scripts/scaffold.mjs` | Socle sans rien écraser : tokens, thème, classes, Storybook, vitest, ESLint, conventions, mémoire ; dépendances à installer |
 | `scripts/rehome.mjs` | Composant de shadcn rangé (un fichier par sous-composant, `index.ts`), classes sémantiques et premier jet du CSS ; avec `--keep-classes`, découpe aussi un fichier d'application qui contient plusieurs composants |
 | `scripts/retoken.mjs` | Classes de shadcn réécrites avec les tokens dans le code d'une application (`bg-card` → `bg-surface`), d'après `theme.css` ; peut être relancé |
+| `scripts/tokens.mjs` | Copie des tokens des specs (dépôt de specs) avec leur provenance ; `--check` : copie en retard ou modifiée à la main |
 | `scripts/project.mjs` | Repérage des emplacements (application, ou paquet de composants d'un monorepo), partagé par les scripts |
 | `references/setup.md` | Mise en place : Next.js ou Vite, Storybook, vitest, ESLint, polices, messages, CI |
 | `references/tokens.md` | Vocabulaire des tokens, tokens tirés du code, mode sombre, thème shadcn, mises en page nommées |

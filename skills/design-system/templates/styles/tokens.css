@@ -4,7 +4,7 @@
  *
  * Bloc @theme de Tailwind v4, importé par la feuille d'entrée juste après @import "tailwindcss". Noms sémantiques
  * (bg-primary, text-muted, rounded-card, h-control…), communs avec les maquettes du skill specs-ui : un projet qui a
- * des specs importe directement specs/ui/tokens.css à la place de ce fichier.
+ * des specs garde ici une copie de leurs tokens (tokens.mjs), à la place de ce fichier.
  * Valeurs en hexadécimal, une ligne par token, commentaire d'usage en fin de ligne : la page Tokens de Storybook
  * les lit telles quelles. `static` : chaque variable est émise, même inutilisée, pour que la page les affiche toutes. Le mode sombre redéfinit les couleurs dans theme.css (.dark).
  */
