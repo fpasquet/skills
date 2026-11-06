@@ -3,9 +3,9 @@
  * Extrait des specs (skill specs-ui) la matière fonctionnelle et UI du cahier des charges, en Markdown,
  * sans que le modèle ait à lire le HTML des specs.
  *
- * Usage : node extract.mjs specs/requirements            (lit specs/requirements/requirements.json → specs, artifacts.specs)
+ * Usage : node extract.mjs <projet>/requirements            (lit <projet>/requirements/requirements.json → specs, artifacts.specs)
  *
- * Écrit dans specs/requirements/sources/generated/ (régénéré à chaque fois, ne pas modifier à la main) :
+ * Écrit dans <projet>/requirements/sources/generated/ (régénéré à chaque fois, ne pas modifier à la main) :
  *   inventaire.md        tous les écrans et états, par lot, avec le lien vers les specs
  *   lot-<nom>.md         par lot : règles fonctionnelles, puis chaque écran (états, contexte, parcours,
  *                        règles annotées, portée mobile)
@@ -19,7 +19,7 @@ import { configPath, loadConfig, specsDirOf } from './config.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !configPath(root)) {
-  console.error('Usage: node extract.mjs specs/requirements   (the folder must contain requirements.json)');
+  console.error('Usage: node extract.mjs <projet>/requirements   (the folder must contain requirements.json)');
   process.exit(2);
 }
 const config = loadConfig(root);

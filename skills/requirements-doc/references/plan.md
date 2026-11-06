@@ -4,20 +4,22 @@ Ce que contient chaque partie, d'où vient sa matière et comment l'écrire. Lec
 
 ## Les parties et leur source
 
-| Source | Partie | Matière | Qui écrit |
-|---|---|---|---|
-| `00-titre.md` | Titre, version, liens, sommaire | rempli par `init.mjs` ; version et statut à tenir à jour | modèle principal |
-| `10-presentation.md` | 1. Présentation | introduction des specs (`site.json`), CONTEXTE.md (décisions, périmètre) | modèle principal |
-| `20-utilisateurs.md` | 2. Utilisateurs et rôles | personas et rôles de CONTEXTE.md ; matrice des permissions tirée des règles RF | modèle principal |
-| `30-specs.md` | 3. Spécifications fonctionnelles et UI | **généré** (`generated/lot-*.md`) + critères d'acceptation (`lots/*-criteres.md`) | extraction + rédacteurs |
-| `40-interface.md` | 4. Interface et identité visuelle | décision d'identité (CONTEXTE.md), tokens (**généré**), composants partagés | modèle principal |
-| `50-exigences-non-fonctionnelles.md` | 5. Exigences non fonctionnelles | règles des specs (délais, conservation, sécurité) + standards | modèle principal |
-| `60-architecture.md` | 6. Architecture | `references/architecture.md` | modèle principal |
-| `70-stack.md` | 7. Stack technique | décisions DT validées | modèle principal |
-| `80-infrastructure.md` | 8. Infrastructure et exploitation | décisions DT validées | modèle principal |
-| `90-lots.md` | 9. Découpage et estimations | inventaire, `references/estimations.md` | modèle principal |
-| `95-risques.md` | 10. Risques et points ouverts | risques (rédigés) + points ouverts (**généré**) | modèle principal |
-| `99-annexes.md` | 11. Annexes | inventaire (**généré**), décisions datées de CONTEXTE.md | modèle principal |
+| Source | Partie | Matière | Qui écrit | Exportée |
+|---|---|---|---|---|
+| `00-titre.md` | Titre, version, liens, sommaire | rempli par `init.mjs` ; version et statut à tenir à jour | modèle principal | non (remplacé par `README.md`) |
+| `10-presentation.md` | 1. Présentation | introduction des specs (`site.json`), CONTEXTE.md (décisions, périmètre) | modèle principal | oui |
+| `20-utilisateurs.md` | 2. Utilisateurs et rôles | personas et rôles de CONTEXTE.md ; matrice des permissions tirée des règles RF | modèle principal | oui |
+| `30-specs.md` | 3. Spécifications fonctionnelles et UI | **généré** (`generated/lot-*.md`) + critères d'acceptation (`lots/*-criteres.md`) | extraction + rédacteurs | oui, un fichier par lot |
+| `40-interface.md` | 4. Interface et identité visuelle | décision d'identité (CONTEXTE.md), tokens (**généré**), composants partagés | modèle principal | oui |
+| `50-exigences-non-fonctionnelles.md` | 5. Exigences non fonctionnelles | règles des specs (délais, conservation, sécurité) + standards | modèle principal | oui |
+| `60-architecture.md` | 6. Architecture | `references/architecture.md` | modèle principal | oui |
+| `70-stack.md` | 7. Stack technique | décisions DT validées | modèle principal | oui |
+| `80-infrastructure.md` | 8. Infrastructure et exploitation | décisions DT validées | modèle principal | oui, sauf les coûts (`export:skip`) |
+| `90-lots.md` | 9. Découpage et estimations | inventaire, `references/estimations.md` | modèle principal | non |
+| `95-risques.md` | 10. Risques et points ouverts | risques (rédigés) + points ouverts (**généré**) | modèle principal | non |
+| `99-annexes.md` | 11. Annexes | inventaire (**généré**), décisions datées de CONTEXTE.md | modèle principal | non |
+
+La colonne « Exportée » dit ce que `export.mjs` envoie par défaut au dépôt de l'application (`SKILL.md`, étape 6).
 
 Les fichiers de `sources/generated/` se régénèrent par `extract.mjs` : ne jamais les modifier. Pour corriger une règle d'écran, corriger les specs (skill `specs-ui`), puis réextraire.
 

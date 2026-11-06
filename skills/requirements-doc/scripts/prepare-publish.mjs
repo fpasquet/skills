@@ -2,9 +2,9 @@
 /**
  * Suit la publication de la page HTML du cahier des charges avec l'outil Artifact.
  *
- *   node prepare-publish.mjs specs/requirements            dit quel fichier publier et vers quel artifact
- *   node prepare-publish.mjs specs/requirements --confirm  à lancer après une publication réussie
- *   node prepare-publish.mjs specs/requirements --check    dit si l'artifact est en retard sur la page locale
+ *   node prepare-publish.mjs <projet>/requirements            dit quel fichier publier et vers quel artifact
+ *   node prepare-publish.mjs <projet>/requirements --confirm  à lancer après une publication réussie
+ *   node prepare-publish.mjs <projet>/requirements --check    dit si l'artifact est en retard sur la page locale
  *                                                          (--strict : code de sortie 1 s'il l'est, pour la CI)
  *
  * La page publiée est publish/<output>.html, écrite par build.mjs (sans enveloppe). L'empreinte de la page
@@ -21,7 +21,7 @@ const root = input && resolve(input);
 const config = root ? loadConfig(root) : {};
 const page = root && join(root, 'publish', (config.output ?? 'requirements.md').replace(/\.md$/, '.html'));
 if (!root || !existsSync(page)) {
-  console.error('Usage: node prepare-publish.mjs specs/requirements [--confirm | --check [--strict]]   (run build.mjs first)');
+  console.error('Usage: node prepare-publish.mjs <projet>/requirements [--confirm | --check [--strict]]   (run build.mjs first)');
   process.exit(2);
 }
 const hash = createHash('sha1').update(readFileSync(page)).digest('hex');

@@ -2,75 +2,36 @@
 /**
  * Assemble le cahier des charges à partir de ses sources.
  *
- * Usage : node build.mjs specs/requirements
+ * Usage : node build.mjs <projet>/requirements
  *
- * Lit specs/requirements/sources/*.md dans l'ordre de leur préfixe numérique (00-, 10-, 20-…), remplace chaque
- * <!-- include: generated/lot-sessions.md --> par le fichier indiqué (chemin relatif à specs/requirements/sources/),
+ * Lit <projet>/requirements/sources/*.md dans l'ordre de leur préfixe numérique (00-, 10-, 20-…), remplace chaque
+ * <!-- include: generated/lot-sessions.md --> par le fichier indiqué (chemin relatif à <projet>/requirements/sources/),
  * génère la table des matières à l'emplacement <!-- toc --> (titres de niveau 2 et 3) et écrit
- * specs/requirements/<output> (requirements.json → output, par défaut cahier-des-charges.md). Les titres inclus sont décalés pour rester sous le titre qui les inclut :
+ * <projet>/requirements/<output> (requirements.json → output, par défaut requirements.md). Les titres inclus sont décalés pour rester sous le titre qui les inclut :
  * <!-- include: generated/lot-sessions.md shift=0 --> pour ne pas décaler.
  * Ne pas lire le fichier produit : travailler dans les sources, puis lancer check.mjs.
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync } from 'node:fs';
 import { render, inline } from './render.mjs';
 import { loadConfig } from './config.mjs';
+import { anchorHeadings, include, sourceFiles } from './assemble.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !existsSync(join(root, 'sources'))) {
-  console.error('Usage: node build.mjs specs/requirements   (the folder must contain sources/)');
+  console.error('Usage: node build.mjs <projet>/requirements   (the folder must contain sources/)');
   process.exit(2);
 }
 const sourcesDir = join(root, 'sources');
 const config = loadConfig(root);
-const files = readdirSync(sourcesDir).filter((f) => /^\d+-.*\.md$/.test(f)).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+const files = sourceFiles(sourcesDir);
 const missing = [];
 
-// Ancres de titres façon GitHub : minuscules, sans ponctuation, espaces → tirets
-export const slug = (text) =>
-  text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/<[^>]+>/g, '')
-    .replace(/[`*_~[\]()]/g, '')
-    .replace(/[^\p{L}\p{N}\s-]/gu, '')
-    .trim()
-    .replace(/\s+/g, '-');
-
-function include(text, depth = 0) {
-  return text.replace(/<!--\s*include:\s*([^\s>]+)(?:\s+shift=(\d+))?\s*-->/g, (_, path, shiftArg) => {
-    const file = join(sourcesDir, path);
-    if (!existsSync(file) || depth > 3) {
-      missing.push(path);
-      return `> **Fichier manquant** : \`${path}\``;
-    }
-    let content = include(readFileSync(file, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, ''), depth + 1);
-    const shift = shiftArg === undefined ? 0 : Number(shiftArg);
-    if (shift) content = content.replace(/^(#{1,5}) /gm, (m, hashes) => `${'#'.repeat(Math.min(hashes.length + shift, 6))} `);
-    return content.trim();
-  });
-}
-
-let doc = files.map((f) => include(readFileSync(join(sourcesDir, f), 'utf8')).trim()).join('\n\n');
-
-// Titres de niveau 2 et 3 (hors blocs de code) : ancre explicite <a id> devant le texte, quel que soit le
-// moteur de rendu Markdown, puis table des matières vers ces ancres
-const headings = [];
-doc = doc
-  .split(/(```[\s\S]*?```)/g)
-  .map((part) =>
-    part.startsWith('```')
-      ? part
-      : part.replace(/^(#{2,3}) (?!<a id=)(.+)$/gm, (_, hashes, text) => {
-          const id = slug(text);
-          headings.push({ level: hashes.length, text: text.trim(), id });
-          return `${hashes} <a id="${id}"></a>${text}`;
-        }),
-  )
-  .join('');
+// Titres de niveau 2 et 3 : ancre explicite <a id> devant le texte, puis table des matières vers ces ancres
+const assembled = anchorHeadings(files.map((f) => include(sourcesDir, readFileSync(join(sourcesDir, f), 'utf8'), missing).trim()).join('\n\n'));
+let doc = assembled.text;
+const headings = assembled.headings;
 const toc = headings.map((h) => `${h.level === 3 ? '  ' : ''}- [${h.text.replace(/<[^>]+>/g, '')}](#${h.id})`).join('\n');
 const docWithoutToc = doc.replace(/<!--\s*toc\s*-->/, '');
 doc = doc.replace(/<!--\s*toc\s*-->/, `**Sommaire**\n\n${toc}`);
