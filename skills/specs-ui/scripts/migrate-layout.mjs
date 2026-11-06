@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Range les dossiers produits par les skills (disposition 1.x / 2.x, côte à côte à la racine du projet)
- * dans un seul dossier specs/, prêt à vivre dans le dépôt de code de l'application.
+ * dans un seul dossier specs/, qui se déplace ensuite vers le dépôt de specs (references/depot-specs.md, « Migrer »).
  *
  * Usage : node migrate-layout.mjs [project-dir] [--dry-run]
  *
@@ -106,4 +106,5 @@ editJson(join(at('design-system-package'), 'package.json'), (d) => {
 console.log(`\nDone. Next:
   - rebuild: build.mjs specs/ui, build.mjs specs/prototype, extract.mjs + build.mjs specs/requirements;
   - review the paths quoted in CONTEXTE.md, PROTOTYPE.md and REQUIREMENTS.md;
-  - the artifacts keep their URL: publish as usual, only changed pages are sent.`);
+  - the artifacts keep their URL: publish as usual, only changed pages are sent;
+  - if specs/ is inside the application repository, move it to the specs repository (references/depot-specs.md, section 6).`);

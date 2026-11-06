@@ -3,10 +3,10 @@
  * Prépare la publication avec l'outil Artifact.
  *
  * Site de specs (dossier construit par build.mjs) :
- *   node prepare-publish.mjs specs/ui/site <out-dir>    prépare la page principale et liste les pages à envoyer
+ *   node prepare-publish.mjs <projet>/ui/site <out-dir>    prépare la page principale et liste les pages à envoyer
  *                                                       (--all : toutes les pages, pour un nouvel artifact)
- *   node prepare-publish.mjs specs/ui/site --confirm    à lancer après une publication réussie
- *   node prepare-publish.mjs specs/ui/site --check      dit si l'artifact est en retard sur le site local
+ *   node prepare-publish.mjs <projet>/ui/site --confirm    à lancer après une publication réussie
+ *   node prepare-publish.mjs <projet>/ui/site --check      dit si l'artifact est en retard sur le site local
  *                                                       (--strict : code de sortie 1 s'il l'est, pour la CI)
  *
  *   La page principale (index.html) est publiée sans enveloppe (l'outil l'ajoute) ; les autres pages sont des
@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto';
 
 const [input, second] = process.argv.slice(2);
 if (!input || !second) {
-  console.error('Usage: node prepare-publish.mjs specs/ui/site <out-dir> | specs/ui/site --confirm | specs/ui/site --check [--strict] | <file.html> <copy.html>');
+  console.error('Usage: node prepare-publish.mjs <projet>/ui/site <out-dir> | <projet>/ui/site --confirm | <projet>/ui/site --check [--strict] | <file.html> <copy.html>');
   process.exit(2);
 }
 const stripEnvelope = (html) =>

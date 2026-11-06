@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.7.0 · 6 nov. 2026
+
+- **Dépôt de specs** : les specs, le prototype et le cahier des charges vivent dans un dépôt git dédié, un dossier par projet, et plus dans le dépôt de l'application, dont elles noyaient les PR. L'application n'en reçoit que l'export du cahier des charges (`export.mjs` du skill `requirements-doc`) et une copie des tokens (`tokens.mjs` du skill `design-system`).
+- `references/depot-specs.md`, commun aux skills de la chaîne, décrit :
+  - la structure du dépôt et son `.gitignore` ;
+  - le travail avec deux clones côte à côte, ou une session web qui ouvre les deux dépôts ;
+  - les images du produit, et ce que reçoit l'application ;
+  - les écarts pendant les développements, le partage par les artifacts (version figée, partage hors de l'organisation) ;
+  - la migration d'un projet dont `specs/` est dans l'application, avec son historique (`git subtree`).
+- `<projet>` désigne le dossier du projet dans les consignes et les messages des scripts. L'étape 0 demande le dépôt de specs d'un nouveau projet ; l'étape 7 reporte un écart dans le dépôt de specs, dans un commit qui cite la PR de code. Un dossier `specs/` dans l'application fonctionne toujours (`<projet>` vaut `specs`).
+- `migrate-layout.mjs` renvoie à la migration vers le dépôt de specs ; `pack.mjs` archive n'importe quel dossier de projet.
+
 ## 3.6.0 · 17 oct. 2026
 
 - **Chat claude.ai** : `references/claude-ai.md`, commun aux trois skills de la chaîne, dit comment travailler sans l'outil Artifact de Claude Code ni disque durable. Il couvre la reprise par archive, la publication en un seul fichier, les contrôles sans navigateur et le réseau filtré. `SKILL.md` y renvoie dès que l'environnement est reconnu.

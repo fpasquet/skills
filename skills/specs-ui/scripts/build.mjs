@@ -3,7 +3,7 @@
  * Construit le site de specs d'un projet à partir de ses sources : une page d'accueil, une page
  * d'index par lot et une page par écran (tous les états d'un écran sur la même page).
  *
- * Usage : node build.mjs specs/ui
+ * Usage : node build.mjs <projet>/ui
  *
  * Sources (voir SKILL.md, « Sources et site ») :
  *   ui/tokens.css                   bloc @theme du produit, injecté dans chaque page
@@ -44,7 +44,7 @@ import { applyTypography } from './typography.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !existsSync(join(root, 'sources', 'site.json'))) {
-  console.error('Usage: node build.mjs specs/ui   (the folder must contain sources/site.json)');
+  console.error('Usage: node build.mjs <projet>/ui   (the folder must contain sources/site.json)');
   process.exit(2);
 }
 const read = (path, fallback = '') => (existsSync(path) ? readFileSync(path, 'utf8') : fallback);
