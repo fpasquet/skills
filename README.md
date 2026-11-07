@@ -10,8 +10,11 @@ Un _skill_ est un ensemble d'instructions réutilisables qui étend les capacit�
 # Lister les skills disponibles sans rien installer
 npx skills add <source> --list
 
-# Installer toute la chaîne dans le projet courant (choix de l'agent en interactif)
+# Installer toute la chaîne dans le dépôt de specs (choix de l'agent en interactif)
 npx skills add <source> --skill specs-ui prototype-ui requirements-doc
+
+# Dans le dépôt de l'application : design system, et traçabilité des critères en CI
+npx skills add <source> --skill design-system requirements-doc
 
 # Installer pour un agent précis, ou globalement pour tous vos projets
 npx skills add <source> --skill specs-ui -a claude-code
@@ -78,7 +81,7 @@ Une nouvelle version d'un skill se réimporte de la même façon. Claude Code su
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
 | [`specs-ui`](skills/specs-ui/README.md)                     | 3.7.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
 | [`prototype-ui`](skills/prototype-ui/README.md)             | 2.5.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
-| [`requirements-doc`](skills/requirements-doc/README.md) | 2.4.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
+| [`requirements-doc`](skills/requirements-doc/README.md) | 2.4.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés ; export vers l'application |
 | [`design-system`](skills/design-system/README.md)       | 1.1.0   | Design system React : tokens, classes sémantiques, shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
 
 Les trois skills de conception publient leur résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et gardent une copie locale. `design-system` travaille dans le code de l'application : il s'utilise depuis Claude Code ou un autre agent de code, pas depuis le chat.
@@ -91,43 +94,40 @@ specs-ui ──────────► prototype-ui ────────
  règles, parcours     scénarios de test         lots et estimations
 ```
 
-Les skills rangent leurs livrables dans un seul dossier `specs/`, à la racine du projet, qui est en général le dépôt de code de l'application :
+Les livrables vivent dans un **dépôt de specs**, séparé du code de l'application. Leurs sources (du HTML par écran) ne viennent plus noyer les PR de l'application, et le chiffrage du cahier des charges reste hors du code. Le dépôt est dédié à un projet, ou partagé entre plusieurs avec un dossier par projet : c'est votre choix, les skills fonctionnent de la même façon. `<projet>` désigne le dossier des livrables d'un projet (`.` dans un dépôt dédié, `orbe/` dans un dépôt partagé) :
 
 ```text
-mon-projet/
-├── apps/, packages/…         # le code de l'application
-└── specs/
-    ├── ui/                   # specs : sources par écran, site construit, CONTEXTE.md (mémoire)
-    ├── prototype/            # prototype : sources, site construit, PROTOTYPE.md (mémoire)
-    ├── requirements/         # cahier des charges : sources par partie, document construit, REQUIREMENTS.md (mémoire)
-    └── design-system-package/  # (option) paquet de tokens pour Claude Design
+orbe-specs/                   # dépôt de specs dédié (ou specs/orbe/ dans un dépôt partagé)
+├── ui/                       # specs : sources par écran, CONTEXTE.md (mémoire)
+├── prototype/                # prototype : sources, PROTOTYPE.md (mémoire)
+└── requirements/             # cahier des charges : sources par partie, REQUIREMENTS.md (mémoire)
+
+orbe-app/                     # dépôt de l'application
+├── docs/requirements/        # export du cahier des charges : critères par lot, exigences, architecture
+└── src/styles/tokens.css     # copie des tokens des specs, avec sa provenance
 ```
 
-`prototype-ui` et `requirements-doc` lisent `specs/ui/` ; le cahier des charges reprend aussi le prototype s'il existe. Chaque dossier garde une mémoire courte (`CONTEXTE.md`, `PROTOTYPE.md`, `REQUIREMENTS.md`) avec les URL des artifacts publiés : une nouvelle session reprend là où la précédente s'est arrêtée, et met à jour les mêmes artifacts. Un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) se range avec `migrate-layout.mjs` du skill `specs-ui`.
+`prototype-ui` et `requirements-doc` lisent `<projet>/ui/` ; le cahier des charges reprend aussi le prototype s'il existe. Chaque dossier garde une mémoire courte (`CONTEXTE.md`, `PROTOTYPE.md`, `REQUIREMENTS.md`) avec les URL des artifacts publiés : une nouvelle session reprend là où la précédente s'est arrêtée, et met à jour les mêmes artifacts. Le client et l'équipe lisent les livrables dans les artifacts.
+
+Le détail est dans [`depot-specs.md`](skills/specs-ui/references/depot-specs.md) : structure et `.gitignore`, deux clones côte à côte, partage, migration d'un projet dont `specs/` est encore dans l'application (avec son historique). Un tel dossier fonctionne toujours, et un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) se range avec `migrate-layout.mjs` du skill `specs-ui`.
 
 ### Le design system de l'application
 
-`design-system` installe dans l'application les tokens des specs (`specs/ui/tokens.css`, importés sans copie), un thème shadcn/ui pointé sur ces tokens, des classes sémantiques et Storybook. Il marche aussi sans specs : il tire alors les tokens et les classes du code existant, ou migre un design system en place.
+`design-system` copie dans l'application les tokens des specs (`<projet>/ui/tokens.css`), avec un commentaire de provenance, puis pose un thème shadcn/ui pointé sur ces tokens, des classes sémantiques et Storybook. Une couleur se change dans les specs, puis `tokens.mjs` recopie le fichier ; l'audit signale une copie modifiée à la main. Le skill marche aussi sans specs : il tire alors les tokens et les classes du code existant, ou migre un design system en place.
 
 ### Pendant les développements
 
-Les trois livrables vivent dans le dépôt de l'application et suivent l'implémentation :
+L'application reçoit seulement ce dont le code a besoin, en fichiers générés qui ne se modifient jamais sur place :
 
-- **sources commitées, HTML reconstruit** : les builds sont déterministes et prennent quelques secondes ; on versionne les sources, le Markdown du cahier des charges et les `.published.json`, et on lit le HTML dans les artifacts publiés. Le `.gitignore` du projet :
+- **l'export du cahier des charges** (`export.mjs`) : règles et critères d'acceptation par lot, exigences non fonctionnelles, architecture, stack et infrastructure, en Markdown, un fichier par lot. Les lots chiffrés, le planning et les risques restent dans le dépôt de specs ;
+- **la copie des tokens** (`tokens.mjs`).
 
-  ```gitignore
-  specs/ui/site/*
-  !specs/ui/site/.published.json
-  specs/prototype/site/*
-  !specs/prototype/site/.published.json
-  specs/requirements/requirements.html
-  specs/requirements/publish/
-  ```
+Les specs suivent l'implémentation :
 
-- **statut par écran** dans les specs (À développer, En cours, Livré, Écart), repris dans le cahier des charges ;
-- **fraîcheur** : rebuild puis `git diff` pour le Markdown du cahier des charges, `prepare-publish.mjs --check` pour les artifacts, `drift.mjs` pour le prototype ;
-- **traçabilité** : les tests citent les critères d'acceptation (`CA-CONN-27`), et `trace.mjs` donne la couverture par lot ;
-- **un écart** se reporte dans les specs, puis dans le prototype et le cahier des charges, dans le même changement que le code.
+- **statut par écran** dans les specs (À développer, En cours, Livré, Écart), repris dans le cahier des charges et dans l'export ;
+- **traçabilité** : les tests citent les critères d'acceptation (`CA-CONN-27`), et `trace.mjs docs/requirements --strict` mesure la couverture dans la CI de l'application, sans le dépôt de specs ;
+- **un écart** se tranche, puis se reporte dans les specs, le prototype et le cahier des charges, dans un commit du dépôt de specs qui cite la PR de code ; l'export et les tokens se régénèrent dans cette PR ;
+- **fraîcheur** : `export.mjs --check` pour l'application, `tokens.mjs --check` pour les tokens, `prepare-publish.mjs --check` pour les artifacts, `drift.mjs` pour le prototype.
 
 ## 📂 Architecture du dépôt
 
