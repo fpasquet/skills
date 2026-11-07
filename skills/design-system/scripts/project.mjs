@@ -217,6 +217,7 @@ export function detectProject(appDir, overrides = {}) {
     return null;
   };
   const designSystemPackage = componentsJson ? null : (sheets.map((file) => !file.startsWith(root + sep) && packageDir(file)).find(Boolean) ?? null);
+  const daisyui = detectDaisyui(root, [entry, ...sheets].filter(Boolean), deps);
 
   return {
     root,
@@ -243,7 +244,141 @@ export function detectProject(appDir, overrides = {}) {
     peerOnly: (name) => Boolean(pkg.peerDependencies?.[name] && !pkg.dependencies?.[name] && !pkg.devDependencies?.[name]),
     // Import de `cn` : le paquet officiel `cn` de shadcn s'il est installé, sinon l'alias utils de components.json
     cnImport: deps.cn ? 'cn' : (componentsJson?.aliases?.utils ?? '@/lib/utils'),
+    // Classes sémantiques : celles de daisyUI quand le projet l'utilise, sinon celles du projet (à la daisyUI)
+    daisyui,
+    classes: overrides.classes ?? (daisyui ? 'daisyui' : 'own'),
   };
+}
+
+// ---------- daisyUI ----------
+
+/** Dossier d'un paquet installé, cherché dans les node_modules de `fromDir` et de ses parents (monorepo). */
+export function packageDirOf(fromDir, name) {
+  for (let dir = resolve(fromDir); dir !== dirname(dir); dir = dirname(dir)) {
+    const candidate = join(dir, 'node_modules', name);
+    if (existsSync(join(candidate, 'package.json'))) return candidate;
+  }
+  return null;
+}
+
+/** Déclarations `nom: valeur;` d'un bloc, avec leur ligne dans la feuille. */
+function blockDeclarations(css, bodyStart, body) {
+  const declarations = [];
+  for (const m of body.matchAll(/([\w-]+)\s*:\s*([^;]+?)\s*(?:;|$)/g)) {
+    declarations.push({ name: m[1], value: m[2].trim(), line: css.slice(0, bodyStart + m.index).split('\n').length });
+  }
+  return declarations;
+}
+
+/**
+ * Blocs de daisyUI d'une feuille : `@plugin "daisyui" { … }` (options : thèmes intégrés, préfixe) et chaque
+ * `@plugin "daisyui/theme" { … }` (nom, défaut, variables).
+ */
+export function daisyuiBlocks(file) {
+  const css = read(file).replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  const plugins = [];
+  for (const m of css.matchAll(/@plugin\s+(['"])daisyui\1\s*(?:;|\{([^}]*)\})/g)) {
+    const options = Object.fromEntries(blockDeclarations(css, 0, m[2] ?? '').map((d) => [d.name, d.value.replace(/^['"]|['"]$/g, '')]));
+    plugins.push({ file, line: css.slice(0, m.index).split('\n').length, options });
+  }
+  const themes = [];
+  for (const m of css.matchAll(/@plugin\s+(['"])daisyui\/theme\1\s*\{([^}]*)\}/g)) {
+    const bodyStart = m.index + m[0].indexOf('{') + 1;
+    const declarations = blockDeclarations(css, bodyStart, m[2]);
+    const option = (name) => declarations.find((d) => d.name === name)?.value.replace(/^['"]|['"]$/g, '');
+    themes.push({
+      file,
+      line: css.slice(0, m.index).split('\n').length,
+      name: option('name') ?? 'custom-theme',
+      isDefault: option('default') === 'true',
+      prefersdark: option('prefersdark') === 'true',
+      variables: declarations.filter((d) => d.name.startsWith('--')),
+    });
+  }
+  return { plugins, themes };
+}
+
+/**
+ * daisyUI dans l'application : greffon déclaré dans une feuille (`@plugin "daisyui"`) ou paquet installé. Les thèmes
+ * intégrés (light et dark par défaut) sont dans la couche base, qui l'emporte sur la couche theme des tokens : ils
+ * écrasent `--color-primary` et les autres couleurs de même nom.
+ */
+function detectDaisyui(root, sheets, deps) {
+  const blocks = sheets.map(daisyuiBlocks);
+  const plugin = blocks.flatMap((b) => b.plugins)[0] ?? null;
+  if (!plugin && !deps.daisyui) return null;
+  const dir = packageDirOf(root, 'daisyui');
+  const version = (dir && readJsonc(join(dir, 'package.json'))?.version) ?? deps.daisyui?.replace(/^[^\d]*/, '') ?? null;
+  const themesOption = plugin?.options.themes;
+  // Sans option, daisyUI pose light (défaut) et dark (préférence du système)
+  const builtinThemes =
+    themesOption === undefined
+      ? ['light', 'dark']
+      : themesOption === 'false'
+        ? []
+        : themesOption === 'all'
+          ? ['all']
+          : themesOption.split(',').map((t) => t.trim().split(/\s+/)[0]).filter(Boolean);
+  return {
+    version,
+    dir,
+    plugin,
+    prefix: plugin?.options.prefix ?? '',
+    builtinThemes,
+    themes: blocks.flatMap((b) => b.themes),
+  };
+}
+
+// Variables qu'un thème daisyUI doit donner quand les thèmes intégrés sont coupés : sans elles, les composants perdent
+// leurs couleurs ou leurs bordures (var() sans valeur de repli)
+export const DAISYUI_THEME_VARIABLES = [
+  ...['base-100', 'base-200', 'base-300', 'base-content'],
+  ...['primary', 'secondary', 'accent', 'neutral', 'info', 'success', 'warning', 'error'].flatMap((c) => [c, `${c}-content`]),
+].map((name) => `--color-${name}`).concat(['--radius-selector', '--radius-field', '--radius-box', '--size-selector', '--size-field', '--border', '--depth', '--noise']);
+
+// Racines des classes de daisyUI 5, quand le paquet n'est pas installé (dossier components/ du paquet)
+const DAISYUI_ROOTS = [
+  'alert', 'aura', 'avatar', 'badge', 'breadcrumbs', 'btn', 'calendar', 'card', 'carousel', 'chat', 'checkbox', 'collapse',
+  'countdown', 'diff', 'divider', 'dock', 'drawer', 'dropdown', 'fab', 'fieldset', 'file-input', 'filter', 'footer', 'glass',
+  'hero', 'hover-3d', 'hover-gallery', 'indicator', 'input', 'join', 'kbd', 'label', 'link', 'list', 'loading', 'mask', 'menu',
+  'mockup', 'modal', 'navbar', 'otp', 'progress', 'radial-progress', 'radio', 'range', 'rating', 'select', 'skeleton', 'stack',
+  'stat', 'stats', 'status', 'steps', 'swap', 'tab', 'tabs', 'table', 'textarea', 'text-rotate', 'timeline', 'toast', 'toggle',
+  'tooltip', 'validator',
+];
+
+/**
+ * Classes de daisyUI, lues dans les feuilles du paquet installé (components/, utilities/), avec son préfixe éventuel ;
+ * et la sous-couche de la règle de base de chaque classe (`daisyui.l1.l2.l3` en 5.x), la plus basse : ses modificateurs
+ * (`btn-sm`, `btn-primary`) sont dans des sous-couches au-dessus. Sans le paquet : les racines connues, et toute classe
+ * `<racine>-…` comptée comme une classe de daisyUI.
+ */
+export function daisyuiCatalog(project) {
+  const prefix = project.daisyui?.prefix ?? '';
+  const classes = new Set();
+  // Première sous-couche de chaque feuille de composant : celle de sa règle de base
+  const firstLayers = new Map();
+  const dir = project.daisyui?.dir;
+  const sheets = dir ? ['components', 'utilities'].flatMap((sub) => (isDir(join(dir, sub)) ? readdirSync(join(dir, sub)).filter((f) => f.endsWith('.css')).map((f) => join(dir, sub, f)) : [])) : [];
+  for (const file of sheets) {
+    const css = read(file);
+    const first = css.match(/@layer\s+(daisyui[\w.]*)\s*\{/)?.[1];
+    if (first && file.includes(`${sep}components${sep}`)) firstLayers.set(first, (firstLayers.get(first) ?? 0) + 1);
+    // Feuille à plat (règles imbriquées par &) : chaque bloc le plus intérieur, avec le sélecteur qui le précède
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      // Le sélecteur suit la dernière déclaration du bloc parent (règle imbriquée : `…;&:hover{`)
+      const selector = m[1].split(';').pop().trim();
+      // Classes de base, sans les variantes de point de rupture que daisyUI génère (.sm\:btn) ni les décimales (.75rem)
+      // ni les noms de ses sous-couches (@layer daisyui.l1.l2)
+      if (selector.startsWith('@')) continue;
+      for (const c of selector.matchAll(/\.((?:\\.|[\w-])+)/g)) if (/^[a-z][\w-]*$/.test(c[1]) && !/^l\d$/.test(c[1])) classes.add(`${prefix}${c[1]}`);
+    }
+  }
+  const roots = new Set(DAISYUI_ROOTS.map((r) => `${prefix}${r}`));
+  const has = classes.size
+    ? (name) => classes.has(name)
+    : (name) => [...roots].some((r) => name === r || name.startsWith(`${r}-`));
+  const baseLayer = [...firstLayers].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'daisyui.l1.l2.l3';
+  return { classes, roots, has, baseLayer, installed: Boolean(classes.size) };
 }
 
 /** Chemin lisible, relatif au dossier de l'application. */
@@ -306,8 +441,9 @@ export function lintConfigText(project) {
 }
 
 /**
- * Réécrit une classe de shadcn avec les tokens : couleurs d'après les variables de theme.css
- * (`--card: var(--color-surface)` : bg-card → bg-surface), ombres et rayons vers les tokens qui existent. Un nom qui est
+ * Réécrit une classe de shadcn ou de daisyUI avec les tokens : couleurs d'après les variables de theme.css
+ * (`--card: var(--color-surface)` : bg-card → bg-surface) et du thème daisyUI (`--color-base-100: var(--color-surface)` :
+ * bg-base-100 → bg-surface), ombres et rayons vers les tokens qui existent. Un nom qui est
  * aussi un token (`muted`, `primary`) garde son sens de token, sauf en fond (bg-muted) : la réécriture peut être
  * relancée sans dommage.
  */
@@ -316,7 +452,13 @@ export function shadcnTokenizer(project) {
   const tokensCss = read(project.tokens);
   const rootBlock = themeCss.match(/:root\s*\{([^}]*)\}/)?.[1] ?? '';
   const hasToken = (name) => new RegExp(`--${name}\\s*:`).test(tokensCss);
-  const themeColors = [...rootBlock.matchAll(/--([\w-]+)\s*:\s*var\(--color-([\w-]+)\)/g)].map((m) => [m[1], m[2]]).filter(([from, to]) => from !== to);
+  // Thème daisyUI pointé sur les tokens (--color-base-100: var(--color-surface)) : bg-base-100 → bg-surface
+  const daisyuiVariables = (project.daisyui?.themes ?? []).filter((t) => t.isDefault || project.daisyui.themes.length === 1).flatMap((t) => t.variables);
+  const daisyuiColors = daisyuiVariables.map((v) => [v.name.match(/^--color-([\w-]+)$/)?.[1], v.value.match(/^var\(--color-([\w-]+)\)$/)?.[1]]).filter(([from, to]) => from && to);
+  const themeColors = [
+    ...[...rootBlock.matchAll(/--([\w-]+)\s*:\s*var\(--color-([\w-]+)\)/g)].map((m) => [m[1], m[2]]),
+    ...daisyuiColors,
+  ].filter(([from, to]) => from !== to);
   const colorMap = new Map(themeColors.filter(([from]) => !hasToken(`color-${from}`)));
   // Nom de shadcn qui est aussi un token d'un autre rôle : `muted` est un fond chez shadcn (--muted: surface-alt), le
   // texte secondaire dans les tokens. En fond, il suit le thème (bg-muted → bg-surface-alt) ; en texte, il reste le token
@@ -325,6 +467,11 @@ export function shadcnTokenizer(project) {
     [/^shadow-(2xs|xs|sm)$/, 'shadow-card', 'shadow-card'],
     [/^shadow(-md|-lg|-xl|-2xl)?$/, 'shadow-overlay', 'shadow-overlay'],
     [/^rounded-md$/, 'rounded-control', 'radius-control'],
+    // Rayons de daisyUI pointés sur les tokens (--radius-box: var(--radius-card)) : rounded-box → rounded-card
+    ...daisyuiVariables
+      .map((v) => [v.name.match(/^--radius-(box|field|selector)$/)?.[1], v.value.match(/^var\(--radius-([\w-]+)\)$/)?.[1]])
+      .filter(([from, to]) => from && to)
+      .map(([from, to]) => [new RegExp(`^rounded-${from}$`), `rounded-${to}`, `radius-${to}`]),
   ];
   let count = 0;
   const toTokens = (utility) => {

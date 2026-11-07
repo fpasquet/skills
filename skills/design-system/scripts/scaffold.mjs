@@ -7,8 +7,11 @@
  * Aucun fichier existant n'est écrasé : il est gardé et signalé. Seule la feuille d'entrée est complétée par les
  * @import qui lui manquent. Les dépendances ne sont pas installées : la commande à lancer est affichée.
  *
- * Usage : node scaffold.mjs <app-dir> [--mode create|maintain|migrate] [--specs <projet>/ui] [--tokens <file>] [--rule <file>]
- *                            [--dry-run] [--src …] [--ui …] [--components …] [--entry …] [--styles …] [--docs …]
+ * Usage : node scaffold.mjs <app-dir> [--mode create|maintain|migrate] [--classes own|daisyui] [--specs <projet>/ui]
+ *                            [--tokens <file>] [--rule <file>] [--dry-run] [--src …] [--ui …] [--components …] [--entry …]
+ *                            [--styles …] [--docs …]
+ *   --classes classes sémantiques du projet (own, à la daisyUI) ou de daisyUI (daisyui) ; par défaut daisyui si
+ *             l'application utilise déjà daisyUI
  *   --specs   specs du skill specs-ui, dans le dépôt de specs (dossier <projet>/ui ou son tokens.css, depuis le dossier
  *             courant) : leurs tokens sont copiés dans <styles>/tokens.css avec leur provenance (tokens.mjs les recopie)
  *   --tokens  fichier de tokens existant de l'application (par défaut : celui que la feuille d'entrée importe, sinon
@@ -16,10 +19,11 @@
  *   --rule    où écrire les conventions (par défaut .claude/rules/design-system.md si le dépôt a .claude/rules/,
  *             sinon docs/design-system.md)
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  DAISYUI_THEME_VARIABLES,
   cssImports,
   detectProject,
   isDir,
@@ -36,13 +40,23 @@ import {
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run']);
 if (!positional[0] || !isDir(positional[0])) {
-  console.error('Usage: node scaffold.mjs <app-dir> [--mode create|maintain|migrate] [--tokens <file>] [--rule <file>] [--dry-run]');
+  console.error('Usage: node scaffold.mjs <app-dir> [--mode create|maintain|migrate] [--classes own|daisyui] [--tokens <file>] [--rule <file>] [--dry-run]');
   process.exit(2);
 }
-const templates = join(dirname(fileURLToPath(import.meta.url)), '..', 'templates');
-const template = (path) => readFileSync(join(templates, path), 'utf8');
-const versions = JSON.parse(template('versions.json'));
+if (options.classes && !['own', 'daisyui'].includes(options.classes)) {
+  console.error('--classes: own or daisyui');
+  process.exit(2);
+}
 const project = detectProject(positional[0], options);
+const withDaisyui = project.classes === 'daisyui';
+// Sections des gabarits propres à une bibliothèque de classes : `/* if:daisyui */ … /* end:daisyui */` (CSS),
+// `<!-- if:own --> … <!-- end:own -->` (Markdown), `{/* if:daisyui */} … {/* end:daisyui */}` (MDX)
+const flags = { own: !withDaisyui, daisyui: withDaisyui };
+const SECTION = /^[ \t]*(?:<!--|\{?\/\*) if:([\w-]+) (?:-->|\*\/\}?)[ \t]*\n([\s\S]*?)^[ \t]*(?:<!--|\{?\/\*) end:\1 (?:-->|\*\/\}?)[ \t]*\n/gm;
+const sections = (text) => text.replace(SECTION, (_, name, body) => (flags[name] ? body : ''));
+const templates = join(dirname(fileURLToPath(import.meta.url)), '..', 'templates');
+const template = (path) => sections(readFileSync(join(templates, path), 'utf8'));
+const versions = JSON.parse(template('versions.json'));
 // Tokens des specs : le dépôt de specs est à part, ses tokens se copient (l'application ne peut pas les importer)
 const specsSource = options.specs ? specsTokensFile(options.specs) : null;
 if (specsSource && !existsSync(specsSource)) {
@@ -125,16 +139,48 @@ if (project.tokensInTheme) {
     `${rel(project, project.theme)} holds the tokens of the project: at step 2, move them to ${rel(project, join(project.styles, 'tokens.css'))} with the names of references/tokens.md (restricted scales, no responsive token), and keep in theme.css only the shadcn variables of templates/styles/theme.css.`,
   );
 }
-if (!project.tokensInTheme && !tokensCopied && !existsSync(tokens) && write(tokens, template('styles/tokens.css'))) {
+// daisyUI déjà en place : les couleurs, rayons et hauteurs de son thème deviennent les tokens (base-100 → surface,
+// d'après le thème daisyUI du gabarit), pour que l'interface garde son rendu une fois le thème pointé sur les tokens
+const daisyuiSource = withDaisyui && project.daisyui ? effectiveDaisyuiTheme(project.daisyui) : null;
+const prefilled = [];
+let tokensTemplate = template('styles/tokens.css');
+if (daisyuiSource && !project.tokens && !tokensCopied) {
+  const mapping = new Map(['primary', 'success', 'warning', 'info'].map((name) => [`--color-${name}`, `--color-${name}`]));
+  for (const m of template('styles/theme.css').matchAll(/^\s*(--(?:color|radius)-[\w-]+)\s*:\s*var\((--[\w-]+)\)/gm)) mapping.set(m[1], m[2]);
+  const assigned = new Map();
+  // Ordre du thème daisyUI (base-100 avant les couleurs de contenu qui reprennent aussi la surface), le rayon des
+  // champs avant celui des cases pour radius-control
+  const order = (name) => (name === '--radius-field' ? -1 : DAISYUI_THEME_VARIABLES.indexOf(name));
+  for (const [from, to] of [...mapping].sort(([a], [b]) => order(a) - order(b))) {
+    const value = daisyuiSource.values.get(from);
+    // Couleurs d'état d'un thème intégré : des fonds clairs (btn-success, avec success-content), alors que le token est
+    // la couleur du texte sur la surface (AA) ; les valeurs du gabarit restent. Celles du thème du projet sont reprises
+    const builtinState = /^--color-(info|success|warning|error)(-content)?$/.test(from) && !daisyuiSource.own.has(from);
+    if (value && !builtinState && !assigned.has(to)) assigned.set(to, [from, cssColorToHex(value)]);
+  }
+  // 10 × --size-field : la hauteur des boutons et des champs de daisyUI
+  const sizeField = daisyuiSource.values.get('--size-field')?.match(/^([\d.]+)rem$/);
+  if (sizeField) assigned.set('--spacing-control', ['--size-field', `${Number((Number(sizeField[1]) * 10).toFixed(4))}rem`]);
+  for (const [token, [from, value]] of assigned) {
+    // Valeur remplacée, commentaire d'usage gardé dans sa colonne
+    const line = new RegExp(`^(\\s*${token.replace(/[\\.]/g, '\\$&')}\\s*:\\s*)([^;]+);([ \\t]*)`, 'm');
+    if (!line.test(tokensTemplate)) continue;
+    tokensTemplate = tokensTemplate.replace(line, (_, head, old, space) => `${head}${value};${space && ' '.repeat(Math.max(1, old.length + space.length - value.length))}`);
+    prefilled.push(`${token.replace(/^--/, '')} ← ${from.replace(/^--/, '')}`);
+  }
+}
+if (!project.tokensInTheme && !tokensCopied && !existsSync(tokens) && write(tokens, tokensTemplate)) {
   notes.push(
-    tokensInEntry
+    prefilled.length
+      ? `${rel(project, tokens)}: pre-filled from the daisyUI theme (${daisyuiSource.sources.join(' + ')}): ${prefilled.join(', ')}. The other tokens keep the template values: fill them from the code (audit.mjs, rules hardcoded-color, palette-class) and check the contrasts (step 2): a state colour of daisyUI is a background, the token is a text colour on surface.`
+      : tokensInEntry
       ? `${rel(project, tokens)}: template values. ${rel(project, project.entry)} declares the colours itself (:root, .dark, @theme inline): move their values into the tokens with the names of references/tokens.md, point the shadcn variables of theme.css at them, then delete them from the entry (step 2).`
       : `${rel(project, tokens)}: template values. Replace them with the colours found by audit.mjs (rule hardcoded-color, palette-class) or the brand.`,
   );
 }
 
 // ---------- Thème, classes, utilitaires ----------
-const tokensCss = existsSync(tokens) ? read(tokens) : tokensCopied ? read(specsSource) : template('styles/tokens.css');
+const tokensCss = existsSync(tokens) ? read(tokens) : tokensCopied ? read(specsSource) : tokensTemplate;
 const colorTokens = [...tokensCss.matchAll(/^\s*(--color-[\w-]+)\s*:\s*([^;]+);/gm)];
 const darkTokens = colorTokens.map(([, name, value]) => `  /* ${name}: ; clair : ${value.trim()} */`).join('\n');
 const theme = project.theme ?? join(project.styles, 'theme.css');
@@ -148,6 +194,11 @@ const values = {
   docs: fromRepo(project.docs),
   app: fromRepo(project.root),
   darkTokens,
+  daisyuiVersion: `daisyUI ${project.daisyui?.version ?? versions.classes.daisyui.daisyui}`,
+  classesLibrary: withDaisyui
+    ? `daisyUI ${project.daisyui?.version ?? versions.classes.daisyui.daisyui}, réglé par les tokens (thème daisyUI de theme.css)`
+    : 'classes du projet, à la daisyUI, dans @layer components',
+  daisyuiMemory: withDaisyui ? ', daisyUI' : '',
   // Primitives des composants : Radix (asChild, data-state) ou Base UI (render, data-open / data-closed)
   ...(project.primitives === 'base'
     ? {
@@ -165,7 +216,9 @@ const values = {
         stateAttributesShort: "Seul `data-state`, posé par Radix, sert aux animations d'ouverture et de fermeture.",
       }),
 };
-write(theme, fill(template('styles/theme.css'), values));
+if (!write(theme, fill(template('styles/theme.css'), values)) && withDaisyui && !project.daisyui?.themes.some((t) => t.file === theme && t.variables.some((v) => /^var\(--color-/.test(v.value)))) {
+  notes.push(`${rel(project, theme)} kept: add the daisyUI theme on the tokens (section if:daisyui of templates/styles/theme.css), see references/daisyui.md.`);
+}
 write(componentsCss, fill(template('styles/components.css'), { ...values, ui: posix(relative(project.root, project.ui)) }));
 write(join(dirname(componentsCss), 'utilities.css'), template('styles/utilities.css'));
 // Voile des fenêtres et apparition des calques flottants, communs aux composants de Radix ou de Base UI
@@ -184,8 +237,10 @@ const wanted = [
   [theme, `@import '${importPath(entry, theme)}';`],
   [componentsCss, `@import '${importPath(entry, componentsCss)}';`],
 ];
+// daisyUI : le greffon, thèmes intégrés coupés (ils écraseraient les tokens depuis la couche base)
+const daisyuiPlugin = withDaisyui && !project.daisyui?.plugin ? '@plugin "daisyui" { themes: false; }' : null;
 if (!existsSync(entry)) {
-  write(entry, `${wanted.map(([, line]) => line).join('\n')}\n`);
+  write(entry, `${[...wanted.map(([, line]) => line), ...(daisyuiPlugin ? [daisyuiPlugin] : [])].join('\n')}\n`);
 } else {
   const css = read(entry);
   if (/@tailwind\s+(base|components|utilities)/.test(css)) {
@@ -196,6 +251,7 @@ if (!existsSync(entry)) {
       [...read(file).matchAll(/@import\s+['"]([^'"]+)['"]/g)].map((m) => (m[1].startsWith('.') ? resolve(dirname(file), m[1]) : m[1])),
     );
     const missing = wanted.filter(([target], index) => !imported.includes(target) && wanted.findIndex(([other]) => other === target) === index);
+    if (daisyuiPlugin) missing.push(['@plugin daisyui', daisyuiPlugin]);
     if (missing.length) {
       // Après le dernier @import existant : l'ordre tailwindcss → tokens → thème → classes est gardé
       const lastImport = [...css.matchAll(/^@import[^\n]*$/gm)].at(-1);
@@ -203,13 +259,31 @@ if (!existsSync(entry)) {
       const block = missing.map(([, line]) => line).join('\n');
       const updated = lastImport ? `${css.slice(0, at)}\n${block}${css.slice(at)}` : `${block}\n${css}`;
       if (!dry) writeFileSync(entry, updated);
-      written.push(`${rel(project, entry)} (+ ${missing.map(([target]) => (target.includes('/') ? rel(project, target) : target)).join(', ')})`);
+      written.push(`${rel(project, entry)} (+ ${missing.map(([target]) => (target.includes('/') && !target.startsWith('@') ? rel(project, target) : target)).join(', ')})`);
       if (missing.some(([target]) => target === 'tailwindcss') && imported.length) {
         notes.push(`${rel(project, entry)}: @import 'tailwindcss' was missing and has been added after the other imports: move it to the top.`);
       }
     }
   }
 }
+
+// ---------- daisyUI : thèmes en place ----------
+if (withDaisyui && project.daisyui) {
+  const dz = project.daisyui;
+  if (dz.builtinThemes.length && dz.plugin) {
+    notes.push(
+      `${rel(project, dz.plugin.file)}:${dz.plugin.line}: @plugin "daisyui" keeps the built-in themes (${dz.builtinThemes.join(', ')}), which override the tokens from the base layer: once their values are in the tokens, write @plugin "daisyui" { themes: false; } (audit rule daisyui-builtin-theme).`,
+    );
+  }
+  for (const t of dz.themes.filter((t) => t.file !== theme && t.variables.some((v) => v.name.startsWith('--color-') && !/^var\(/.test(v.value)))) {
+    notes.push(`${rel(project, t.file)}:${t.line}: the daisyUI theme ${t.name} has its own values: once they are in the tokens, delete it; theme.css points daisyUI at the tokens.`);
+  }
+  const darkSource = dz.themes.find((t) => t.prefersdark)?.name ?? (dz.builtinThemes.includes('dark') || dz.builtinThemes.includes('all') ? 'dark (built-in)' : null);
+  if (darkSource) {
+    notes.push(`Dark mode came from the daisyUI theme ${darkSource} (prefers-color-scheme): to keep it, fill the .dark block of ${rel(project, theme)} with its values, and set the class dark on <html> (references/daisyui.md).`);
+  }
+}
+if (withDaisyui && !project.daisyui) notes.push('daisyUI: install it (dependencies above), then read references/daisyui.md before the first component.');
 
 // ---------- cn ----------
 // tailwind-merge ne connaît pas les noms propres aux tokens (text-compact, h-control) : la fonction du projet les déclare
@@ -326,7 +400,7 @@ const provided = (name) =>
   (name === '@tailwindcss/vite' && hasPostcssTailwind);
 const missingDeps = (list) => Object.entries(list).filter(([name]) => !provided(name)).map(([name, version]) => `${name}@${version}`);
 const deps = missingDeps({ ...versions.dependencies, ...versions.primitives[project.primitives] });
-const devDeps = missingDeps({ ...versions.devDependencies, ...versions.framework[isNext ? 'next' : 'vite'] });
+const devDeps = missingDeps({ ...versions.devDependencies, ...versions.framework[isNext ? 'next' : 'vite'], ...(withDaisyui ? versions.classes.daisyui : {}) });
 
 // Catalogue pnpm (`catalog:` dans package.json) : les versions s'ajoutent à pnpm-workspace.yaml, pas au paquet
 const workspaceYaml = read(join(project.repo, 'pnpm-workspace.yaml'));
@@ -338,7 +412,7 @@ const catalog = Object.fromEntries(
 // Une version du dépôt plus ancienne que celle des gabarits (majeure en dessous) : à trancher avant d'installer
 const major = (version) => Number(String(version).replace(/^[^\d]*/, '').split('.')[0]);
 const resolvedVersion = (name) => (project.deps[name]?.startsWith('catalog:') ? catalog[name] : project.deps[name]);
-for (const [name, version] of Object.entries({ ...versions.dependencies, ...versions.primitives[project.primitives], ...versions.devDependencies })) {
+for (const [name, version] of Object.entries({ ...versions.dependencies, ...versions.primitives[project.primitives], ...versions.devDependencies, ...(withDaisyui ? versions.classes.daisyui : {}) })) {
   const current = resolvedVersion(name) ?? catalog[name];
   if (current && major(current) < major(version)) {
     notes.push(
@@ -369,7 +443,9 @@ if (deps.length || devDeps.length) {
 }
 const scripts = readFileSync(join(project.root, 'package.json'), 'utf8');
 const wantedScripts = { storybook: 'storybook dev -p 6006 --no-open', 'build-storybook': 'storybook build -o storybook-static --quiet', 'test:stories': 'vitest run --project stories' };
-const missingScripts = Object.entries(wantedScripts).filter(([name]) => !new RegExp(`"${name}"\\s*:`).test(scripts));
+// Clés de "scripts" seulement : la dépendance "storybook" n'est pas le script du même nom
+const scriptNames = Object.keys(JSON.parse(scripts).scripts ?? {});
+const missingScripts = Object.entries(wantedScripts).filter(([name]) => !scriptNames.includes(name));
 if (missingScripts.length) {
   console.log('\nScripts to add to package.json:');
   for (const [name, command] of missingScripts) console.log(`  "${name}": "${command}"`);
@@ -384,4 +460,50 @@ if (notes.length) {
   console.log('\nTo do:');
   for (const note of notes) console.log(`  - ${note}`);
 }
-console.log(`\nNext: fill ${rel(project, memory)}, then node audit.mjs ${positional[0]} for the state of the code.`);
+console.log(`\nNext: fill ${rel(project, memory)}, then node audit.mjs ${positional[0]} for the state of the code.${withDaisyui ? ' daisyUI: references/daisyui.md.' : ''}`);
+
+// ---------- daisyUI : thème en place et couleurs ----------
+
+/**
+ * Variables du thème daisyUI qui s'applique à la racine : le thème intégré par défaut (ou celui dont le thème du projet
+ * reprend le nom, que daisyUI fusionne), recouvert par le thème du projet marqué `default`.
+ */
+function effectiveDaisyuiTheme(dz) {
+  const values = new Map();
+  const sources = [];
+  const own = dz.themes.find((t) => t.isDefault) ?? (dz.themes.length === 1 ? dz.themes[0] : null);
+  // Thèmes intégrés en feuilles (daisyUI 5 : theme/light.css…) ; daisyUI 4 n'en a pas
+  const themeDir = dz.dir && join(dz.dir, 'theme');
+  const builtinNames = themeDir && isDir(themeDir) ? new Set(readdirSync(themeDir).filter((f) => f.endsWith('.css')).map((f) => f.slice(0, -4))) : new Set();
+  const base = own && builtinNames.has(own.name) ? own.name : dz.builtinThemes.length ? (dz.builtinThemes.includes('dark') && !dz.builtinThemes.includes('light') ? dz.builtinThemes[0] : 'light') : null;
+  if (base && base !== 'all' && builtinNames.has(base)) {
+    for (const m of read(join(dz.dir, 'theme', `${base}.css`)).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) values.set(m[1], m[2].trim());
+    sources.push(`built-in ${base}`);
+  }
+  if (own) {
+    for (const v of own.variables) values.set(v.name, v.value);
+    sources.push(own.name);
+  }
+  return values.size ? { values, sources, own: new Set(own?.variables.map((v) => v.name) ?? []) } : null;
+}
+
+/** Couleur CSS en hexadécimal : #rgb, #rrggbb, oklch() ; une autre écriture est gardée telle quelle. */
+function cssColorToHex(value) {
+  const hex = (channels) => `#${channels.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0')).join('')}`;
+  if (/^#[0-9a-f]{3}$/i.test(value)) return `#${[...value.slice(1)].map((c) => c + c).join('')}`.toLowerCase();
+  if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)) return value.toLowerCase();
+  const m = value.match(/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)(?:deg)?\s*(?:\/\s*([\d.]+)(%?))?\s*\)$/i);
+  if (!m) return value;
+  const L = Number(m[1]) / (m[2] ? 100 : 1);
+  const C = Number(m[3]);
+  const h = (Number(m[4]) * Math.PI) / 180;
+  const a = C * Math.cos(h);
+  const b = C * Math.sin(h);
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const mm = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const linear = [4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * mm + 1.707614701 * s];
+  const srgb = linear.map((c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055));
+  const alpha = m[5] === undefined ? [] : [Number(m[5]) / (m[6] ? 100 : 1)];
+  return hex([...srgb, ...alpha.filter((x) => x < 1)]);
+}

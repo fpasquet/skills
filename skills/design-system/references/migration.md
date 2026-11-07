@@ -73,6 +73,16 @@ Composants rangés par niveaux (Atomic design : `Atoms`, `Molecules`, `Organisms
   dans les tests : `vi.mock` au premier niveau du fichier (plus dans un `describe`), et `vi.spyOn(window, 'matchMedia')`,
   qui demande une fonction existante (à poser dans le fichier de mise en place des tests, jsdom n'en a pas).
 
+## Depuis un projet daisyUI
+
+Thèmes intégrés (`@plugin "daisyui";`) ou thème du projet à valeurs propres (`@plugin "daisyui/theme" { --color-base-100: oklch(…) }`), classes de daisyUI et couleurs de daisyUI dans le JSX (`bg-base-200`, `text-base-content`). On garde daisyUI : ses valeurs passent dans les tokens et son thème pointe dessus.
+
+1. **Socle et tokens** : `scaffold.mjs <app> --mode migrate` (mode daisyUI repéré seul) pré-remplit les tokens avec le thème en place ; compléter et vérifier les contrastes, passer le greffon en `themes: false`, supprimer l'ancien thème, puis `retoken.mjs <app>` (couleurs de daisyUI → tokens) dans le même lot. L'audit ne doit plus avoir de `daisyui-*`.
+2. **Règles sur les classes de daisyUI** (`@layer components { .btn … }`, `@utility btn`) : elles passent dans la sous-couche de base de daisyUI (`daisyui-layer`).
+3. **Composants** : les listes de classes répétées (`btn btn-primary btn-sm`) deviennent des composants de `<ui>` sur le modèle `templates/ui/button-daisyui/`, un lot par famille, avec leurs histoires.
+
+Le détail est dans `daisyui.md`. Pour quitter daisyUI au profit des classes du projet, chaque composant reçoit sa feuille (classes du projet) avant que le greffon ne soit retiré, au dernier lot.
+
 ## Depuis Tailwind v3
 
 1. Mettre à jour Tailwind : `npx @tailwindcss/upgrade` sur une branche propre, puis relire le diff. Il convertit la configuration, les directives et les classes renommées.

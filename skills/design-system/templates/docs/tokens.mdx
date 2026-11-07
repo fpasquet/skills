@@ -9,6 +9,10 @@ import { ScaleTokens } from './tokens/scale-tokens';
 Lus dans `{{tokens}}` (bloc `@theme` de Tailwind v4) : cette page suit le fichier sans copie. Les valeurs sombres,
 quand le mode sombre existe, viennent du bloc `.dark` de `{{styles}}/theme.css`. Les variables de shadcn/ui (`--background`,
 `--primary-foreground`, `--ring`…) pointent sur ces tokens.
+{/* if:daisyui */}
+Celles du thème daisyUI aussi (`--color-base-100`, `--radius-field`, `--size-field`) : une couleur se change ici, jamais
+dans le thème daisyUI.
+{/* end:daisyui */}
 
 Les échelles gardent les noms de Tailwind (`p-4`, `text-sm`), mais seuls les pas listés ici existent : chaque famille
 est remise à zéro (`--spacing-*: initial`) puis redéclarée. Une autre classe (`p-5`, `text-[13px]`) n'est pas générée
