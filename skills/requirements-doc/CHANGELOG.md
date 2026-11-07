@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 2.4.3 · 07/11/2026
+
+- `trace.mjs` compte à part les critères retirés (« 5 acceptance criteria (1 retired, not counted) ») : `check.mjs`, qui les compte, n'annonce plus un autre nombre sans explication.
+- Étape 6 : `--check` affiche les notes de l'export (coûts, gabarits) sans rien écrire, et la base des chemins est dite (`--to` depuis le dossier courant, `export.to` depuis le dossier du cahier des charges).
+
 ## 2.4.2 · 07/11/2026
 
 - **Clone de l'application absent** : `export.mjs` refuse d'écrire hors d'un dépôt git de l'application, ou dans un dépôt qui contient aussi les specs, au lieu de créer un dossier d'application fantôme (`--force` pour passer outre). Depuis le dépôt de specs, `trace.mjs` ne remonte plus les dossiers jusqu'à un dépôt sans rapport : sans clone de l'application, il le dit et n'analyse rien.

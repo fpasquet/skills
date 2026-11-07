@@ -14,7 +14,7 @@ description: >
   même sans prononcer le mot « cahier des charges ».
 metadata:
   author: fpasquet
-  version: "2.4.2"
+  version: "2.4.3"
 ---
 
 # Cahier des charges à partir des specs
@@ -139,10 +139,10 @@ node <skill>/scripts/export.mjs <projet>/requirements --check                   
 ```
 
 - **Parties exportées** : `requirements.json` → `export.parts`, par défaut 10 à 80 (présentation, rôles, specs par lot, interface, exigences non fonctionnelles, architecture, stack, infrastructure). Le titre, les lots et estimations, les risques et les annexes restent internes.
-- **Rester interne dans une partie exportée** : encadrer le passage de `<!-- export:skip -->` et `<!-- /export:skip -->` (les coûts de 8.10, déjà encadrés dans le gabarit). Le script signale ce qui ressemble encore à un coût ou à une charge : lire ses notes avant le premier export, et quand une partie exportée change.
+- **Rester interne dans une partie exportée** : encadrer le passage de `<!-- export:skip -->` et `<!-- /export:skip -->` (les coûts de 8.10, déjà encadrés dans le gabarit). Le script signale ce qui ressemble encore à un coût ou à une charge : lire ses notes avant le premier export (`--check` les affiche sans rien écrire), et quand une partie exportée change.
 - **Produit** : `README.md` (version, liens des artifacts, contenu, écrans, règles des identifiants), un fichier par partie, `lots/<lot>.md` par lot (règles RF, écrans, statut, critères CA), et `export.json` (source, version, statut des écrans, empreinte de chaque fichier). Les liens internes sont réécrits vers le bon fichier ; ceux qui visent une partie non exportée restent en texte. Rien n'est réécrit quand rien n'a changé.
 - **Dans l'application**, ces fichiers se commitent dans le même changement que le code qu'ils concernent, et ne s'y modifient jamais : `trace.mjs --strict` signale un fichier modifié à la main.
-- `export.to` est un chemin relatif : il suppose le clone de l'application à côté du dépôt de specs. Sinon, passer `--to`. Un dossier existant qui ne vient pas d'un export est refusé (`--force` pour passer outre).
+- **Chemins** : `--to` se lit depuis le dossier courant, et `export.to` depuis le dossier du cahier des charges ; le script fait la conversion. Ce chemin relatif suppose le clone de l'application à côté du dépôt de specs : sinon, passer `--to`. Sont refusés, sauf `--force` : une destination hors d'un dépôt git de l'application (clone absent), ou un dossier existant qui ne vient pas d'un export.
 
 ## Specs modifiées
 

@@ -166,7 +166,8 @@ if (args.includes('--json')) {
   console.log(JSON.stringify({ scanned, lots: Object.fromEntries(byLot), unknown, retiredCited, untestedDelivered, citedRulesAndRequirements: otherCited, editedExport }, null, 2));
 } else {
   const pct = (n, total) => (total ? `${Math.round((100 * n) / total)} %` : '–');
-  console.log(`Traced ${criteria.length} acceptance criteria against ${scanned} code file(s) in ${codeRoots.map((r) => relative(process.cwd(), r) || '.').join(', ') || 'no folder'}.`);
+  const retiredCount = [...definitions.values()].filter((d) => d.kind === 'CA' && d.retired).length;
+  console.log(`Traced ${criteria.length} acceptance criteria${retiredCount ? ` (${retiredCount} retired, not counted)` : ''} against ${scanned} code file(s) in ${codeRoots.map((r) => relative(process.cwd(), r) || '.').join(', ') || 'no folder'}.`);
   console.log('\nLot              tested  referenced  uncovered  total  tested %');
   for (const [lot, n] of byLot) console.log(`${lot.padEnd(16)} ${String(n.tested).padStart(6)}  ${String(n.referenced).padStart(10)}  ${String(n.uncovered).padStart(9)}  ${String(n.total).padStart(5)}  ${pct(n.tested, n.total).padStart(8)}`);
   if (otherCited.length) console.log(`\nRules and requirements cited in the code (${otherCited.length}): ${otherCited.join(', ')}`);
