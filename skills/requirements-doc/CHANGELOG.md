@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.4.2 · 07/11/2026
+
+- **Clone de l'application absent** : `export.mjs` refuse d'écrire hors d'un dépôt git de l'application, ou dans un dépôt qui contient aussi les specs, au lieu de créer un dossier d'application fantôme (`--force` pour passer outre). Depuis le dépôt de specs, `trace.mjs` ne remonte plus les dossiers jusqu'à un dépôt sans rapport : sans clone de l'application, il le dit et n'analyse rien.
+
 ## 2.4.1 · 07/11/2026
 
 - **Décisions techniques et ADR** : les décisions DT restent dans un seul fichier de l'export (`architecture.md`). Les ADR que l'équipe écrit pendant les développements vivent dans l'application, hors du dossier de l'export ; un ADR qui remplace une DT se reporte dans le cahier des charges, qui marque la DT « Remplacée par ADR-… ». Le `README.md` de l'export le rappelle.

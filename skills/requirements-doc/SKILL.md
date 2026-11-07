@@ -14,7 +14,7 @@ description: >
   même sans prononcer le mot « cahier des charges ».
 metadata:
   author: fpasquet
-  version: "2.4.1"
+  version: "2.4.2"
 ---
 
 # Cahier des charges à partir des specs

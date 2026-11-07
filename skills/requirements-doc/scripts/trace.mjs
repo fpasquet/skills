@@ -58,7 +58,16 @@ const repoOf = (dir) => {
   }
 };
 const exportDir = exported ? root : config.export?.to ? resolve(root, config.export.to) : null;
-const defaultCode = exportDir ? [repoOf(exportDir) ?? resolve(exportDir, '../..')] : [resolve(root, '../..')];
+// Depuis le dépôt de specs, le code est le dépôt de l'export, à condition que son clone soit là : sans lui, remonter
+// les dossiers trouverait un dépôt sans rapport (dépôt parent, dépôt de specs lui-même)
+const within = (dir, parent) => dir === parent || dir.startsWith(parent + sep);
+const specsRepo = exported ? null : repoOf(root);
+const appRepo = exportDir && existsSync(exportDir) ? repoOf(exportDir) : null;
+const appUsable = appRepo && !(specsRepo && within(specsRepo, appRepo));
+const defaultCode = exported ? [appRepo ?? resolve(root, '../..')] : exportDir ? (appUsable ? [appRepo] : []) : [resolve(root, '../..')];
+if (exportDir && !exported && !appUsable && !valueOf('--code') && !config.code) {
+  console.log(`NOTE: no code traced: the export folder (requirements.json → export.to: ${config.export.to}) is not in a clone of the application. Clone it next to the specs repository, or pass --code.`);
+}
 const codeRoots = valueOf('--code')
   ? valueOf('--code').split(',').map((p) => resolve(p.trim()))
   : config.code
@@ -157,7 +166,7 @@ if (args.includes('--json')) {
   console.log(JSON.stringify({ scanned, lots: Object.fromEntries(byLot), unknown, retiredCited, untestedDelivered, citedRulesAndRequirements: otherCited, editedExport }, null, 2));
 } else {
   const pct = (n, total) => (total ? `${Math.round((100 * n) / total)} %` : '–');
-  console.log(`Traced ${criteria.length} acceptance criteria against ${scanned} code file(s) in ${codeRoots.map((r) => relative(process.cwd(), r) || '.').join(', ')}.`);
+  console.log(`Traced ${criteria.length} acceptance criteria against ${scanned} code file(s) in ${codeRoots.map((r) => relative(process.cwd(), r) || '.').join(', ') || 'no folder'}.`);
   console.log('\nLot              tested  referenced  uncovered  total  tested %');
   for (const [lot, n] of byLot) console.log(`${lot.padEnd(16)} ${String(n.tested).padStart(6)}  ${String(n.referenced).padStart(10)}  ${String(n.uncovered).padStart(9)}  ${String(n.total).padStart(5)}  ${pct(n.tested, n.total).padStart(8)}`);
   if (otherCited.length) console.log(`\nRules and requirements cited in the code (${otherCited.length}): ${otherCited.join(', ')}`);

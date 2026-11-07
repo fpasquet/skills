@@ -145,6 +145,15 @@ let existing = dest;
 while (!existsSync(existing) && dirname(existing) !== existing) existing = dirname(existing);
 const destTop = git(existing, 'rev-parse', '--show-toplevel');
 const destFromApp = destTop ? posix(relative(destTop, dest)) || '.' : posix(relative(process.cwd(), dest));
+// La destination doit être dans le dépôt de l'application : sans son clone, ne pas créer de dossier fantôme, ni écrire
+// dans un dépôt qui contient aussi les specs (dépôt parent, ou dépôt de specs lui-même)
+const within = (dir, parent) => dir === parent || dir.startsWith(parent + sep);
+if (!args.includes('--force') && (!destTop || (top && within(top, destTop)))) {
+  console.error(
+    `${posix(relative(process.cwd(), dest))} is not in the application repository: ${destTop ? `the nearest git repository (${destTop}) also holds the specs` : 'no git repository there'}. Clone the application next to the specs repository or pass --to; --force writes anyway.`,
+  );
+  process.exit(2);
+}
 const artifacts = Object.fromEntries(
   Object.entries({ ...config.artifacts, specs: config.artifacts?.specs || site.artifact }).filter(([key, url]) => url && key !== 'cdc'),
 );
