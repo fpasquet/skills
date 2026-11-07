@@ -1,8 +1,9 @@
 # daisyUI
 
 Avec daisyUI 5 (Tailwind v4), les classes sémantiques du design system sont celles de daisyUI, réglées par les tokens.
-`scaffold.mjs` passe dans ce mode quand une feuille de l'application déclare daisyUI (`@plugin "daisyui"`), ou avec
-`--classes daisyui`. L'audit l'indique (ligne `daisyui`). Le paquet installé seul ne change pas le mode : sans
+`scaffold.mjs` passe dans ce mode quand une feuille de l'application déclare daisyUI (`@plugin "daisyui"`), quand
+les specs le déclarent (`--specs <projet>/ui`, dont `sources/site.json` → `daisyui` : leurs maquettes emploient ses
+classes, et sa version est installée), ou avec `--classes daisyui`. L'audit l'indique (ligne `daisyui`). Le paquet installé seul ne change pas le mode : sans
 greffon, daisyUI ne génère aucune classe, et l'audit n'applique pas ses règles `daisyui-*`.
 
 | Couche | Classes du projet (par défaut) | daisyUI |

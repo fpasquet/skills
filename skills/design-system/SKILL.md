@@ -112,7 +112,7 @@ Détails, Next.js ou Vite, CI : `references/setup.md`.
 ## Étape 2 · Tokens
 
 - **À partir de l'existant** : `audit.mjs <app> --rule hardcoded-color --limit 0 --json`, puis `--rule palette-class`. Regrouper les valeurs par usage (fond, surface, bordure, texte, texte secondaire, marque, états), et proposer les tokens du vocabulaire commun (`canvas`, `surface`, `line`, `ink`, `muted`, `primary`, `success`…) avec leur valeur actuelle. Faire valider avec **AskUserQuestion** les fusions de valeurs proches et les couleurs d'état.
-- **À partir des specs** : `scaffold.mjs <app> --specs <projet>/ui` copie les tokens des specs dans `<styles>/tokens.css`, en tête un commentaire de provenance (dépôt, chemin, empreinte). Ensuite :
+- **À partir des specs** : `scaffold.mjs <app> --specs <projet>/ui` copie les tokens des specs dans `<styles>/tokens.css`, en tête un commentaire de provenance (dépôt, chemin, empreinte). Des specs qui déclarent daisyUI (`sources/site.json` → `daisyui`) font passer aux classes de daisyUI, à leur version. Un token que lisent les feuilles du socle et qui manque à la copie (`--color-overlay`) est signalé : il s'ajoute aux specs, jamais à la copie. Ensuite :
 
   ```sh
   node <skill>/scripts/tokens.mjs <app> --from <projet>/ui            # recopie après une évolution des specs

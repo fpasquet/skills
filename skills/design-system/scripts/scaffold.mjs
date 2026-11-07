@@ -47,6 +47,17 @@ if (options.classes && !['own', 'daisyui'].includes(options.classes)) {
   console.error('--classes: own or daisyui');
   process.exit(2);
 }
+// daisyUI déclaré par les specs (<projet>/ui/sources/site.json → daisyui) : les maquettes emploient ses classes,
+// l'application aussi, sauf --classes own
+const specsSite = options.specs ? (() => {
+  try {
+    return JSON.parse(read(join(dirname(specsTokensFile(options.specs)), 'sources', 'site.json')) || 'null');
+  } catch {
+    return null;
+  }
+})() : null;
+const specsDaisyui = typeof specsSite?.daisyui === 'string' ? specsSite.daisyui : (specsSite?.daisyui?.version ?? null);
+if (specsDaisyui && !options.classes) options.classes = 'daisyui';
 const project = detectProject(positional[0], options);
 const withDaisyui = project.classes === 'daisyui';
 // Sections des gabarits propres à une bibliothèque de classes : `/* if:daisyui */ … /* end:daisyui */` (CSS),
@@ -57,6 +68,15 @@ const sections = (text) => text.replace(SECTION, (_, name, body) => (flags[name]
 const templates = join(dirname(fileURLToPath(import.meta.url)), '..', 'templates');
 const template = (path) => sections(readFileSync(join(templates, path), 'utf8'));
 const versions = JSON.parse(template('versions.json'));
+const notes = [];
+// La version des specs : les maquettes la rendent, l'application la reprend
+if (withDaisyui && specsDaisyui) {
+  if (!process.argv.includes('--classes')) notes.push(`Classes of daisyUI ${specsDaisyui}: declared by the specs (site.json → daisyui), whose mockups use them. --classes own keeps the classes of the project.`);
+  if (specsDaisyui !== versions.classes.daisyui.daisyui) {
+    notes.push(`daisyUI ${specsDaisyui}, the version of the specs (site.json), installed instead of ${versions.classes.daisyui.daisyui}, tested with the templates: check the audit (daisyui-layer, daisyui-theme-missing) after the install.`);
+  }
+  versions.classes.daisyui.daisyui = specsDaisyui;
+}
 // Tokens des specs : le dépôt de specs est à part, ses tokens se copient (l'application ne peut pas les importer)
 const specsSource = options.specs ? specsTokensFile(options.specs) : null;
 if (specsSource && !existsSync(specsSource)) {
@@ -70,7 +90,6 @@ if (options.tokens && !resolve(project.root, options.tokens).startsWith(project.
 const dry = options['dry-run'];
 const written = [];
 const kept = [];
-const notes = [];
 
 const posix = (path) => path.split('\\').join('/');
 const fromRepo = (path) => posix(relative(project.repo, path)) || '.';
@@ -222,7 +241,21 @@ if (!write(theme, fill(template('styles/theme.css'), values)) && withDaisyui && 
 write(componentsCss, fill(template('styles/components.css'), { ...values, ui: posix(relative(project.root, project.ui)) }));
 write(join(dirname(componentsCss), 'utilities.css'), template('styles/utilities.css'));
 // Voile des fenêtres et apparition des calques flottants, communs aux composants de Radix ou de Base UI
-write(join(dirname(componentsCss), 'classes', 'overlay.css'), template(`styles/classes/${project.primitives === 'base' ? 'overlay-base' : 'overlay'}.css`));
+const overlayTemplate = template(`styles/classes/${project.primitives === 'base' ? 'overlay-base' : 'overlay'}.css`);
+write(join(dirname(componentsCss), 'classes', 'overlay.css'), overlayTemplate);
+// Copie des specs : les feuilles du socle lisent des tokens (var(--color-line), bg-overlay) qu'elle doit contenir,
+// sinon le build échoue (« Cannot apply unknown utility class bg-overlay »). Un token manquant s'ajoute aux specs
+if (tokensCopied) {
+  const copied = read(specsSource);
+  const needed = new Set([...`${template('styles/theme.css')}\n${overlayTemplate}`.matchAll(/var\((--(?:color|radius|spacing|shadow)-[\w-]+)\)/g)].map((m) => m[1]));
+  for (const m of overlayTemplate.matchAll(/\bbg-([a-z][\w-]*)/g)) needed.add(`--color-${m[1]}`);
+  const missingTokens = [...needed].filter((name) => !new RegExp(`${name}\\s*:`).test(copied));
+  if (missingTokens.length) {
+    notes.push(
+      `The specs tokens lack ${missingTokens.join(', ')}, read by the stylesheets of the design system (theme.css, classes/overlay.css): add them to ${relative(process.cwd(), specsSource)} (vocabulary of specs-ui), then tokens.mjs ${positional[0]} --from ${options.specs}. Until then the build fails on the missing class.`,
+    );
+  }
+}
 
 // ---------- Feuille d'entrée ----------
 // Une bibliothèque qui n'a `next` qu'en dépendance de pair se documente avec Vite

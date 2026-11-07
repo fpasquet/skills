@@ -4,7 +4,8 @@
 
 - **daisyUI 5** : ses classes peuvent devenir les classes sémantiques du design system, réglées par les tokens
   (`references/daisyui.md`). Mode repéré seul (`@plugin "daisyui"` dans une feuille ; le paquet installé seul ne le
-  change pas et n'active pas les règles `daisyui-*`), ou choisi par `scaffold.mjs --classes daisyui`. Éprouvé sur une
+  change pas et n'active pas les règles `daisyui-*`), déclaré par les specs (`site.json` → `daisyui`, lu par
+  `scaffold.mjs --specs`, qui installe leur version), ou choisi par `scaffold.mjs --classes daisyui`. Éprouvé sur une
   application Vite qui utilisait daisyUI avec ses thèmes, et sur une application Next.js en monorepo dont le design
   system à classes du projet passe à daisyUI (Storybook 10, histoires rendues dans Chromium, accessibilité bloquante,
   lint) :
@@ -40,6 +41,9 @@
     `btn-square`) ; `versions.json` avec daisyUI 5.7.50.
 - `hardcoded-color` voit aussi une couleur en dur dans une variable dont le nom a des chiffres (`--color-base-100`).
 - `scaffold.mjs` ne prend plus la dépendance `storybook` pour le script du même nom.
+- `scaffold.mjs --specs` signale les tokens que lisent les feuilles du socle et qui manquent à la copie des specs
+  (`--color-overlay` de `classes/overlay.css`, absent des specs jusqu'à `specs-ui` 3.8.0) : le build échouait sur
+  `bg-overlay`, sans dire quoi ajouter aux specs.
 
 ## 1.1.0 · 07/11/2026
 
