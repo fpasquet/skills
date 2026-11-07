@@ -5,7 +5,8 @@ Mémoire du cahier des charges. À lire en premier à chaque reprise, à mettre 
 ## État
 
 - **Artifact** : {{URL}} (aussi dans `requirements.json` → `artifacts.requirements`)
-- **Specs de référence** : extraction du {{date}} (`node <skill>/scripts/extract.mjs specs/requirements` après toute évolution des specs)
+- **Specs de référence** : extraction du {{date}} (`node <skill>/scripts/extract.mjs <projet>/requirements` après toute évolution des specs)
+- **Export vers l'application** : {{chemin}} (`requirements.json` → `export.to`), version exportée {{…}}
 - **Prochaine étape** : {{…}}
 
 ## Sources et avancement
