@@ -17,7 +17,7 @@ Skill pour agents IA (Claude Code…) qui produit des **spécifications UI maque
 
 La mémoire du projet, `<projet>/ui/CONTEXTE.md`, permet de reprendre le travail sans relire les specs : les agents lisent et modifient de petits fichiers plutôt que des documents de 300 Ko.
 
-Les tokens (`tokens.css`, bloc `@theme` Tailwind v4) et les classes des maquettes sont repris tels quels pendant les développements, par une copie que le skill `design-system` tient à jour.
+Les tokens (`tokens.css`, bloc `@theme` Tailwind v4) et les classes des maquettes sont repris tels quels pendant les développements, par une copie que le skill `design-system` tient à jour. Pour un produit sous daisyUI, déclaré dans `sources/site.json`, les maquettes emploient ses classes (`btn btn-primary`), réglées par un thème pointé sur les tokens, comme dans l'application.
 
 `<projet>` désigne le dossier des livrables d'un projet dans le dépôt de specs. Ce dépôt est dédié à un projet, ou partagé entre plusieurs avec un dossier par projet : c'est votre choix, les skills fonctionnent de la même façon.
 
@@ -51,9 +51,11 @@ specs-ui/
 │   ├── tokens.css                   identité du produit
 │   ├── contexte.md                  mémoire du projet (CONTEXTE.md)
 │   ├── design-system.html           catalogue de composants exporté vers le Design System
+│   ├── design-system-daisyui.html   le même catalogue, sur les classes de daisyUI
 │   └── design-sync/                 modèles du paquet « tokens seuls » pour Claude Design
 └── scripts/
     ├── build.mjs                    construit un document depuis ses sources (tokens, coquilles, habillage, typographie)
+    ├── daisyui.mjs                  daisyUI dans les pages : feuilles des composants employés, thème sur les tokens
     ├── split.mjs                    découpe un document existant en sources par écran
     ├── capture.mjs                  contrôles et captures (planche --sheet, --frames, --thumbnails, --themes)
     ├── check-contrast.mjs           contrôle WCAG AA des tokens
@@ -72,7 +74,7 @@ specs-ui/
 
 - **Node.js 18+** pour les scripts (aucune dépendance).
 - **Chrome ou Chromium** (facultatif) pour les captures de site et la vérification du rendu. Chemin personnalisé : variable `CHROME_PATH` ; options en plus : `CHROME_ARGS` (`--no-sandbox` dans un conteneur).
-- Navigateur avec accès à `cdn.jsdelivr.net` et Google Fonts pour afficher les maquettes (Tailwind et Lucide sont chargés depuis le CDN). La version autonome (`bundle.mjs`) intègre Tailwind et Lucide et s'ouvre sans réseau.
+- Navigateur avec accès à `cdn.jsdelivr.net` et Google Fonts pour afficher les maquettes (Tailwind et Lucide sont chargés depuis le CDN). Avec daisyUI, ses feuilles viennent aussi du CDN. La version autonome (`bundle.mjs`) intègre Tailwind, Lucide et daisyUI, et s'ouvre sans réseau.
 
 ## Exemples de demandes
 

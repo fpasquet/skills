@@ -45,7 +45,8 @@ npx skills add <source> --skill prototype-ui -g
 | `templates/check-hook.js` | Contrôles lus par `check.mjs`, actifs avec `?check` |
 | `templates/prototype.md` | Mémoire du prototype (`PROTOTYPE.md`) |
 | `scripts/scaffold.mjs` | Crée `<projet>/prototype/src/` depuis `<projet>/ui/sources/` (une page par écran) |
-| `scripts/build.mjs` | Construit `<projet>/prototype/site/` : accueil, une page par écran (CSS compilé), socle `proto.js`, données `data.js` |
+| `scripts/build.mjs` | Construit `<projet>/prototype/site/` : accueil, une page par écran (CSS compilé), socle `proto.js`, données `data.js` ; daisyUI quand les specs le déclarent |
+| `scripts/daisyui.mjs` | daisyUI dans les pages (copie du module de `specs-ui`) : feuilles des composants employés, thème pointé sur les tokens |
 | `scripts/check.mjs` | Liens, presets, erreurs JS et Alpine, icônes, débordement, étapes de scénario ; planches des scénarios et des pages |
 | `scripts/outline.mjs` | Résumé des états d'une page avec leurs lignes, ou des coquilles (`--shells`), pour lire peu |
 | `scripts/prepare-publish.mjs` | Prépare la publication incrémentale avec l'outil Artifact ; `--check` : artifact en retard sur le site local |

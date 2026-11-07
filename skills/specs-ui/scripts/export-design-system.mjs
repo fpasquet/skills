@@ -9,7 +9,8 @@
  *   README.md                  consignes : produit, thème, vocabulaire des tokens, règles d'usage, composants
  *   tokens.css                 copie de tokens.css
  *   foundations/*.html         couleurs, typographie, formes et relief (valeurs lues dans tokens.css)
- *   components/*.html          composants du catalogue du skill (templates/design-system.html)
+ *   components/*.html          composants du catalogue du skill (templates/design-system.html, ou
+ *                              design-system-daisyui.html quand site.json déclare daisyui)
  *   patterns/*.html            composants propres au projet (sources/shared/*.html : coquilles, en-têtes…)
  * Chaque aperçu commence par le marqueur <!-- @dsCard group="…" --> lu par Claude Design.
  * La synchronisation se fait ensuite avec le skill /design-sync, lancé par la personne.
@@ -17,6 +18,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiVersion } from './daisyui.mjs';
 
 const args = process.argv.slice(2);
 const root = args[0] && resolve(args[0]);
@@ -36,6 +38,8 @@ if (!theme) {
 }
 const site = JSON.parse(read(join(root, 'sources', 'site.json'), '{}'));
 const product = site.title ?? 'Produit';
+// daisyUI (site.json → daisyui) : les aperçus chargent ses composants et son thème pointé sur les tokens, comme les specs
+const daisyui = daisyuiVersion(site);
 const firstLot = (site.lots ?? []).find((l) => existsSync(join(root, 'sources', l, 'lot.json')));
 const fonts = firstLot ? JSON.parse(read(join(root, 'sources', firstLot, 'lot.json'))).fonts ?? '' : '';
 const template = read(join(skillDir, 'templates', 'specs.html'));
@@ -46,6 +50,7 @@ const themeComment = tokensCss.match(/\/\*([\s\S]*?)\*\//)?.[1]?.split('\n').map
 
 // ---------- Gabarit d'un aperçu ----------
 function previewPage({ group, title, body, templates = '' }) {
+  const daisyuiFiles = daisyui ? daisyuiComponents(`${body}\n${templates}`) : [];
   return `<!-- @dsCard group="${group}" -->
 <!doctype html>
 <html lang="fr">
@@ -53,11 +58,13 @@ function previewPage({ group, title, body, templates = '' }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} · ${product}</title>
-${fonts ? `<link rel="stylesheet" href="${fonts}">\n` : ''}<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
+${fonts ? `<link rel="stylesheet" href="${fonts}">\n` : ''}${daisyuiFiles.length ? `${daisyuiHead(daisyui, daisyuiFiles)}\n` : ''}<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <style type="text/tailwindcss">
-  ${theme.replace(/\n/g, '\n  ')}
+  ${(daisyui ? daisyuiTheme(theme) : theme).replace(/\n/g, '\n  ')}
   html body { margin: 0; padding: 24px; background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+  /* Le script du template pose le bouton « Retours » de relecture des specs : sans objet dans une carte */
+  [data-retours-ui] { display: none !important; }
 </style>
 </head>
 <body>
@@ -107,7 +114,8 @@ const foundations = {
 };
 
 // ---------- Composants du catalogue ----------
-const catalogue = [...read(join(skillDir, 'templates', 'design-system.html')).replace(/<!--[\s\S]*?-->/g, '').matchAll(/<section\b([^>]*)>([\s\S]*?)<\/section>/g)].map((m) => ({
+// Catalogue du skill, écrit avec les classes de daisyUI quand le produit l'emploie
+const catalogue = [...read(join(skillDir, 'templates', daisyui ? 'design-system-daisyui.html' : 'design-system.html')).replace(/<!--[\s\S]*?-->/g, '').matchAll(/<section\b([^>]*)>([\s\S]*?)<\/section>/g)].map((m) => ({
   title: m[1].match(/data-card="([^"]+)"/)?.[1],
   group: m[1].match(/data-group="([^"]+)"/)?.[1] ?? 'Composants',
   slug: m[1].match(/data-slug="([^"]+)"/)?.[1],

@@ -1,5 +1,50 @@
 # Journal des versions
 
+## 1.2.0 · 07/11/2026
+
+- **daisyUI 5** : ses classes peuvent devenir les classes sémantiques du design system, réglées par les tokens
+  (`references/daisyui.md`). Mode repéré seul (`@plugin "daisyui"` dans une feuille ; le paquet installé seul ne le
+  change pas et n'active pas les règles `daisyui-*`), déclaré par les specs (`site.json` → `daisyui`, lu par
+  `scaffold.mjs --specs`, qui installe leur version), ou choisi par `scaffold.mjs --classes daisyui`. Éprouvé sur une
+  application Vite qui utilisait daisyUI avec ses thèmes, et sur une application Next.js en monorepo dont le design
+  system à classes du projet passe à daisyUI (Storybook 10, histoires rendues dans Chromium, accessibilité bloquante,
+  lint) :
+  - passage des classes du projet à daisyUI (`daisyui.md`) : classe homonyme d'un même composant réécrite sur
+    daisyUI, d'un autre composant renommée (`toggle`, bouton bascule contre interrupteur), variantes renommées
+    (`btn-danger` → `btn-error`) ;
+  - thème daisyUI `app` pointé sur les tokens dans `theme.css` (`--color-base-100` sur `surface`, `--radius-field` sur
+    `radius-control`, `--size-field` tiré de `--spacing-control`), à côté des variables de shadcn ; `primary`,
+    `success`, `warning` et `info` restent les tokens eux-mêmes ; mode sombre par le bloc `.dark`, que daisyUI suit ;
+  - thèmes intégrés coupés (`@plugin "daisyui" { themes: false; }`, ajouté à la feuille d'entrée) : ils sont dans la
+    couche `base`, qui l'emporte sur les tokens, et `dark` s'appliquait dès que le système était en sombre ;
+  - `scaffold.mjs` pré-remplit les tokens avec le thème en place (thème intégré, recouvert par celui du projet ;
+    oklch converti en hexadécimal), sans les couleurs d'état d'un thème intégré, qui sont des fonds ;
+  - cascade : daisyUI range ses classes dans la couche des utilitaires, sa règle de base dans la sous-couche
+    `daisyui.l1.l2.l3`. Un réglage du projet s'écrit dans cette sous-couche, d'où les modificateurs (`btn-sm`) et le
+    JSX l'emportent encore. Une règle de `@layer components` sur une classe de daisyUI ne s'applique pas ;
+    `@utility btn`, que propose la documentation de daisyUI, écrase `btn-circle` et parfois le JSX
+    (`btn font-bold` restait en medium) ;
+  - `--border` est l'épaisseur des bordures chez daisyUI : en mode daisyUI, le thème de shadcn ne le déclare pas. Sa
+    couleur (`var(--color-line)`, hors couche) l'emporterait sur le thème daisyUI : `btn` passerait à 3px, `input`,
+    `checkbox` et `card-border` perdraient leur bordure. `--color-border` pointe sur le token dans `@theme inline`, que
+    `retoken.mjs` lit aussi (`border-border` → `border-line`) ;
+  - audit : ligne `daisyui` dans l'en-tête, et règles `daisyui-builtin-theme`, `daisyui-theme-value` (valeur propre
+    ou token redéclaré), `daisyui-theme-missing` (variable sans valeur), `daisyui-border` (couleur sous le nom
+    `--border`) et `daisyui-layer` (règle hors de la sous-couche de base, nom lu dans la version installée) ; les
+    classes de daisyUI sont connues des contrôles de la documentation ; `data-theme` est permis dans les sélecteurs ;
+  - `rehome.mjs` refuse une classe qui reprend un nom de daisyUI (`card`, `card-title`), signale l'équivalent de
+    daisyUI d'un composant de shadcn (`dialog` → `modal`) et laisse ses classes dans le JSX ;
+  - `retoken.mjs` réécrit les couleurs et rayons de daisyUI avec les tokens (`bg-base-100` → `bg-surface`,
+    `rounded-box` → `rounded-card`) ;
+  - gabarits à sections par bibliothèque de classes (`if:own`, `if:daisyui`) : conventions, mémoire, pages de
+    documentation, thème, feuille des classes ; modèle `templates/ui/button-daisyui/` (CVA → `btn`, `btn-error`,
+    `btn-square`) ; `versions.json` avec daisyUI 5.7.50.
+- `hardcoded-color` voit aussi une couleur en dur dans une variable dont le nom a des chiffres (`--color-base-100`).
+- `scaffold.mjs` ne prend plus la dépendance `storybook` pour le script du même nom.
+- `scaffold.mjs --specs` signale les tokens que lisent les feuilles du socle et qui manquent à la copie des specs
+  (`--color-overlay` de `classes/overlay.css`, absent des specs jusqu'à `specs-ui` 3.8.0) : le build échouait sur
+  `bg-overlay`, sans dire quoi ajouter aux specs.
+
 ## 1.1.0 · 07/11/2026
 
 - **Tokens des specs copiés, plus importés** : les specs du skill `specs-ui` vivent dans un dépôt de specs, à part, et l'application ne peut plus importer leur `tokens.css`. Elle en garde une copie, précédée d'un commentaire de provenance (dépôt, chemin, empreinte), qu'on ne modifie jamais à la main.

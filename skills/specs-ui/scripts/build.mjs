@@ -10,7 +10,8 @@
  *   ui/propositions.html            (facultatif) copié tel quel dans le site
  *   ui/sources/site.json            { "title", "heading", "intro" (texte ou liste de paragraphes), "artifact",
  *                                   "lots": ["connexion", …], "implementation": true (statut d'implémentation affiché),
- *                                   "assets": "../../apps/web/public/assets" (facultatif : dossier des images, voir plus bas) }
+ *                                   "assets": "../../apps/web/public/assets" (facultatif : dossier des images, voir plus bas),
+ *                                   "daisyui": "5.7.50" (facultatif : le produit emploie daisyUI, voir plus bas) }
  *   ui/sources/shared/*.html        <template> partagés par tous les lots : shells.html (coquilles),
  *                                   components.html (composants communs : en-tête de projet…)
  *   ui/sources/<lot>/lot.json       { "label", "title", "fonts", "screens": { "e13": "titre court" },
@@ -31,6 +32,9 @@
  * Statut d'implémentation (site.json → implementation) : todo (défaut), doing, done, gap. Le badge remplace
  * le badge « Nouveau » de chaque état, et l'avancement apparaît dans la navigation, l'index du lot et l'accueil.
  *
+ * daisyUI (site.json → daisyui, version exacte) : chaque page charge depuis le CDN les feuilles des composants de
+ * daisyUI qu'elle emploie, et un thème daisyUI pointé sur les tokens (scripts/daisyui.mjs).
+ *
  * Sortie : ui/site/index.html, site/<lot>/index.html, site/<lot>/eN.html, site/propositions.html.
  * Le build est déterministe (aucune date) : le site construit peut être commité avec ses sources.
  * Les liens « #e13b », « sessions.html#e13b » ou « propositions.html#retenu » sont réécrits vers la bonne page.
@@ -41,6 +45,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, copyFi
 import { join, dirname, resolve, relative, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyTypography } from './typography.mjs';
+import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiVersion } from './daisyui.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !existsSync(join(root, 'sources', 'site.json'))) {
@@ -50,6 +55,13 @@ if (!root || !existsSync(join(root, 'sources', 'site.json'))) {
 const read = (path, fallback = '') => (existsSync(path) ? readFileSync(path, 'utf8') : fallback);
 const site = JSON.parse(read(join(root, 'sources', 'site.json')));
 const outDir = join(root, 'site');
+let daisyui;
+try {
+  daisyui = daisyuiVersion(site);
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
+}
 
 // Template du skill : version, habillage du document, script final
 const template = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'specs.html'), 'utf8');
@@ -206,6 +218,9 @@ function usedTemplates(html, available) {
   return available.filter((t) => used.has(t.id));
 }
 function renderPage({ title, fonts, lotStyle = '', templates = [], body }) {
+  // daisyUI : seulement les feuilles des composants que la page emploie (maquettes et calques réutilisés)
+  const daisyuiFiles = daisyui ? daisyuiComponents(`${body}\n${templates.map((t) => t.html).join('\n')}`) : [];
+  const pageTheme = daisyui ? daisyuiTheme(theme) : theme;
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -217,11 +232,11 @@ function renderPage({ title, fonts, lotStyle = '', templates = [], body }) {
 <title>${title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-${fonts ? `<link rel="stylesheet" href="${fonts}">\n` : ''}<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
+${fonts ? `<link rel="stylesheet" href="${fonts}">\n` : ''}${daisyuiFiles.length ? `${daisyuiHead(daisyui, daisyuiFiles)}\n` : ''}<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <style type="text/tailwindcss">
   /* ===== 1. Identité du produit : tokens.css ===== */
-  ${theme.replace(/\n/g, '\n  ')}
+  ${pageTheme.replace(/\n/g, '\n  ')}
 ${lotStyle ? `\n  /* ===== CSS propre au lot (style.css) ===== */\n  ${lotStyle.replace(/\n/g, '\n  ')}\n` : ''}
   ${chrome}
 </style>

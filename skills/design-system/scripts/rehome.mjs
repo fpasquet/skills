@@ -14,6 +14,9 @@
  *   les valeurs arbitraires connues, commentaire TODO pour le reste ; règle prefers-reduced-motion si ça s'anime ;
  * - la feuille est ajoutée à components.css.
  *
+ * Avec daisyUI, ses classes restent dans le JSX, et le script refuse d'écrire une classe qui reprend un nom de daisyUI
+ * (`card`, `card-title`) : dans @layer components, elle perdrait contre daisyUI et les deux styles se mêleraient.
+ *
  * Le résultat est un premier jet à relire : noms des classes et des variantes (default → primary, destructive →
  * danger), couleurs de shadcn à remplacer par les tokens si besoin, TODO, textes à traduire, histoire à écrire.
  *
@@ -23,7 +26,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
-import { cssImports, detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, scaleChecker, shadcnTokenizer, walk } from './project.mjs';
+import { cssImports, daisyuiCatalog, detectProject, isDir, kebab, lintConfigText, parseArgs, pascal, rel, scaleChecker, shadcnTokenizer, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run', 'keep-classes']);
 const [appDir, name] = positional;
@@ -32,6 +35,8 @@ if (!appDir || !name || !isDir(appDir)) {
   process.exit(2);
 }
 const project = detectProject(appDir, options);
+// Classes de daisyUI : elles restent dans le JSX, et aucune classe du composant ne reprend leur nom
+const daisyui = project.classes === 'daisyui' ? daisyuiCatalog(project) : null;
 // Échelle d'espacement restreinte (--spacing-*: initial) : plus de variable --spacing, donc plus de --spacing(n)
 const readIf = (file) => (file && existsSync(file) ? readFileSync(file, 'utf8') : '');
 const spacingRestricted = /--spacing-\*\s*:\s*initial/.test(`${readIf(project.tokens)}\n${readIf(project.theme)}`);
@@ -345,6 +350,7 @@ for (const queue = project.entry ? [project.entry] : [], seen = new Set(); queue
 const isMarker = (token) =>
   /^(group|peer)(\/[\w-]+)?$|^(not-)?prose$/.test(token) ||
   projectClasses.has(token) ||
+  Boolean(daisyui?.installed && daisyui.has(token)) ||
   lintIgnores.some((pattern) => {
     try {
       return !/[[\]:]/.test(token) && new RegExp(`^(?:${pattern})$`).test(token);
@@ -759,8 +765,38 @@ for (const file of searchRoots.flatMap((dir) => walk(dir, ['.tsx', '.jsx', '.ts'
   }
 }
 
-// ---------- Écriture ----------
+// ---------- daisyUI : noms déjà pris ----------
+// Composants de shadcn qui ont un équivalent dans daisyUI : à écrire sur ses classes plutôt qu'à ranger
+const DAISYUI_EQUIVALENTS = {
+  accordion: 'collapse', alert: 'alert', 'alert-dialog': 'modal', avatar: 'avatar', badge: 'badge', breadcrumb: 'breadcrumbs',
+  button: 'btn', card: 'card', checkbox: 'checkbox', collapsible: 'collapse', dialog: 'modal', drawer: 'drawer',
+  'dropdown-menu': 'dropdown, menu', input: 'input', kbd: 'kbd', 'native-select': 'select', pagination: 'join, btn',
+  progress: 'progress', 'radio-group': 'radio', separator: 'divider', sheet: 'drawer', skeleton: 'skeleton', slider: 'range',
+  spinner: 'loading', switch: 'toggle', table: 'table', tabs: 'tabs, tab', textarea: 'textarea', tooltip: 'tooltip',
+};
 const relFolder = rel(project, folder);
+if (daisyui && !options['keep-classes']) {
+  // Classes que le script a nommées (racine, parties, variantes, modificateurs)
+  const produced = new Set(classMap.map(([, cls]) => cls).filter((cls) => !cls.includes('<')));
+  const taken = [...produced].filter((cls) => daisyui.has(cls));
+  const equivalent = DAISYUI_EQUIVALENTS[base];
+  if (taken.length) {
+    console.error(
+      `Class names of daisyUI: ${taken.join(', ')}. In @layer components they lose to daisyUI (utilities layer), and both styles mix.`,
+    );
+    console.error(
+      equivalent
+        ? `daisyUI has this component (${equivalent}): write ${pascal(base)} on its classes (references/daisyui.md, templates/ui/button-daisyui/), or rerun with --class <prefix> to keep the design of shadcn under classes of the project.`
+        : 'Rerun with --class <prefix>, a prefix that daisyUI does not use.',
+    );
+    if (!options['dry-run']) process.exit(1);
+  } else if (equivalent) {
+    console.log(`daisyUI has an equivalent (${equivalent}): prefer it unless the behaviour of this component is needed (references/daisyui.md).\n`);
+  }
+  if (!daisyui.installed) console.log('daisyUI class sheets not found (package missing, or daisyUI 4): its class names are guessed from their roots.\n');
+}
+
+// ---------- Écriture ----------
 if (options['dry-run']) {
   for (const [file, content] of output) console.log(`\n=== ${relFolder}/${file}\n${content}`);
 } else {

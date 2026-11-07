@@ -62,6 +62,8 @@ Le `.gitignore` du dépôt écarte ce qui se reconstruit :
 | `docs/requirements/` : règles et critères par lot, exigences non fonctionnelles, architecture, stack | cahier des charges | `export.mjs` du skill `requirements-doc` (étape 6) |
 | `<styles>/tokens.css` : copie des tokens, avec sa provenance | `<projet>/ui/tokens.css` | `tokens.mjs` du skill `design-system` |
 
+Des specs qui déclarent daisyUI (`sources/site.json` → `daisyui`) ne donnent rien de plus à copier : `scaffold.mjs --specs` du skill `design-system` en déduit les classes de daisyUI et installe la même version, et le thème daisyUI de l'application pointe sur la copie des tokens.
+
 Rien d'autre : ni maquettes, ni prototype, ni chiffrage. Ces fichiers sont générés et ne se modifient jamais dans l'application. `trace.mjs --strict` (sur l'export) et l'audit du design system (sur les tokens) signalent un fichier modifié à la main.
 
 Les ADR que l'équipe écrit pendant les développements restent dans l'application, hors du dossier de l'export. Un ADR qui remplace une décision DT du cahier des charges s'y reporte (`requirements-doc`, « Maintenir pendant les développements »).

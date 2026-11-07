@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.6.0 · 07/11/2026
+
+- **Specs sous daisyUI** (`site.json` des specs → `daisyui`) : `build.mjs` charge les mêmes feuilles de composants et le même thème pointé sur les tokens que les specs, en Tailwind compilé comme en mode CDN (rendus identiques). `scripts/daisyui.mjs` est la copie du module de `specs-ui`. `alpine.md` §9 : câbler une fenêtre (`:class="open && 'modal-open'"`), un menu déroulant, un onglet (`:aria-selected`) et une case (`:aria-checked`) en gardant les classes de la maquette.
+
 ## 2.5.0 · 07/11/2026
 
 - **Dépôt de specs** : le prototype vit avec les specs dans un dépôt séparé du code de l'application (`references/depot-specs.md` du skill `specs-ui`), et ne va jamais dans le dépôt de l'application. `<projet>` désigne le dossier du projet dans les consignes et les messages des scripts ; un dossier `specs/` dans l'application fonctionne toujours.

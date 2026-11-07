@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.7.0"
+  version: "3.8.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -114,7 +114,8 @@ Les captures de vérification vont dans un dossier temporaire (le scratchpad de 
 | `templates/specs.html` | Squelette d'un document de specs : habillage, script, deux écrans d'exemple |
 | `templates/propositions.html` | Page de comparaison : trois dispositions, trois thèmes, combinables en direct |
 | `templates/tokens.css`, `templates/contexte.md` | Fichier d'identité, mémoire du projet |
-| `scripts/build.mjs` | Construit le site depuis les sources : pages, liens entre pages, tokens, coquilles, habillage, typographie ; liste les pages modifiées |
+| `scripts/build.mjs` | Construit le site depuis les sources : pages, liens entre pages, tokens, coquilles, habillage, typographie, daisyUI s'il est déclaré ; liste les pages modifiées |
+| `scripts/daisyui.mjs` | daisyUI dans les pages (`site.json` → `daisyui`) : feuilles des composants employés, thème pointé sur les tokens |
 | `scripts/split.mjs` | Crée un lot (`--new <lot> --root <projet>/ui`) ou découpe un document existant en sources |
 | `scripts/capture.mjs` | Contrôles d'un fichier ou de tout le site ; images : `--sheet`, `--frames`, `--thumbnails`, `--sections`, `--themes`, `--ids` |
 | `scripts/check-contrast.mjs` | Contrôle WCAG AA des tokens |
@@ -127,7 +128,7 @@ Les captures de vérification vont dans un dossier temporaire (le scratchpad de 
 | `scripts/typography.mjs` | Typographie française (appliquée automatiquement par `build.mjs`) |
 | `scripts/export-design-system.mjs` | (Facultatif) Prépare un dossier Design System Claude Design : tokens, fondations, composants, README |
 | `scripts/design-sync-package.mjs` | (Facultatif) Crée le paquet « tokens seuls » envoyé à Claude Design par `/design-sync` |
-| `templates/design-system.html` | Catalogue de composants exporté vers le Design System |
+| `templates/design-system.html`, `design-system-daisyui.html` | Catalogue de composants exporté vers le Design System (le second pour un produit sous daisyUI) |
 | `templates/design-sync/` | Modèles du paquet : `build.mjs`, brouillon de conventions, notes de synchronisation |
 
 Les templates contiennent un produit fictif (« Orbe », demandes clients) qui ne sert qu'à montrer le format : en remplacer tout le contenu.
@@ -143,7 +144,7 @@ Les templates contiennent un produit fictif (« Orbe », demandes clients) qui n
    - `build.mjs <projet>/ui`, puis contrôle avec `capture.mjs <projet>/ui/site <tmp>` ;
    - rédiger `CONTEXTE.md` en extrayant le texte des points ouverts et des journaux, plutôt qu'en lisant les pages ;
    - publier le site comme un nouvel artifact, et noter les anciens artifacts comme remplacés.
-3. **Origine de l'identité**, déduite de la conversation : **à définir** → étape 1A ; **site ou code existant** → étape 1B ; **fournie** (charte, design system, tokens) → `tokens.css` directement, puis étape 2. Si la personne dispose d'un **Design System Claude Design** et souhaite partir de celui-ci (c'est facultatif, le proposer seulement s'il existe), le lire (outil Artifact : `list` avec le type « Design System », puis `read` du README et des tokens) et le traduire en `tokens.css` et en coquilles : l'étape 1A devient inutile.
+3. **Origine de l'identité**, déduite de la conversation : **à définir** → étape 1A ; **site ou code existant** → étape 1B ; **fournie** (charte, design system, tokens) → `tokens.css` directement, puis étape 2. Un produit sous daisyUI se déclare dans `sources/site.json` (`"daisyui": "<version>"`) : les maquettes emploient ses classes (`tailwind.md` §9). Si la personne dispose d'un **Design System Claude Design** et souhaite partir de celui-ci (c'est facultatif, le proposer seulement s'il existe), le lire (outil Artifact : `list` avec le type « Design System », puis `read` du README et des tokens) et le traduire en `tokens.css` et en coquilles : l'étape 1A devient inutile.
 4. **Besoin fonctionnel** : objectif, utilisateurs, règles, documents fournis. Un brief qui s'appuie sur une bibliothèque ou une documentation se lit avant de concevoir, puis se traduit en vocabulaire fonctionnel (`redaction-specs.md` §1). La bibliothèque n'apparaît jamais dans les specs.
 
 S'il manque des informations, les demander **toutes dans un seul message**. Si le brief suffit, ne rien demander : écrire les hypothèses et produire. Sans nom de produit, en choisir un provisoire et le signaler.
@@ -163,7 +164,7 @@ Un choix composite se reformule précisément avant d'être appliqué. S'il rest
 
 ## Étape 1B · Reprendre un site existant
 
-Suivre `references/site-existant.md` : `extract-identity.mjs <url> --screenshots <projet>/ui/captures` (ou un dossier de code), croiser le rapport avec les captures, écrire `tokens.css` avec les valeurs exactes et leur origine, puis reproduire une page en **E0 · Existant** à côté de sa capture et faire valider la fidélité. Si l'emplacement de la fonctionnalité est incertain, proposer deux ou trois dispositions d'intégration.
+Suivre `references/site-existant.md` : `extract-identity.mjs <url> --screenshots <projet>/ui/captures` (ou un dossier de code), croiser le rapport avec les captures, écrire `tokens.css` avec les valeurs exactes et leur origine (site sous daisyUI : correspondance de son thème et déclaration dans `site.json`, `site-existant.md`), puis reproduire une page en **E0 · Existant** à côté de sa capture et faire valider la fidélité. Si l'emplacement de la fonctionnalité est incertain, proposer deux ou trois dispositions d'intégration.
 
 ## Étape 2 · Inventaire des écrans
 
@@ -278,7 +279,7 @@ Après une évolution de l'identité ou des composants partagés : relancer l'ex
 
 ## Étape 6 · Passer aux développements
 
-Vérifier qu'aucun point ouvert ne bloque, activer le statut d'implémentation (étape 7), proposer l'export Design System si la personne ne s'est pas encore prononcée (voir l'option ci-dessus), proposer l'inventaire des composants récurrents, et rappeler que `tokens.css` se copie tel quel dans l'application, après `@import "tailwindcss";` : `tokens.mjs` du skill `design-system` pose et recopie cette copie avec sa provenance. Sur demande, découper en stories avec les annotations comme critères d'acceptation.
+Vérifier qu'aucun point ouvert ne bloque, activer le statut d'implémentation (étape 7), proposer l'export Design System si la personne ne s'est pas encore prononcée (voir l'option ci-dessus), proposer l'inventaire des composants récurrents, et rappeler que `tokens.css` se copie tel quel dans l'application, après `@import "tailwindcss";` : `tokens.mjs` du skill `design-system` pose et recopie cette copie avec sa provenance. Des specs qui déclarent daisyUI font aussi passer le design system de l'application aux classes de daisyUI (`scaffold.mjs --specs`). Sur demande, découper en stories avec les annotations comme critères d'acceptation.
 
 Pour faire tester les parcours ou les montrer avant de développer, le skill `prototype-ui` transforme ces specs en prototype cliquable (mêmes écrans, données simulées, scénarios de test). Pour lancer les développements, le skill `requirements-doc` en tire le cahier des charges de l'équipe (specs par lot avec critères d'acceptation, architecture, stack, infrastructure, lots et estimations).
 

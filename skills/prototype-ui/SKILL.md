@@ -10,7 +10,7 @@ description: >
   sans prononcer le mot « prototype ».
 metadata:
   author: fpasquet
-  version: "2.5.0"
+  version: "2.6.0"
 ---
 
 # Prototype UI à partir des specs
@@ -72,6 +72,8 @@ node <skill>/scripts/scaffold.mjs --specs <projet>/ui --out <projet>/prototype
 node <skill>/scripts/build.mjs <projet>/prototype
 node <skill>/scripts/drift.mjs <projet>/prototype --mark   # point de départ du suivi des specs
 ```
+
+L'identité vient des specs : `tokens.css`, polices, et daisyUI quand leur `site.json` le déclare (mêmes feuilles et même thème que les specs ; câblage de ses calques : `references/alpine.md` §9).
 
 Le scaffold écrit :
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.8.0 · 7 nov. 2026
+
+- **Produit sous daisyUI** : `sources/site.json` → `"daisyui": "5.7.50"` (version exacte), et les maquettes emploient ses classes (`btn btn-primary`, `badge badge-soft badge-success`, `tabs` > `tab`), que les développeurs reprennent telles quelles (`tailwind.md` §9). Éprouvé sur un projet jetable (écrans, prototype, version autonome, export Claude Design) et en non-régression sur un projet réel de 34 pages, identique octet pour octet sans la déclaration.
+  - `build.mjs` ajoute à chaque page les seules feuilles des composants qu'elle emploie, depuis le CDN (repérées par leur classe racine : `list-disc` ou `table-auto` ne chargent rien), jamais `daisyui.css`, dont les thèmes intégrés, rangés dans la couche base, écraseraient les tokens. L'ordre des couches de Tailwind est déclaré avant ces feuilles.
+  - Thème daisyUI pointé sur les tokens, avec la même correspondance que le skill `design-system` (`base-100` → `surface`, `error` → `danger`, `size-field` tiré de `spacing-control`). Les tokens passent en `@theme static` : sans lui, Tailwind n'émettait pas `--color-primary`, que seul daisyUI lit, et `btn-primary` restait gris.
+  - Calques dans le cadre : `modal modal-open absolute` (`modal-box` seule reste invisible, `modal` seule couvre la page de specs), `dropdown dropdown-open`. Les états passent par ARIA (`aria-checked` sur un `span`, `aria-selected` sur l'onglet).
+  - `export-design-system.mjs` charge daisyUI dans les aperçus et exporte le catalogue `templates/design-system-daisyui.html` ; `bundle.mjs` intègre les feuilles du CDN (jsdelivr, unpkg) : la version autonome s'ouvre sans réseau.
+  - `extract-identity.mjs` repère daisyUI (au lieu de « Bootstrap » sur `btn`) et donne les variables du thème appliqué, en hexadécimal, avec le token correspondant : thème intégré du paquet, blocs compilés `[data-theme=…]` (le bloc sombre de `prefers-color-scheme` écarté), thème du projet. `site-existant.md` explique la correspondance, et le piège des couleurs d'état, qui sont des fonds chez daisyUI.
+- Couleurs oklch lues par `extract-identity.mjs` (Tailwind 4, daisyUI 5), converties en hexadécimal.
+- Token `--color-overlay` (voile des fenêtres modales, `bg-overlay`) dans le vocabulaire : le design system de l'application en a besoin, et la copie des tokens des specs le faisait échouer au build.
+- `export-design-system.mjs` : le bouton « Retours » de relecture n'apparaît plus, sans style, dans chaque carte exportée.
+
 ## 3.7.0 · 7 nov. 2026
 
 - **Dépôt de specs** : les specs, le prototype et le cahier des charges vivent dans un dépôt git séparé du code de l'application, dont elles noyaient les PR. Ce dépôt est dédié à un projet (livrables à sa racine, `<projet>` vaut `.`) ou partagé entre plusieurs projets (un dossier par projet), au choix de la personne. L'application n'en reçoit que l'export du cahier des charges (`export.mjs` du skill `requirements-doc`) et une copie des tokens (`tokens.mjs` du skill `design-system`).

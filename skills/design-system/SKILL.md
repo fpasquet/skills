@@ -2,17 +2,17 @@
 name: design-system
 description: >
   Crée, maintient ou migre le design system d'une application React avec Tailwind CSS v4 : tokens en source
-  unique, thème shadcn/ui pointé sur les tokens, classes sémantiques (btn, btn-primary, card) posées par les
-  variantes CVA des composants shadcn/ui sur Radix ou Base UI, sans data-slot, un dossier par composant avec son CSS et
-  son histoire, Storybook (pages Tokens et Classes, accessibilité bloquante) et lint des classes (ni valeur
-  arbitraire ni couleur de la palette). Tire les tokens et les classes du code existant, range et réécrit les
-  composants ajoutés par la CLI de shadcn, et mesure l'écart aux conventions par un audit. Utiliser dès que la
-  personne parle de design system, de tokens, de Storybook, de shadcn/ui, de Radix, de Base UI, de classes sémantiques,
+  unique, thème shadcn/ui et daisyUI pointé sur les tokens, classes sémantiques (btn, btn-primary, card) du projet
+  ou de daisyUI posées par les variantes CVA des composants (shadcn/ui sur Radix ou Base UI), sans data-slot, un
+  dossier par composant, Storybook (pages Tokens et Classes, accessibilité bloquante) et lint des classes (ni valeur
+  arbitraire ni couleur de la palette). Tire les tokens et les classes du code existant, range les composants
+  ajoutés par la CLI de shadcn, et mesure l'écart aux conventions par un audit. Utiliser dès que la personne parle
+  de design system, de tokens, de Storybook, de shadcn/ui, de daisyUI, de Radix, de Base UI, de classes sémantiques,
   de thème ou de mode sombre, d'uniformiser l'interface, de migrer des styles (Tailwind v3, CSS modules,
   bibliothèque de composants) ou d'ajouter un composant d'interface partagé, même sans dire « design system ».
 metadata:
   author: fpasquet
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Design system React : tokens, classes sémantiques, shadcn/ui, Storybook
@@ -22,6 +22,8 @@ Ce skill met en place et fait vivre le design system d'une application React (Ne
 1. des **tokens** en source unique (bloc `@theme` de Tailwind v4) ;
 2. un **thème shadcn/ui** pointé sur ces tokens, et des **classes sémantiques** (`btn`, `btn-primary`, `card`) dans `@layer components`, le CSS de chaque composant à côté de lui ;
 3. des **composants shadcn/ui sur Radix ou Base UI** (style `base-*` de `components.json`), dont les variantes CVA posent ces classes : `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
+
+**Avec daisyUI**, les classes sémantiques sont les siennes, réglées par un thème daisyUI pointé sur les mêmes tokens, et les composants React posent ses classes (`btn`, `btn-primary`, `card`). Le reste ne change pas. Le mode est repéré seul (`@plugin "daisyui"`), ou choisi par `scaffold.mjs --classes daisyui` : lire `references/daisyui.md` avant le premier changement.
 
 Storybook documente le tout : pages Tokens et Classes, une histoire par état, et un contrôle d'accessibilité qui bloque. Le lint garde les classes propres.
 
@@ -60,6 +62,7 @@ Deux rédacteurs ne touchent jamais les mêmes fichiers. **Seul le modèle princ
 | Ajouter ou réécrire un composant (étape 3) | `references/components.md`, `templates/ui/button/` (modèle) |
 | Histoires et pages de documentation (étape 4) | `references/storybook.md` |
 | Migration | `references/migration.md` |
+| Projet avec daisyUI (thème, cascade, composants) | `references/daisyui.md`, `templates/ui/button-daisyui/` (modèle) |
 | Toute modification de l'interface | le document de conventions du projet |
 
 ## Étape 0 · Repérer et choisir le mode
@@ -72,29 +75,30 @@ Deux rédacteurs ne touchent jamais les mêmes fichiers. **Seul le modèle princ
    node <skill>/scripts/audit.mjs <app>
    ```
 
-   L'en-tête dit ce qui est en place : feuille d'entrée, tokens, thème, classes, composants, Storybook, lint, shadcn. Le reste liste les écarts aux conventions.
+   L'en-tête dit ce qui est en place : feuille d'entrée, tokens, thème, classes, composants, Storybook, lint, shadcn, daisyUI. Le reste liste les écarts aux conventions.
 4. Proposer le mode avec **AskUserQuestion**, en recommandant celui qui découle de l'audit :
    - **créer** : ni tokens ni classes sémantiques, des couleurs et des listes d'utilitaires répétées dans le JSX ;
    - **migrer** : un design system existe, mais suit d'autres conventions (Tailwind v3, shadcn d'origine avec ses utilitaires et ses `data-slot`, CSS Modules, styled-components, bibliothèque de composants) ;
    - **maintenir** : le socle suit déjà ces conventions.
 5. Un projet qui a des specs du skill `specs-ui` a déjà ses tokens. Les specs vivent dans un dépôt de specs, à part : l'application en garde une **copie** avec sa provenance (`tokens.mjs`), qu'on ne modifie jamais à la main. Une couleur se change dans les specs, puis se recopie. Ancienne disposition, `specs/ui/tokens.css` dans le dépôt de l'application : il est importé tel quel, jusqu'au déplacement des specs.
+6. Les classes : un projet qui utilise daisyUI garde ses classes (mode daisyUI, ligne `daisyui` de l'audit). Pour un nouveau design system, demander avec **AskUserQuestion** si les classes sont celles du projet (recommandé : maîtrise complète, à la daisyUI) ou celles de daisyUI (moins de CSS à écrire, mise en forme imposée par daisyUI).
 
 ## Étape 1 · Poser le socle (créer, migrer)
 
 ```sh
-node <skill>/scripts/scaffold.mjs <app> --mode create   # ou --mode migrate ; --dry-run pour voir avant
+node <skill>/scripts/scaffold.mjs <app> --mode create   # ou --mode migrate ; --classes daisyui ; --dry-run pour voir avant
 ```
 
 Le script écrit ce qui manque et garde tout fichier existant :
 
-- tokens, si l'application n'en a pas ;
-- `theme.css`, `components.css` et `utilities.css` ;
+- tokens, si l'application n'en a pas (avec daisyUI, pré-remplis par son thème en place) ;
+- `theme.css` (avec daisyUI, son thème pointé sur les tokens), `components.css` et `utilities.css` ;
 - Storybook : configuration et pages Introduction, Tokens et Classes ;
 - le projet vitest des histoires ;
 - le fragment ESLint ;
 - le document de conventions et la mémoire.
 
-Il complète aussi la feuille d'entrée par les `@import` manquants. Enfin, il affiche les dépendances à installer (versions testées ensemble, `templates/versions.json`), les scripts à ajouter au `package.json` et ce qui reste à faire.
+Il complète aussi la feuille d'entrée par les `@import` manquants, et par `@plugin "daisyui" { themes: false; }` en mode daisyUI. Enfin, il affiche les dépendances à installer (versions testées ensemble, `templates/versions.json`), les scripts à ajouter au `package.json` et ce qui reste à faire.
 
 Ensuite :
 
@@ -108,7 +112,7 @@ Détails, Next.js ou Vite, CI : `references/setup.md`.
 ## Étape 2 · Tokens
 
 - **À partir de l'existant** : `audit.mjs <app> --rule hardcoded-color --limit 0 --json`, puis `--rule palette-class`. Regrouper les valeurs par usage (fond, surface, bordure, texte, texte secondaire, marque, états), et proposer les tokens du vocabulaire commun (`canvas`, `surface`, `line`, `ink`, `muted`, `primary`, `success`…) avec leur valeur actuelle. Faire valider avec **AskUserQuestion** les fusions de valeurs proches et les couleurs d'état.
-- **À partir des specs** : `scaffold.mjs <app> --specs <projet>/ui` copie les tokens des specs dans `<styles>/tokens.css`, en tête un commentaire de provenance (dépôt, chemin, empreinte). Ensuite :
+- **À partir des specs** : `scaffold.mjs <app> --specs <projet>/ui` copie les tokens des specs dans `<styles>/tokens.css`, en tête un commentaire de provenance (dépôt, chemin, empreinte). Des specs qui déclarent daisyUI (`sources/site.json` → `daisyui`) font passer aux classes de daisyUI, à leur version. Un token que lisent les feuilles du socle et qui manque à la copie (`--color-overlay`) est signalé : il s'ajoute aux specs, jamais à la copie. Ensuite :
 
   ```sh
   node <skill>/scripts/tokens.mjs <app> --from <projet>/ui            # recopie après une évolution des specs
@@ -116,6 +120,7 @@ Détails, Next.js ou Vite, CI : `references/setup.md`.
   ```
 
   Le script liste les tokens ajoutés et retirés. Il refuse de remplacer un fichier qui n'est pas une copie des specs, ou une copie modifiée à la main, sans `--force` : comparer d'abord. `<app>` et `<projet>/ui` se lisent depuis le dossier courant, quel qu'il soit. Le chemin du clone du dépôt de specs est noté dans la mémoire par `scaffold.mjs --specs` ; sans design system, l'en-tête de la copie donne le dépôt et le chemin source. Une feuille d'entrée qui importait encore `specs/ui/tokens.css` (ancienne disposition) importe la copie après le premier passage.
+- **Avec daisyUI** : les couleurs de son thème en place deviennent les tokens (pré-remplies par `scaffold.mjs`), puis les thèmes intégrés se coupent et le thème du projet se supprime : `theme.css` pointe daisyUI sur les tokens (`references/daisyui.md`).
 - **Toujours** :
   - une ligne par token, en hexadécimal, avec un commentaire d'usage (la page Tokens les affiche) ;
   - des échelles restreintes : les noms de Tailwind (`p-4`, `text-sm`), famille remise à zéro puis seuls les pas retenus redéclarés, jamais une échelle nommée (`p-m`) ;
@@ -129,7 +134,9 @@ Puis remplacer les couleurs dans le code, lot par lot (étape 5). Détails, noms
 
 ## Étape 3 · Composants
 
-**Avant d'écrire un bloc**, chercher s'il existe dans `<ui>` et `<components>`, puis dans le catalogue de shadcn/ui : un contrôle de formulaire passe toujours par son composant, et un champ par `Field` (`references/components.md`, « Champs de formulaire »).
+**Avant d'écrire un bloc**, chercher s'il existe dans `<ui>` et `<components>`, puis dans daisyUI s'il est en place, puis dans le catalogue de shadcn/ui : un contrôle de formulaire passe toujours par son composant, et un champ par `Field` (`references/components.md`, « Champs de formulaire »).
+
+**Avec daisyUI**, un composant que daisyUI a (bouton, carte, onglets, fenêtre…) s'écrit sur ses classes, avec le comportement du HTML natif ou d'une primitive Radix ou Base UI (modèle `templates/ui/button-daisyui/`, tableau des composants de `references/daisyui.md`). Un réglage de ses classes passe par le thème, sinon par la sous-couche de base de daisyUI, jamais par `@layer components` ni `@utility`. Seul ce que daisyUI n'a pas vient de shadcn, comme ci-dessous ; `rehome.mjs` refuse alors une classe qui reprend un nom de daisyUI.
 
 Pour un composant de shadcn :
 
@@ -177,7 +184,7 @@ Détails : `references/storybook.md`.
 ## Étape 5 · Migrer (mode migrer)
 
 1. Faire l'inventaire avec `audit.mjs <app> --json`, et lister les sources à migrer (`references/migration.md`).
-2. Découper en **lots** (lint en `warn`, histoires pas encore migrées en `a11y: { test: 'todo' }`, jusqu'au dernier) : socle et tokens, puis composants de `<ui>`, puis composants partagés, puis une fonctionnalité à la fois. Écrire le plan dans la mémoire. Depuis shadcn d'origine, le lot des tokens renomme aussi les fonds `bg-muted` en `bg-surface-alt` dans tout le code qui importe le thème. Proposer aussi de retirer les composants que rien n'importe (`references/migration.md`).
+2. Découper en **lots** (lint en `warn`, histoires pas encore migrées en `a11y: { test: 'todo' }`, jusqu'au dernier) : socle et tokens, puis composants de `<ui>`, puis composants partagés, puis une fonctionnalité à la fois. Écrire le plan dans la mémoire. Depuis shadcn d'origine, le lot des tokens renomme aussi les fonds `bg-muted` en `bg-surface-alt` dans tout le code qui importe le thème. Depuis daisyUI, il coupe les thèmes intégrés et réécrit ses couleurs avec `retoken.mjs` (`bg-base-100` → `bg-surface`). Proposer aussi de retirer les composants que rien n'importe (`references/migration.md`).
 3. Pour chaque lot, dans un commit qui compile, passe le lint du lot et garde les histoires vertes :
    - réécrire le lot ;
    - lancer `eslint <dossier>`, puis `audit.mjs <app> --rule …` ;
@@ -192,11 +199,11 @@ Chaque ajout se fait dans un seul changement, qui contient le code, sa feuille, 
 - **une classe** : la feuille du composant, ou un fichier de `classes/` importé par `components.css`, plus une section de la page Classes ;
 - **un composant de shadcn** : étape 3 ;
 - **une variante** : on ajoute à l'API de shadcn, on n'en retire rien ;
-- **du code écrit avec les classes de shadcn** (`bg-card`, `text-muted-foreground`) : `retoken.mjs <app>` les réécrit avec les tokens, puis le lint remet l'ordre des classes ;
+- **du code écrit avec les classes de shadcn ou les couleurs de daisyUI** (`bg-card`, `text-muted-foreground`, `bg-base-100`) : `retoken.mjs <app>` les réécrit avec les tokens, puis le lint remet l'ordre des classes ;
 - **un composant de l'application devenu générique** (sans état, sans routeur ni traductions) : le copier à plat dans `<ui>`, puis `rehome.mjs`. Ce qui tient à l'application devient une prop (libellé, rendu des liens, `locale`) et l'application garde un adaptateur ; un déclencheur de champ transmet `id` et `aria-*` à l'élément que le libellé doit nommer. Ses tests suivent le composant ;
 - **un fichier qui contient plusieurs composants** : `rehome.mjs <app> <chemin> --ui src --keep-classes` le découpe (un fichier par composant, l'`index.ts` garde l'API d'origine), sur place si le fichier est déjà dans son dossier ;
 - **une mise à jour de shadcn** : relancer la CLI. Comme le dossier existe, `rehome.mjs` refuse et laisse le fichier à plat pour la comparaison : reporter les changements utiles à la main, puis le supprimer ;
-- **une montée de version** (Storybook, Tailwind, lint) : sur une branche, en vérifiant le build de Storybook, les histoires et le lint, puis noter les versions dans la mémoire.
+- **une montée de version** (Storybook, Tailwind, lint, daisyUI) : sur une branche, en vérifiant le build de Storybook, les histoires, le lint et l'audit (pour daisyUI, sa sous-couche de base et les variables de son thème), puis noter les versions dans la mémoire.
 
 ## Contrôler avant de rendre la main
 
@@ -214,10 +221,10 @@ Dire à la personne ce qui a été contrôlé et ce qui ne l'a pas été. Une su
 
 | Fichier | Rôle |
 |---|---|
-| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, pas hors de l'échelle, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`, configuration de `cn`, copie des tokens des specs modifiée), avertissements, suggestions ; `--json`, `--strict` |
-| `scripts/scaffold.mjs` | Socle sans rien écraser : tokens, thème, classes, Storybook, vitest, ESLint, conventions, mémoire ; dépendances à installer |
+| `scripts/audit.mjs` | État des lieux : emplacements, erreurs (couleurs en dur, palette, valeurs arbitraires, pas hors de l'échelle, `data-*`, feuilles non importées, sélecteurs en double, `bg-muted`, configuration de `cn`, copie des tokens des specs modifiée, thème et cascade de daisyUI), avertissements, suggestions ; `--json`, `--strict` |
+| `scripts/scaffold.mjs` | Socle sans rien écraser : tokens, thème, classes, Storybook, vitest, ESLint, conventions, mémoire ; dépendances à installer ; `--classes daisyui` |
 | `scripts/rehome.mjs` | Composant de shadcn rangé (un fichier par sous-composant, `index.ts`), classes sémantiques et premier jet du CSS ; avec `--keep-classes`, découpe aussi un fichier d'application qui contient plusieurs composants |
-| `scripts/retoken.mjs` | Classes de shadcn réécrites avec les tokens dans le code d'une application (`bg-card` → `bg-surface`), d'après `theme.css` ; peut être relancé |
+| `scripts/retoken.mjs` | Classes de shadcn et couleurs de daisyUI réécrites avec les tokens dans le code d'une application (`bg-card`, `bg-base-100` → `bg-surface`), d'après `theme.css` ; peut être relancé |
 | `scripts/tokens.mjs` | Copie des tokens des specs (dépôt de specs) avec leur provenance ; `--check` : copie en retard ou modifiée à la main |
 | `scripts/project.mjs` | Repérage des emplacements (application, ou paquet de composants d'un monorepo), partagé par les scripts |
 | `references/setup.md` | Mise en place : Next.js ou Vite, Storybook, vitest, ESLint, polices, messages, CI |
@@ -225,7 +232,9 @@ Dire à la personne ce qui a été contrôlé et ce qui ne l'a pas été. Une su
 | `references/components.md` | Relecture d'un composant rangé, composants maison, classes ou composant, animations, textes |
 | `references/storybook.md` | Titres et sections, histoires par état, pages d'écran, pages de documentation, accessibilité |
 | `references/migration.md` | Migrer depuis shadcn d'origine, Tailwind v3, CSS Modules, styled-components ou une bibliothèque de composants |
+| `references/daisyui.md` | daisyUI : mise en place, thème pointé sur les tokens, cascade (où écrire une règle), composants, lint, montée de version |
 | `templates/rule.md`, `templates/memory.md` | Document de conventions et mémoire posés dans le projet |
 | `templates/styles/`, `templates/storybook/`, `templates/docs/`, `templates/eslint/` | Gabarits du socle |
 | `templates/ui/button/` | Modèle de composant : `button.tsx` (CVA → classes), `button.css`, histoire, `index.ts` |
-| `templates/versions.json` | Versions testées ensemble (CLI de shadcn, Storybook, Tailwind, vitest, lint) |
+| `templates/ui/button-daisyui/` | Le même modèle sur les classes de daisyUI : réglages de base dans sa sous-couche |
+| `templates/versions.json` | Versions testées ensemble (CLI de shadcn, Storybook, Tailwind, vitest, lint, daisyUI) |

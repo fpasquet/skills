@@ -8,7 +8,8 @@
  *
  * Produit un rapport Markdown (ou JSON) : variables CSS, couleurs les plus utilisées et leurs
  * propriétés, familles de polices, tailles, rayons, ombres, points de rupture, navigation,
- * indices de framework. Avec --screenshots et un Chrome/Chromium installé, enregistre aussi des
+ * indices de framework. Un site ou un code sous daisyUI donne aussi les variables de son thème, en
+ * hexadécimal, avec le token du vocabulaire commun qui leur correspond (references/site-existant.md). Avec --screenshots et un Chrome/Chromium installé, enregistre aussi des
  * captures desktop et mobile à regarder : la fréquence d'une couleur ne dit pas son rôle.
  *
  * Node 18+ requis (fetch natif). Aucune dépendance.
@@ -113,7 +114,15 @@ function fromFolder(rootDir) {
     }
   })(resolve(rootDir), 0);
   const themeFiles = sources.filter((s) => /@theme\b/.test(readFileSync(s, 'utf8')));
-  return { html: html.join('\n'), css: css.join('\n'), sources, configFiles, themeFiles, googleFonts: [] };
+  // daisyUI : paquet déclaré, et feuille du thème intégré par défaut (dans node_modules, que le parcours ignore)
+  const pkgPath = join(resolve(rootDir), 'package.json');
+  const pkg = existsSync(pkgPath) ? JSON.parse(readFileSync(pkgPath, 'utf8')) : {};
+  const daisyuiDep = pkg.dependencies?.daisyui ?? pkg.devDependencies?.daisyui ?? null;
+  const builtinTheme = (name) => {
+    const file = join(resolve(rootDir), 'node_modules', 'daisyui', 'theme', `${name}.css`);
+    return existsSync(file) ? readFileSync(file, 'utf8') : '';
+  };
+  return { html: html.join('\n'), css: css.join('\n'), sources, configFiles, themeFiles, googleFonts: [], daisyuiDep, builtinTheme };
 }
 
 // ---------- Analyse ----------
@@ -132,6 +141,7 @@ function normalizeColor(raw) {
     return h.length >= 6 ? '#' + h.slice(0, 6) : null;
   }
   if ((m = c.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/))) return '#' + hex2(+m[1]) + hex2(+m[2]) + hex2(+m[3]);
+  if ((m = c.match(/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)(?:deg)?/))) return oklchToHex(+m[1] / (m[2] ? 100 : 1), +m[3], +m[4]);
   if ((m = c.match(/^hsla?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%/))) {
     const [h, s, l] = [+m[1] / 360, +m[2] / 100, +m[3] / 100];
     const f = (n) => {
@@ -142,6 +152,59 @@ function normalizeColor(raw) {
   }
   return null;
 }
+/** oklch (daisyUI 5, Tailwind 4) en hexadécimal sRGB, canaux bornés. */
+function oklchToHex(L, C, H) {
+  const h = (H * Math.PI) / 180;
+  const [a, b] = [C * Math.cos(h), C * Math.sin(h)];
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const linear = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+  return '#' + linear.map((c) => hex2(255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055))).join('');
+}
+
+// ---------- daisyUI ----------
+// Variables du thème daisyUI → token du vocabulaire commun (tailwind.md §2), même correspondance que le skill
+// design-system. Les couleurs d'état de daisyUI sont des fonds (btn-success, avec success-content), le token est une
+// couleur de texte sur surface : à vérifier (check-contrast.mjs), le fond clair allant dans <état>-soft.
+const DAISYUI_TOKENS = [
+  ['--color-base-100', 'surface'], ['--color-base-200', 'surface-alt'], ['--color-base-300', 'line'], ['--color-base-content', 'ink'],
+  ['--color-primary', 'primary'], ['--color-primary-content', 'on-primary'],
+  ['--color-success', 'success (text on surface: check AA)'], ['--color-warning', 'warning (text on surface: check AA)'],
+  ['--color-info', 'info (text on surface: check AA)'], ['--color-error', 'danger (text on surface: check AA)'], ['--color-error-content', 'on-danger'],
+  ['--color-secondary', '(no token: secondary of the product, to decide)'], ['--color-accent', '(no token: accent, to decide)'], ['--color-neutral', '(no token: neutral, to decide)'],
+  ['--radius-field', 'radius-control'], ['--radius-box', 'radius-card'], ['--radius-selector', '(badges, checkboxes)'],
+  ['--size-field', 'spacing-control (× 10)'], ['--border', '(border width)'],
+];
+function daisyuiTheme({ html, css, daisyuiDep, builtinTheme }) {
+  const plugin = css.match(/@plugin\s+["']daisyui["']\s*(?:;|\{([^}]*)\})/);
+  const detected = Boolean(plugin || daisyuiDep || /🌼 daisyUI|--color-base-100\s*:/.test(css));
+  if (!detected) return null;
+  // Thèmes intégrés : option themes du greffon (light et dark par défaut) ; thème courant : data-theme de la page
+  const themesOption = plugin?.[1]?.match(/themes\s*:\s*([^;]+)/)?.[1].trim();
+  const entries = themesOption === 'false' ? [] : (themesOption ?? 'light --default, dark --prefersdark').split(',').map((t) => t.trim().split(/\s+/)).filter((e) => e[0]);
+  const builtin = entries.map((e) => e[0]);
+  const dataTheme = html.match(/data-theme=["']([\w-]+)/)?.[1];
+  // Valeurs du thème appliqué, fusionnées dans l'ordre de la cascade : feuille du thème intégré (paquet installé),
+  // blocs compilés du thème ([data-theme=<nom>], un thème du projet de même nom vient après), thème du projet
+  // (@plugin "daisyui/theme" dans le code). Le bloc sombre de prefers-color-scheme (:root:not([data-theme])) est écarté
+  const own = [...css.matchAll(/@plugin\s+["']daisyui\/theme["']\s*\{([^}]*)\}/g)].map((m) => m[1]);
+  const defaultName = dataTheme ?? (entries.find((e) => e.includes('--default')) ?? entries[0])?.[0];
+  const compiled = defaultName
+    ? [...css.matchAll(/([^{}]*)\{([^{}]*--color-base-100[^{}]*)\}/g)].filter((m) => new RegExp(`\\[data-theme=["']?${defaultName}["']?\\]`).test(m[1])).map((m) => m[2])
+    : [];
+  const values = new Map();
+  for (const block of [builtinTheme && defaultName ? builtinTheme(defaultName) : '', ...compiled, ...own]) {
+    for (const m of block.matchAll(/(--[\w-]+)\s*:\s*([^;}]+)/g)) values.set(m[1], m[2].trim());
+  }
+  const first = (name) => values.get(name) ?? null;
+  const variables = DAISYUI_TOKENS.map(([name, token]) => {
+    const value = first(name);
+    return value && { name, value, hex: normalizeColor(value), token };
+  }).filter(Boolean);
+  return { version: daisyuiDep, builtinThemes: builtin, dataTheme, ownThemes: own.length, variables };
+}
+
 function saturation(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
   const max = Math.max(r, g, b);
@@ -150,12 +213,13 @@ function saturation(hex) {
   return max === min ? 0 : (max - min) / (1 - Math.abs(2 * l - 1));
 }
 
-function analyze({ html, css }) {
+function analyze(collected) {
+  const { html, css } = collected;
   const declarations = [...css.matchAll(/([a-z-]+)\s*:\s*([^;{}]+)/gi)].map((m) => [m[1].toLowerCase(), m[2].trim()]);
   const variables = countValues(declarations.filter(([p]) => p.startsWith('--')).map(([p, v]) => `${p}: ${v}`)).slice(0, 80);
 
   const usages = new Map();
-  const colorPattern = /#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/gi;
+  const colorPattern = /#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\([^)]*\)/gi;
   for (const [property, value] of declarations) {
     for (const raw of value.match(colorPattern) || []) {
       const hex = normalizeColor(raw);
@@ -198,7 +262,9 @@ function analyze({ html, css }) {
   if (/data-v-[0-9a-f]{6,}|__nuxt/.test(html)) hints.push('Vue / Nuxt');
   if (/ng-version/.test(html)) hints.push('Angular');
   if (/wp-content|wp-includes/.test(html)) hints.push('WordPress');
-  if (/class="[^"]*\b(?:btn|col-md-|container-fluid)\b/.test(html)) hints.push('Bootstrap (likely)');
+  const daisyui = daisyuiTheme(collected);
+  if (daisyui) hints.push('daisyUI (theme variables below; sources/site.json → "daisyui", references/site-existant.md)');
+  else if (/class="[^"]*\b(?:btn|col-md-|container-fluid)\b/.test(html)) hints.push('Bootstrap (likely)');
   if (/\bMui[A-Z]/.test(html)) hints.push('MUI');
 
   return {
@@ -217,6 +283,7 @@ function analyze({ html, css }) {
     shadows: valuesOf(/^box-shadow$/).slice(0, 6),
     maxWidths: valuesOf(/^max-width$/).slice(0, 8),
     breakpoints: breakpoints.slice(0, 10),
+    daisyui,
   };
 }
 
@@ -260,6 +327,11 @@ function markdownReport(r) {
   if (r.configFiles?.length) lines.push(`\nConfiguration / token files to read first:\n${r.configFiles.map((c) => `- ${c}`).join('\n')}`);
   if (r.themeFiles?.length) lines.push(`\nFiles with a @theme block (Tailwind v4):\n${r.themeFiles.map((c) => `- ${c}`).join('\n')}`);
   if (r.googleFonts?.length) lines.push(`\nGoogle Fonts loaded: ${r.googleFonts.join(', ')}`);
+  if (r.daisyui) {
+    const d = r.daisyui;
+    lines.push(`\n## daisyUI theme\n\n${[d.version && `package ${d.version}`, d.builtinThemes.length ? `built-in themes ${d.builtinThemes.join(', ')}` : 'built-in themes off', d.dataTheme && `data-theme="${d.dataTheme}" on the page`, d.ownThemes && `${d.ownThemes} theme(s) of the project`].filter(Boolean).join(' · ')}`);
+    lines.push(d.variables.length ? d.variables.map((v) => `- \`${v.name}: ${v.value}\`${v.hex && v.hex !== v.value ? ` = \`${v.hex}\`` : ''} → ${v.token}`).join('\n') : '_no theme value found (built-in theme of a package not installed: read it on daisyui.com/docs/themes)_');
+  }
   list('Most used colors', r.colors, (c) => `- \`${c.hex}\` × ${c.total} · ${c.kind} · ${c.properties}`);
   list('CSS variables (most frequent)', r.variables);
   list('font-family', r.fontFamilies);
