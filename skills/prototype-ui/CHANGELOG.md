@@ -1,5 +1,14 @@
 # Journal des versions
 
+## 2.5.1 · 07/11/2026
+
+- `check.mjs` vérifie d'abord que Chrome démarre avec un profil vierge, et le dit au lieu d'accuser chaque page. Une page sans résultat évoque aussi un délai dépassé (polices web ou CDN injoignables), pas seulement un plantage.
+- « Maintenir » : après `scaffold.mjs --pages eN --force`, reporter les coquilles de `src/_from-specs/shells.html`, puis supprimer `src/_from-specs/`.
+
+## 2.5.0 · 06/11/2026
+
+- **Dépôt de specs** : le prototype vit avec les specs dans un dépôt dédié, séparé du code de l'application (`references/depot-specs.md` du skill `specs-ui`), et ne va jamais dans le dépôt de l'application. `<projet>` désigne le dossier du projet dans les consignes et les messages des scripts ; un dossier `specs/` dans l'application fonctionne toujours.
+
 ## 2.4.0 · 17/10/2026
 
 - **Chat claude.ai** : `SKILL.md` renvoie à `references/claude-ai.md` du skill `specs-ui` (archive du projet, version autonome en un seul fichier, contrôles sans navigateur).

@@ -29,7 +29,7 @@ Ordre des imports : Tailwind, animations, tokens, thème, classes. Le script ajo
 ```css
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import '../styles/tokens.css';        /* ou ../../../../specs/ui/tokens.css */
+@import '../styles/tokens.css';        /* copie des tokens des specs, le cas échéant (tokens.mjs) */
 @import '../styles/theme.css';
 @import '../styles/components.css';
 ```

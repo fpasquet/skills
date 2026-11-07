@@ -1,5 +1,17 @@
 # Journal des versions
 
+## 1.1.1 · 07/11/2026
+
+- `tokens.mjs` fait importer la copie par une feuille d'entrée qui importait encore les tokens des specs (`specs/ui/tokens.css`, ancienne disposition) ; ses notes donnent les chemins depuis l'application. `SKILL.md` dit depuis où se lisent `<app>` et `--from`, et où se note le chemin du dépôt de specs.
+
+## 1.1.0 · 06/11/2026
+
+- **Tokens des specs copiés, plus importés** : les specs du skill `specs-ui` vivent dans un dépôt de specs, à part, et l'application ne peut plus importer leur `tokens.css`. Elle en garde une copie, précédée d'un commentaire de provenance (dépôt, chemin, empreinte), qu'on ne modifie jamais à la main.
+  - `tokens.mjs` pose et recopie la copie (`--from <projet>/ui`), liste les tokens ajoutés et retirés, et refuse sans `--force` de remplacer un fichier qui n'est pas une copie ou une copie modifiée à la main. `--check` dit si la copie est en retard sur les specs ou modifiée (`--strict` en CI). L'empreinte ignore les espaces et les guillemets, qu'un formateur peut changer.
+  - `scaffold.mjs --specs <projet>/ui` pose la copie dans `<styles>/tokens.css` et note sa provenance dans la mémoire ; `--tokens` vers un fichier hors du dépôt est refusé.
+  - L'audit affiche la provenance de la copie et signale une copie modifiée (`tokens-copy-edited`).
+  - Ancienne disposition (`specs/ui/tokens.css` dans le dépôt de l'application) : toujours importé tel quel, avec une note pour passer à la copie.
+
 ## 1.0.0 · 27/10/2026
 
 - Première version, tirée du design system d'un projet Next.js : tokens en source unique, thème shadcn/ui pointé sur les tokens, classes sémantiques posées par les variantes CVA, un dossier par composant, pas d'attribut `data-slot`, Storybook documenté avec accessibilité bloquante, lint des classes Tailwind.

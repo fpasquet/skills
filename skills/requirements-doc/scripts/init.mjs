@@ -2,16 +2,16 @@
 /**
  * Prépare le dossier du cahier des charges à partir d'un projet de specs (skill specs-ui).
  *
- * Usage : node init.mjs --specs specs/ui --out specs/requirements [--prototype specs/prototype]
+ * Usage : node init.mjs --specs <projet>/ui --out <projet>/requirements [--prototype <projet>/prototype]
  *
  * Crée, sans écraser un fichier existant :
- *   specs/requirements/requirements.json                 titre, chemins, liens des artifacts (specs, prototype, cahier des charges)
- *   specs/requirements/REQUIREMENTS.md                   mémoire du cahier des charges
- *   specs/requirements/sources/NN-*.md          une source par partie, avec les valeurs connues déjà remplies et des
+ *   <projet>/requirements/requirements.json                 titre, chemins, liens des artifacts (specs, prototype, cahier des charges)
+ *   <projet>/requirements/REQUIREMENTS.md                   mémoire du cahier des charges
+ *   <projet>/requirements/sources/NN-*.md          une source par partie, avec les valeurs connues déjà remplies et des
  *                                gabarits {{…}} à rédiger (check.mjs les signale tant qu'il en reste)
- *   specs/requirements/sources/30-specs.md      partie fonctionnelle et UI : un chapitre par lot, qui inclut l'extraction
- *   specs/requirements/sources/lots/<lot>-criteres.md   critères d'acceptation du lot, à rédiger
- * Puis lance extract.mjs (matière des specs en Markdown, dans specs/requirements/sources/generated/).
+ *   <projet>/requirements/sources/30-specs.md      partie fonctionnelle et UI : un chapitre par lot, qui inclut l'extraction
+ *   <projet>/requirements/sources/lots/<lot>-criteres.md   critères d'acceptation du lot, à rédiger
+ * Puis lance extract.mjs (matière des specs en Markdown, dans <projet>/requirements/sources/generated/).
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { join, resolve, relative, dirname } from 'node:path';
@@ -24,7 +24,7 @@ const specsDir = valueOf('--specs') && resolve(valueOf('--specs'));
 const outDir = valueOf('--out') && resolve(valueOf('--out'));
 const prototypeDir = valueOf('--prototype') && resolve(valueOf('--prototype'));
 if (!specsDir || !outDir || !existsSync(join(specsDir, 'sources', 'site.json'))) {
-  console.error('Usage: node init.mjs --specs specs/ui --out specs/requirements [--prototype specs/prototype]   (the specs folder must contain sources/site.json)');
+  console.error('Usage: node init.mjs --specs <projet>/ui --out <projet>/requirements [--prototype <projet>/prototype]   (the specs folder must contain sources/site.json)');
   process.exit(2);
 }
 const skillDir = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -69,7 +69,7 @@ const fill = (text) =>
   text
     .replaceAll('{{PRODUCT}}', product)
     .replaceAll('{{DATE}}', date)
-    .replaceAll('{{SPECS_LINK}}', links.specs ? `[artifact des specs](${links.specs})` : 'dossier `specs/ui/`')
+    .replaceAll('{{SPECS_LINK}}', links.specs ? `[artifact des specs](${links.specs})` : 'dossier `ui/` du projet')
     .replaceAll('{{PROTOTYPE_LINK}}', links.prototype ? `[artifact du prototype](${links.prototype})` : 'aucun')
     .replaceAll('{{LOTS}}', String(lots.length))
     .replaceAll('{{SCREENS}}', String(screens))

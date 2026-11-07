@@ -2,13 +2,13 @@
 /**
  * Construit le site du prototype à partir de ses sources.
  *
- * Usage : node build.mjs specs/prototype
+ * Usage : node build.mjs <projet>/prototype
  *
- * Sources (specs/prototype/src/) : prototype.json (titre, specs, scénarios, pages), data.js, actions.js,
+ * Sources (<projet>/prototype/src/) : prototype.json (titre, specs, scénarios, pages), data.js, actions.js,
  * shells.html (coquilles et templates), pages/eN.html (une page par écran).
  * L'identité vient du projet de specs indiqué par prototype.json → specs : tokens.css et polices du premier lot.
  *
- * Sortie (specs/prototype/site/) : index.html (accueil : scénarios, exploration libre, liste des écrans) et une
+ * Sortie (<projet>/prototype/site/) : index.html (accueil : scénarios, exploration libre, liste des écrans) et une
  * page par écran. Chaque page embarque Tailwind, Alpine.js, Lucide, l'état simulé (store), les actions,
  * les coquilles qu'elle utilise et le panneau « Scénarios ». Affiche les pages modifiées et supprime les
  * pages sans source.
@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 const args = process.argv.slice(2);
 const root = args[0] && !args[0].startsWith('--') && resolve(args[0]);
 if (!root || !existsSync(join(root, 'src', 'prototype.json'))) {
-  console.error('Usage: node build.mjs specs/prototype [--cdn]   (the folder must contain src/prototype.json)');
+  console.error('Usage: node build.mjs <projet>/prototype [--cdn]   (the folder must contain src/prototype.json)');
   process.exit(2);
 }
 const read = (path, fallback = '') => (existsSync(path) ? readFileSync(path, 'utf8') : fallback);
@@ -44,7 +44,7 @@ const firstLot = (site.lots ?? []).find((l) => existsSync(join(specsDir, 'source
 const fonts = config.fonts ?? (firstLot ? JSON.parse(read(join(specsDir, 'sources', firstLot, 'lot.json'))).fonts : '');
 
 // Tailwind compilé au build (affichage immédiat, pas de compilation dans le navigateur) si la CLI est
-// disponible : specs/prototype/node_modules (npm install), variable TAILWIND_CLI, ou tailwindcss dans le PATH.
+// disponible : <projet>/prototype/node_modules (npm install), variable TAILWIND_CLI, ou tailwindcss dans le PATH.
 // Sinon, repli sur Tailwind navigateur (CDN).
 function findTailwind() {
   const candidates = [process.env.TAILWIND_CLI, join(root, 'node_modules', '.bin', 'tailwindcss')].filter(Boolean);
@@ -57,7 +57,7 @@ function findTailwind() {
   }
 }
 const tailwindCli = args.includes('--cdn') ? null : findTailwind();
-// Dossier de travail dans le prototype : la CLI y résout « tailwindcss » depuis specs/prototype/node_modules
+// Dossier de travail dans le prototype : la CLI y résout « tailwindcss » depuis <projet>/prototype/node_modules
 const workDir = tailwindCli ? join(root, '.build-tmp') : null;
 if (workDir) mkdirSync(workDir, { recursive: true });
 const baseCss = `[x-cloak] { display: none !important; }

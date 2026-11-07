@@ -2,7 +2,7 @@
 /**
  * Contrôle le cahier des charges construit (requirements.json → output), sans avoir à le lire.
  *
- * Usage : node check.mjs specs/requirements
+ * Usage : node check.mjs <projet>/requirements
  *
  * Signale :
  *   - les parties attendues absentes (architecture, stack, infrastructure, lots, estimations…) ;
@@ -22,7 +22,7 @@ const root = process.argv[2] && resolve(process.argv[2]);
 const config = root ? loadConfig(root) : {};
 const file = root && join(root, config.output ?? 'requirements.md');
 if (!root || !existsSync(file)) {
-  console.error('Usage: node check.mjs specs/requirements   (run build.mjs first)');
+  console.error('Usage: node check.mjs <projet>/requirements   (run build.mjs first)');
   process.exit(2);
 }
 const doc = readFileSync(file, 'utf8');

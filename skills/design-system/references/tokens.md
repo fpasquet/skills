@@ -81,7 +81,9 @@ Pour les tailles de texte, les rayons et les hauteurs, on part aussi des valeurs
 
 ## Specs du skill `specs-ui`
 
-Quand `specs/ui/tokens.css` existe, l'application l'importe directement (`@import '../../../../specs/ui/tokens.css'`) et la page Tokens de Storybook le lit. Les maquettes et l'application partagent ainsi les mêmes valeurs. Une couleur, un rayon ou une police se change dans les specs, avec le skill `specs-ui`, jamais dans l'application.
+Les specs vivent dans un dépôt de specs, séparé du code. L'application garde une copie de leurs tokens (`<styles>/tokens.css`), précédée d'un commentaire de provenance : dépôt, chemin et empreinte du fichier des specs. `tokens.mjs` la pose et la recopie, `tokens.mjs --check` et l'audit (`tokens-copy-edited`) signalent une copie en retard ou modifiée à la main. L'empreinte ignore les espaces et les guillemets : un formateur peut repasser sur le fichier. Les maquettes et l'application partagent ainsi les mêmes valeurs. Une couleur, un rayon ou une police se change dans les specs, avec le skill `specs-ui`, jamais dans l'application.
+
+Ancienne disposition, `specs/ui/tokens.css` dans le dépôt de l'application : l'entrée l'importe directement (`@import '../../../../specs/ui/tokens.css'`). Quand les specs partent dans le dépôt de specs, `tokens.mjs` pose la copie et l'entrée importe `<styles>/tokens.css` à la place.
 
 ## Thème shadcn/ui
 

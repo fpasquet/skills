@@ -1,5 +1,28 @@
 # Journal des versions
 
+## 2.4.3 · 07/11/2026
+
+- `trace.mjs` compte à part les critères retirés (« 5 acceptance criteria (1 retired, not counted) ») : `check.mjs`, qui les compte, n'annonce plus un autre nombre sans explication.
+- Étape 6 : `--check` affiche les notes de l'export (coûts, gabarits) sans rien écrire, et la base des chemins est dite (`--to` depuis le dossier courant, `export.to` depuis le dossier du cahier des charges).
+
+## 2.4.2 · 07/11/2026
+
+- **Clone de l'application absent** : `export.mjs` refuse d'écrire hors d'un dépôt git de l'application, ou dans un dépôt qui contient aussi les specs, au lieu de créer un dossier d'application fantôme (`--force` pour passer outre). Depuis le dépôt de specs, `trace.mjs` ne remonte plus les dossiers jusqu'à un dépôt sans rapport : sans clone de l'application, il le dit et n'analyse rien.
+
+## 2.4.1 · 07/11/2026
+
+- **Décisions techniques et ADR** : les décisions DT restent dans un seul fichier de l'export (`architecture.md`). Les ADR que l'équipe écrit pendant les développements vivent dans l'application, hors du dossier de l'export ; un ADR qui remplace une DT se reporte dans le cahier des charges, qui marque la DT « Remplacée par ADR-… ». Le `README.md` de l'export le rappelle.
+
+## 2.4.0 · 06/11/2026
+
+- **Dépôt de specs** : le cahier des charges vit avec les specs et le prototype dans un dépôt dédié, séparé du code de l'application (`references/depot-specs.md` du skill `specs-ui`). `<projet>` désigne le dossier du projet dans ce dépôt ; l'ancienne disposition (`specs/` dans l'application) fonctionne toujours.
+- **`export.mjs`** : exporte vers le dépôt de l'application la partie utile au code, en Markdown généré. Il produit un fichier par partie, `lots/<lot>.md` par lot, un `README.md` (version, artifacts, écrans, identifiants) et un `export.json` (source, version, statut des écrans, empreintes).
+  - Par défaut, les parties 10 à 80 ; le titre, les lots chiffrés, le planning, les risques et les annexes restent internes (`requirements.json` → `export.parts`).
+  - `<!-- export:skip -->` … `<!-- /export:skip -->` garde un passage interne, comme les coûts de 8.10 du gabarit ; le script signale ce qui ressemble encore à un coût ou à une charge.
+  - Les liens internes sont réécrits vers le bon fichier. Rien n'est réécrit quand rien n'a changé, et seuls les fichiers d'un export précédent sont supprimés. `--check` dit si l'application est en retard. Un dossier qui ne vient pas d'un export est refusé.
+- **`trace.mjs`** lit aussi un export : la CI de l'application trace ses tests sans le dépôt de specs, avec les statuts d'écran de l'export, et signale un fichier de l'export modifié à la main (`--strict`). Depuis le dépôt de specs, le code analysé par défaut est le dépôt git de l'export (`export.to`).
+- `assemble.mjs` : inclusions, ancres et ordre des sources, partagés par `build.mjs` et `export.mjs` (le document construit ne change pas).
+
 ## 2.3.0 · 17/10/2026
 
 - **Chat claude.ai** : `SKILL.md` renvoie à `references/claude-ai.md` du skill `specs-ui`. La page se publie en version autonome (`bundle.mjs`, Mermaid intégré, sans réseau), avec le Markdown à côté, et le projet se garde dans une archive d'une conversation à l'autre.

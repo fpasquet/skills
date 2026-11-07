@@ -10,6 +10,7 @@ de chaque étape, sous 120 lignes. Les conventions sont dans `{{rule}}`, pas ici
 | Application | `{{app}}` |
 | Feuille d'entrée | `{{entry}}` |
 | Tokens | `{{tokens}}` |
+| Tokens des specs | {{specsTokens}} |
 | Thème, classes | `{{styles}}/theme.css`, `{{styles}}/components.css` |
 | Composants | `{{ui}}`, `{{components}}` |
 | Documentation | `{{docs}}` (Storybook) |

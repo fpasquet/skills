@@ -4,8 +4,8 @@ Tu rédiges les critères d'acceptation d'un lot du cahier des charges. Ils serv
 
 ## Ce que tu lis, et rien d'autre
 
-- `specs/requirements/sources/generated/lot-<lot>.md` : règles du lot (RF) et écrans avec leurs états, parcours et règles. C'est ta seule source fonctionnelle.
-- Le fichier à écrire : `specs/requirements/sources/lots/<lot>-criteres.md`, qui contient un gabarit `{{…}}`.
+- `<projet>/requirements/sources/generated/lot-<lot>.md` : règles du lot (RF) et écrans avec leurs états, parcours et règles. C'est ta seule source fonctionnelle.
+- Le fichier à écrire : `<projet>/requirements/sources/lots/<lot>-criteres.md`, qui contient un gabarit `{{…}}`.
 
 Ne lis ni les specs HTML, ni `requirements.md`, ni les autres lots. Lis le fichier du lot une fois, par morceaux de 300 lignes au plus si besoin, sans y revenir.
 

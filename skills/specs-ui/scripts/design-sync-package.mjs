@@ -3,7 +3,7 @@
  * Prépare le paquet « tokens seuls » qui permet d'envoyer l'identité des specs vers Claude Design avec le
  * skill /design-sync (option facultative, voir SKILL.md « Option · Design System Claude Design »).
  *
- * Usage : node design-sync-package.mjs specs/ui [--out specs/design-system-package]
+ * Usage : node design-sync-package.mjs <projet>/ui [--out <projet>/design-system-package]
  *
  * Crée, à côté du projet de specs (sans écraser un fichier existant) :
  *   package.json                  mini-paquet sans composant (Tailwind CLI, React pour le convertisseur)
@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 const args = process.argv.slice(2);
 const specsDir = args[0] && !args[0].startsWith('--') && resolve(args[0]);
 if (!specsDir || !existsSync(join(specsDir, 'tokens.css'))) {
-  console.error('Usage: node design-sync-package.mjs specs/ui [--out specs/design-system-package]   (the specs folder must contain tokens.css)');
+  console.error('Usage: node design-sync-package.mjs <projet>/ui [--out <projet>/design-system-package]   (the specs folder must contain tokens.css)');
   process.exit(2);
 }
 const outDir = resolve(args.includes('--out') ? args[args.indexOf('--out') + 1] : join(dirname(specsDir), 'design-system-package'));
