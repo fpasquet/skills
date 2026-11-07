@@ -19,14 +19,16 @@ La mémoire du projet, `<projet>/ui/CONTEXTE.md`, permet de reprendre le travail
 
 Les tokens (`tokens.css`, bloc `@theme` Tailwind v4) et les classes des maquettes sont repris tels quels pendant les développements, par une copie que le skill `design-system` tient à jour.
 
-`<projet>` désigne le dossier du projet dans le dépôt de specs, un dossier par projet :
+`<projet>` désigne le dossier des livrables d'un projet dans le dépôt de specs. Ce dépôt est dédié à un projet, ou partagé entre plusieurs avec un dossier par projet : c'est votre choix, les skills fonctionnent de la même façon.
 
 ```text
-specs/                 dépôt de specs, privé
-├── orbe/              <projet>
-│   ├── ui/            specs (ce skill)
-│   ├── prototype/     prototype (skill prototype-ui)
-│   └── requirements/  cahier des charges (skill requirements-doc)
+orbe-specs/            dépôt dédié : <projet> vaut .
+├── ui/                specs (ce skill)
+├── prototype/         prototype (skill prototype-ui)
+└── requirements/      cahier des charges (skill requirements-doc)
+
+specs/                 dépôt partagé : <projet> vaut orbe, atlas…
+├── orbe/              ui/, prototype/, requirements/
 └── atlas/…
 ```
 

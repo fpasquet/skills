@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.7.2 · 7 nov. 2026
+
+- **Dépôt de specs dédié ou partagé**, au choix de la personne : `depot-specs.md` décrit les deux organisations (livrables à la racine d'un dépôt dédié, `<projet>` valant `.`, ou un dossier par projet dans un dépôt partagé), comment choisir, et la migration vers un dépôt dédié neuf (`git pull` de l'historique extrait). L'étape 0 demande laquelle pour un nouveau projet.
+
 ## 3.7.1 · 7 nov. 2026
 
 - `depot-specs.md` : les ADR que l'équipe écrit pendant les développements restent dans l'application, hors du dossier de l'export ; un ADR qui remplace une décision DT se reporte dans le cahier des charges (skill `requirements-doc`).

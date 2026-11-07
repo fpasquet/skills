@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.7.1"
+  version: "3.7.2"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -136,7 +136,7 @@ Les templates contiennent un produit fictif (« Orbe », demandes clients) qui n
 
 ## Étape 0 · Cadrer
 
-1. **Où ?** Le projet vit dans le dépôt de specs, dans `<projet>/`. Un nouveau projet : demander le dépôt et le nom du dossier s'ils ne sont pas connus, sans jamais créer le dossier dans le dépôt de l'application. Un dossier `specs/` dans l'application (disposition des versions 3.0 à 3.6) fonctionne toujours, `<projet>` valant `specs` : proposer de le déplacer (`depot-specs.md` §6).
+1. **Où ?** Le projet vit dans un dépôt de specs, dans `<projet>/`. Un nouveau projet : demander, s'ils ne sont pas connus, le dépôt de specs (dédié au projet ou partagé avec d'autres, au choix de la personne) et, dans un dépôt partagé, le nom du dossier. Ne jamais créer le dossier dans le dépôt de l'application. Un dossier `specs/` dans l'application (disposition des versions 3.0 à 3.6) fonctionne toujours, `<projet>` valant `specs` : proposer de le déplacer (`depot-specs.md` §6).
 2. **Reprise ?** Si `<projet>/ui/` existe, lire `CONTEXTE.md` et reprendre à l'étape utile. Un projet à l'ancienne disposition (`specs-ui/` à la racine, versions 2.x) se range d'abord avec `node <skill>/scripts/migrate-layout.mjs <dossier>` (`--dry-run` pour voir), puis se reconstruit ; les artifacts gardent leur URL. Un projet sans `CONTEXTE.md` ni `sources/` (créé par une version 1.x, un document par lot) se migre d'abord :
    - `split.mjs` sur chaque document de specs, dans l'ordre des lots ;
    - ranger les anciens documents dans `<projet>/ui/archives/` ;

@@ -10,21 +10,30 @@ L'application en reçoit seulement ce dont le code a besoin (§3).
 
 ## 1. Structure
 
-Un dossier par projet. `<projet>` désigne ce dossier dans les consignes des skills : il remplace l'ancien dossier `specs/` à la racine de l'application, avec la même disposition.
+Deux organisations, au choix de la personne, et les skills fonctionnent de la même façon dans les deux :
+
+- un **dépôt dédié** à un projet, avec les livrables à sa racine ;
+- un **dépôt partagé** entre plusieurs projets, avec un dossier par projet.
+
+`<projet>` désigne, dans les consignes des skills, le dossier qui contient les livrables d'un projet : la racine d'un dépôt dédié (`.`), ou son dossier dans un dépôt partagé (`orbe/`). Il remplace l'ancien dossier `specs/` à la racine de l'application, avec la même disposition.
 
 ```text
-specs/                        dépôt de specs (privé)
-├── README.md                 index : projet, artifacts, dépôt de l'application
+orbe-specs/                   dépôt dédié : <projet> vaut .
+├── README.md                 projet, artifacts, dépôt de l'application
 ├── .gitignore
-├── orbe/                     <projet>
-│   ├── ui/                   specs (skill specs-ui) : sources, CONTEXTE.md, site/.published.json
-│   ├── prototype/            prototype (skill prototype-ui), facultatif
-│   └── requirements/         cahier des charges (skill requirements-doc), facultatif
+├── ui/                       specs (skill specs-ui) : sources, CONTEXTE.md, site/.published.json
+├── prototype/                prototype (skill prototype-ui), facultatif
+└── requirements/             cahier des charges (skill requirements-doc), facultatif
+
+specs/                        dépôt partagé : <projet> vaut orbe, atlas…
+├── README.md                 index : projets, artifacts, dépôts des applications
+├── .gitignore
+├── orbe/                     ui/, prototype/, requirements/
 └── atlas/…
 ```
 
-- **Un dépôt pour tous les projets**, ou un par client quand d'autres personnes doivent y écrire : les droits se règlent par dépôt.
-- **Les scripts se lancent depuis la racine du dépôt**, avec le dossier du projet : `node <skill>/scripts/build.mjs orbe/ui`. Les chemins entre livrables d'un même projet (`../ui`) ne changent pas.
+- **Choisir** : le dépôt partagé regroupe tous les projets au même endroit. Le dépôt dédié s'ouvre à d'autres personnes (client, autre équipe) sans leur montrer les autres projets, car les droits se règlent par dépôt. Un dépôt partagé par client est un entre-deux. Ne pas trancher à la place de la personne.
+- **Les scripts se lancent depuis la racine du dépôt**, avec le dossier du livrable : `node <skill>/scripts/build.mjs ui` dans un dépôt dédié, `build.mjs orbe/ui` dans un dépôt partagé. Les chemins entre livrables d'un même projet (`../ui`) ne changent pas, et un dépôt dédié peut devenir un dossier d'un dépôt partagé tel quel.
 - **Les skills** s'installent dans ce dépôt (portée projet, avec `skills-lock.json`) ou globalement (`-g`).
 
 Le `.gitignore` du dépôt écarte ce qui se reconstruit :
@@ -41,10 +50,10 @@ Le `.gitignore` du dépôt écarte ce qui se reconstruit :
 
 ## 2. Travailler avec les deux dépôts
 
-- **Clones côte à côte** (`~/www/specs` et `~/www/orbe-app`) : les chemins relatifs le supposent. C'est le cas de `requirements.json` → `export.to`, de `sources/site.json` → `assets` quand il pointe vers les images de l'application, et du chemin noté dans la mémoire du design system. Ailleurs, passer les chemins en option.
+- **Clones côte à côte** (`~/www/orbe-specs` ou `~/www/specs`, et `~/www/orbe-app`) : les chemins relatifs le supposent. C'est le cas de `requirements.json` → `export.to`, de `sources/site.json` → `assets` quand il pointe vers les images de l'application, et du chemin noté dans la mémoire du design system. Ailleurs, passer les chemins en option.
 - **Claude Code sur le web** : une session peut ouvrir les deux dépôts. Les ouvrir ensemble quand le travail touche les deux (export, tokens, écart pendant les développements).
 - **Depuis l'application**, un agent trouve les specs par `docs/requirements/README.md` (dépôt, dossier, artifacts) et par la mémoire du design system. L'`AGENTS.md` de l'application y renvoie en une ligne.
-- **Images du produit** : `site.json` → `assets` peut pointer vers le clone de l'application (`../../../orbe-app/apps/web/public/assets`) pour reprendre ses vraies images sans copie, mais le build dépend alors de ce clone et signale les images manquantes. Pour un dépôt de specs qui se construit seul, copier les images citées dans `<projet>/ui/assets/`.
+- **Images du produit** : `site.json` → `assets` peut pointer vers le clone de l'application (`../../orbe-app/apps/web/public/assets` depuis un dépôt dédié, un `../` de plus depuis un dépôt partagé) pour reprendre ses vraies images sans copie, mais le build dépend alors de ce clone et signale les images manquantes. Pour un dépôt de specs qui se construit seul, copier les images citées dans `<projet>/ui/assets/`.
 
 ## 3. Ce que reçoit l'application
 
@@ -67,7 +76,7 @@ Les ADR que l'équipe écrit pendant les développements restent dans l'applicat
 ## 5. Partager
 
 - Le client et l'équipe lisent les **artifacts** ; le dépôt reste privé. Le dépôt fait foi : un artifact perdu se republie (`prepare-publish.mjs … --all`).
-- **Version figée** : le bouton de partage d'un artifact permet de partager une version précise plutôt que la dernière. À chaque validation, poser un tag (`git tag orbe/cdc-1.0`) et, pour un livrable contractuel, joindre la version autonome (`bundle.mjs`) et `requirements.md`.
+- **Version figée** : le bouton de partage d'un artifact permet de partager une version précise plutôt que la dernière. À chaque validation, poser un tag (`git tag cdc-1.0`, ou `orbe/cdc-1.0` dans un dépôt partagé) et, pour un livrable contractuel, joindre la version autonome (`bundle.mjs`) et `requirements.md`.
 - **Hors de l'organisation claude.ai** (plans Team et Enterprise), un lien public n'existe que si un Owner l'autorise : ouvrir le lien dans une fenêtre privée avant de l'envoyer.
 - Les relecteurs extérieurs ne voient pas les commentaires d'un artifact : leurs retours passent par le bouton « Retours » des pages, dont ils renvoient l'export.
 
@@ -78,7 +87,9 @@ Ne rien supprimer de l'application sans l'accord de la personne, et pas avant qu
 ```sh
 # Dans le dépôt de l'application : l'historique de specs/ sur une branche locale
 git subtree split --prefix=specs -b specs-history
-# Dans le dépôt de specs (qui a déjà au moins un commit) : le projet dans son dossier
+# Dépôt dédié, neuf et vide : les livrables à sa racine, avec leur historique
+git pull ../<app> specs-history
+# Ou dépôt partagé, qui a déjà au moins un commit : le projet dans son dossier
 git subtree add --prefix=<projet> ../<app> specs-history
 ```
 
