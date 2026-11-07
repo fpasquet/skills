@@ -8,7 +8,7 @@
  *   node bundle.mjs <site-dir> <out.html> [--start index.html]   site de plusieurs pages (specs, prototype)
  *   node bundle.mjs <page.html> <out.html>                        page seule (cahier des charges)
  *
- * Intégrés au fichier : scripts (locaux ou CDN), feuilles de style locales et images. Un script CDN est téléchargé
+ * Intégrés au fichier : scripts (locaux ou CDN), feuilles de style (locales, ou du CDN jsdelivr ou unpkg : daisyUI) et images. Un script CDN est téléchargé
  * une fois (cache dans le dossier temporaire) depuis le CDN, sinon avec curl (qui suit le proxy du bac à sable), sinon
  * depuis le registre npm (npm pack) : le bac à sable de claude.ai n'autorise souvent que les gestionnaires de paquets.
  * Les polices Google Fonts restent des liens : sans réseau, la page prend ses polices de repli.
@@ -127,10 +127,24 @@ const inlineCssUrls = (css, cssPath) => css.replace(/url\((["']?)([^"')]+)\1\)/g
   return value ? `url("${value}")` : match;
 });
 
+// Feuille de style d'un paquet npm servie par un CDN (daisyUI des maquettes) ; Google Fonts reste un lien
+const isCdnStylesheet = (href) => /^https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com)\//.test(href ?? '');
+
 async function inlinePage(html, pagePath) {
-  // Feuilles de style locales, puis images (avant les scripts, dont le code n'est pas à analyser)
+  // Feuilles du CDN téléchargées d'abord (le remplacement qui suit est synchrone)
+  const linkHref = (tag) => tag.match(/\shref="([^"]+)"/)?.[1];
+  const cdnSheets = new Map();
+  for (const [tag] of html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*>/g)) {
+    const href = linkHref(tag);
+    if (isCdnStylesheet(href) && !cdnSheets.has(href)) cdnSheets.set(href, await remote(href));
+  }
+  // Feuilles de style locales ou du CDN, puis images (avant les scripts, dont le code n'est pas à analyser)
   html = html.replace(/<link\b[^>]*\brel="stylesheet"[^>]*>/g, (tag) => {
-    const href = tag.match(/\shref="([^"]+)"/)?.[1];
+    const href = linkHref(tag);
+    if (cdnSheets.has(href)) {
+      const css = cdnSheets.get(href).replace(/<\/(style)/gi, '<\\/$1');
+      return `<style>${isSite ? share(`remote:${href}`, css) : css}</style>`;
+    }
     if (!isInlineable(href)) return tag;
     const path = fromPage(pagePath, href);
     if (!path || !existsSync(join(root, path))) {

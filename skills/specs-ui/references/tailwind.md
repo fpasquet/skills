@@ -12,6 +12,7 @@ Les maquettes sont écrites en Tailwind CSS v4, chargé dans le navigateur. Le b
 6. Catalogue de composants
 7. Icônes et images
 8. Pièges connus
+9. Produit sous daisyUI
 
 ## 1. Chargement
 
@@ -52,6 +53,7 @@ Toujours les mêmes noms, quelle que soit l'identité. Les maquettes n'utilisent
 | `--spacing-control` | `h-control` | Hauteur des boutons et champs |
 | `--spacing-row` | `h-row` | Hauteur des lignes de tableau et de liste |
 | `--shadow-card` / `overlay` | `shadow-card`, `shadow-overlay` | Relief des cartes / des éléments flottants |
+| `--color-overlay` | `bg-overlay` | Voile sous les fenêtres modales (couleur semi-transparente) |
 
 Les échelles Tailwind par défaut (espacements `p-4`, tailles `text-sm`, `size-4`…) restent utilisables : elles ne portent pas l'identité.
 
@@ -302,3 +304,39 @@ Le script final appelle `lucide.createIcons()`. Noms au format kebab-case du sit
 - **Classes générées en JavaScript** : le navigateur les détecte, mais elles sont invisibles à la lecture du HTML. Les écrire en clair dans le balisage.
 - **Texte qui passe à la ligne** dans un champ ou un bouton étroit : `whitespace-nowrap` + `truncate` sur le texte.
 - **Contenus qui débordent du cadre** : réduire le nombre de lignes plutôt que la taille du texte. Une maquette lisible vaut mieux qu'une maquette exhaustive.
+
+## 9. Produit sous daisyUI
+
+Quand l'application emploie daisyUI (site existant, ou choix noté dans `CONTEXTE.md`), les maquettes emploient ses classes : `btn btn-primary`, et non une suite d'utilitaires qui l'imite. Les développeurs les reprennent telles quelles, et le skill `design-system` pose le même thème dans l'application.
+
+- **Déclarer** la version dans `sources/site.json` : `"daisyui": "5.7.50"`, une version exacte. `build.mjs` ajoute à chaque page les feuilles des composants qu'elle emploie, depuis le CDN, et un thème daisyUI pointé sur les tokens (`base-100` → `surface`, `error` → `danger`, `radius-field` → `radius-control`, `size-field` tiré de `spacing-control`). Ne jamais écrire ces liens ni ce thème à la main. Le prototype et l'export Claude Design suivent la même déclaration.
+- **Les tokens restent la source** : une couleur se change dans `tokens.css`, jamais dans un thème daisyUI. Pas de `data-theme`, de thème intégré ni de préfixe de classes (`prefix`) dans les maquettes.
+- **Couleurs et mises en page** : les classes des tokens (`bg-surface`, `text-muted`, `border-line`), pas celles de daisyUI (`bg-base-100`, `text-base-content`). Les classes de composant gardent les noms de daisyUI : `btn-error`, `badge-error`, `alert-error` pour une erreur, alors que le token reste `danger`.
+- **États** par les attributs ARIA, que daisyUI lit : `aria-checked="true"` sur une case, un interrupteur ou un choix unique écrits en `span` (la maquette ne réagit pas), `aria-selected="true"` sur l'onglet actif, `aria-current="page"` dans un menu, `disabled` sur un bouton.
+- **Calques** dans le cadre : une fenêtre `modal modal-open absolute` (sans `absolute`, `modal` couvre toute la page de specs), un menu déroulant `dropdown dropdown-open`, un message `toast absolute`. Seule, `modal-box` reste invisible.
+- **Badges d'état** : `badge badge-soft badge-success`. Chez daisyUI, la couleur d'état pleine est un fond (`badge-success`, texte sur `surface`) ; la variante `soft` correspond au fond `-soft` des tokens.
+
+Le catalogue du §6 s'écrit alors ainsi (catalogue complet : `templates/design-system-daisyui.html`, exporté vers Claude Design) :
+
+```html
+<button type="button" class="btn btn-primary"><i data-lucide="check" class="size-4"></i>Principal</button>
+<button type="button" class="btn btn-outline">Secondaire</button>
+<button type="button" class="btn btn-ghost">Discret</button>
+<button type="button" class="btn btn-error">Supprimer</button>
+<!-- Petit : btn-sm · icône seule : btn-square et aria-label · désactivé : disabled -->
+
+<div><p class="mb-1 text-xs font-medium text-muted">Libellé</p><div class="input w-full">Valeur saisie</div></div>
+<!-- Erreur : input-error + <p class="mt-1 text-xs text-danger">Message</p> · liste : select w-full · zone de texte : textarea -->
+
+<span class="checkbox checkbox-primary" role="checkbox" aria-checked="true"></span>
+<span class="toggle toggle-primary" role="switch" aria-checked="true"></span>
+
+<div role="tablist" class="tabs tabs-border"><span role="tab" class="tab" aria-selected="true">Actif</span><span role="tab" class="tab">Inactif</span></div>
+<!-- Segmenté : tabs tabs-box -->
+
+<div class="card card-border bg-surface"><div class="card-body"><h3 class="card-title">Titre</h3><p class="text-muted">Texte</p></div></div>
+<div class="overflow-hidden rounded-card border border-line bg-surface"><table class="table">…</table></div>
+<div role="alert" class="alert alert-soft alert-warning"><i data-lucide="triangle-alert" class="size-4"></i><span>Message</span></div>
+```
+
+Un composant que daisyUI n'a pas (palette de commandes, sélecteur de date de l'application) garde les utilitaires du §6.

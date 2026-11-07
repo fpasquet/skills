@@ -1,0 +1,117 @@
+<!--
+  Catalogue de composants exporté vers un Design System Claude Design, pour un produit qui emploie daisyUI
+  (sources/site.json → daisyui) : mêmes cartes que design-system.html, écrites avec les classes de daisyUI, que son
+  thème pointé sur les tokens met aux couleurs du produit. Les mises en page restent en utilitaires Tailwind.
+  Chaque <section data-card="…" data-group="…"> devient une carte d'aperçu (un fichier HTML).
+-->
+
+<section data-card="Boutons" data-group="Composants" data-slug="buttons" data-width="720">
+  <div class="flex flex-wrap items-center gap-3">
+    <button type="button" class="btn btn-primary"><i data-lucide="check" class="size-4"></i>Principal</button>
+    <button type="button" class="btn btn-outline">Secondaire</button>
+    <button type="button" class="btn btn-ghost">Discret</button>
+    <button type="button" class="btn btn-error">Supprimer</button>
+    <button type="button" class="btn btn-square btn-outline" aria-label="Actions"><i data-lucide="ellipsis" class="size-4"></i></button>
+    <button type="button" class="btn btn-primary" disabled>Désactivé</button>
+  </div>
+  <div class="mt-3 flex flex-wrap items-center gap-3"><button type="button" class="btn btn-primary btn-sm">Petit</button><button type="button" class="btn btn-outline btn-sm">Petit</button><button type="button" class="btn btn-primary btn-lg">Grand (mobile)</button></div>
+  <p class="mt-4 text-xs text-muted">Une seule action principale par écran. Libellé : un verbe qui dit ce qui va se passer.</p>
+</section>
+
+<section data-card="Champs de saisie" data-group="Composants" data-slug="fields" data-width="720">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div><p class="mb-1 text-xs font-medium text-muted">Libellé</p><div class="input w-full">Valeur saisie</div></div>
+    <div><p class="mb-1 text-xs font-medium text-muted">Avec indication</p><div class="input w-full text-muted">Texte d'exemple</div></div>
+    <div><p class="mb-1 text-xs font-medium text-muted">Liste déroulante</p><div class="select w-full">Option choisie</div></div>
+    <div><p class="mb-1 text-xs font-medium text-muted">En erreur</p><div class="input input-error w-full">valeur incorrecte</div><p class="mt-1 text-xs text-danger">Ce qui ne va pas, et comment le corriger.</p></div>
+  </div>
+</section>
+
+<section data-card="Cases, choix et interrupteurs" data-group="Composants" data-slug="selection" data-width="560">
+  <div class="flex flex-col gap-3 text-sm">
+    <label class="flex items-center gap-2"><span class="checkbox checkbox-primary checkbox-sm" role="checkbox" aria-checked="true"></span>Option cochée</label>
+    <label class="flex items-center gap-2"><span class="checkbox checkbox-sm" role="checkbox" aria-checked="false"></span>Option non cochée</label>
+    <label class="flex items-center gap-2"><span class="radio radio-primary radio-sm" role="radio" aria-checked="true"></span>Choix unique sélectionné</label>
+    <label class="flex items-center gap-2"><span class="toggle toggle-primary toggle-sm" role="switch" aria-checked="true"></span>Interrupteur activé</label>
+  </div>
+</section>
+
+<section data-card="Badges d'état" data-group="Composants" data-slug="badges" data-width="640">
+  <div class="flex flex-wrap gap-2">
+    <span class="badge badge-soft badge-success">Terminé</span>
+    <span class="badge badge-soft badge-info">En cours</span>
+    <span class="badge badge-soft badge-warning">En attente</span>
+    <span class="badge badge-soft badge-error">Échec</span>
+    <span class="badge">Neutre</span>
+  </div>
+  <p class="mt-4 text-xs text-muted">Toujours un libellé : la couleur seule ne porte pas l'information.</p>
+</section>
+
+<section data-card="Onglets" data-group="Composants" data-slug="tabs" data-width="640">
+  <div role="tablist" class="tabs tabs-border"><span role="tab" class="tab" aria-selected="true">Actif</span><span role="tab" class="tab">Inactif</span><span role="tab" class="tab">Autre</span></div>
+  <div role="tablist" class="tabs tabs-box mt-5 w-fit"><span role="tab" class="tab" aria-selected="true">Segment actif</span><span role="tab" class="tab">Autre segment</span></div>
+</section>
+
+<section data-card="Cartes et listes" data-group="Composants" data-slug="cards" data-width="720">
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div class="card card-border bg-surface"><div class="card-body"><p class="card-title text-base">Objet manipulable</p><p class="text-sm text-muted">Une carte pour un objet qu'on ouvre, déplace ou sélectionne.</p></div></div>
+    <ul class="list rounded-card border border-line bg-surface text-sm">
+      <li class="list-row items-center">Élément de liste<span class="text-xs text-muted">méta</span></li>
+      <li class="list-row items-center">Élément de liste<span class="text-xs text-muted">méta</span></li>
+    </ul>
+  </div>
+</section>
+
+<section data-card="Tableau" data-group="Composants" data-slug="table" data-width="760">
+  <div class="overflow-hidden rounded-card border border-line bg-surface">
+    <table class="table">
+      <thead><tr><th>Nom</th><th>État</th><th class="text-right">Mise à jour</th></tr></thead>
+      <tbody>
+        <tr class="bg-primary-soft/60"><td class="font-medium">Ligne sélectionnée</td><td><span class="badge badge-soft badge-info">En cours</span></td><td class="text-right text-muted tabular-nums">il y a 2 min</td></tr>
+        <tr><td>Ligne standard</td><td><span class="badge badge-soft badge-success">Terminé</span></td><td class="text-right text-muted tabular-nums">hier</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section data-card="Calques : modale, menu, message" data-group="Composants" data-slug="overlays" data-width="760">
+  <div class="relative h-72 overflow-hidden rounded-card border border-line bg-canvas">
+    <div class="dropdown dropdown-open absolute top-4 left-4"><span class="btn btn-outline btn-sm">Trier</span><ul class="dropdown-content menu z-10 w-44 rounded-card border border-line bg-surface shadow-overlay"><li><a aria-current="page">Plus récents</a></li><li><a>Plus anciens</a></li></ul></div>
+    <div class="modal modal-open absolute"><div class="modal-box w-72"><p class="font-medium">Modale</p><p class="mt-1 text-sm text-muted">Confirmation ou saisie courte.</p><div class="modal-action"><span class="btn btn-ghost btn-sm">Annuler</span><span class="btn btn-primary btn-sm">Valider</span></div></div></div>
+    <div class="toast toast-start absolute"><div role="status" class="alert alert-success alert-soft text-sm"><i data-lucide="check" class="size-4"></i>Message de confirmation</div></div>
+  </div>
+</section>
+
+<section data-card="États vides et erreurs" data-group="Composants" data-slug="states" data-width="720">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="flex flex-col items-center gap-2 rounded-card border border-line bg-surface px-4 py-8 text-center">
+      <span class="grid size-10 place-items-center rounded-full bg-primary-soft text-primary"><i data-lucide="inbox" class="size-5"></i></span>
+      <b class="font-display font-semibold">Rien pour l'instant</b><p class="text-sm text-muted">Dire quoi faire ensuite.</p>
+    </div>
+    <div role="alert" class="alert alert-soft alert-error self-start text-sm"><i data-lucide="circle-alert" class="size-4 shrink-0"></i><span>Ce qui s'est passé, puis quoi faire. <b class="underline">Réessayer</b></span></div>
+  </div>
+</section>
+
+<section data-card="Assistant à étapes" data-group="Motifs" data-slug="stepper" data-width="720">
+  <ul class="steps w-full text-sm">
+    <li class="step step-primary">Étape faite</li>
+    <li class="step step-primary">Étape en cours</li>
+    <li class="step">À venir</li>
+  </ul>
+</section>
+
+<section data-card="Liste de conditions" data-group="Motifs" data-slug="conditions" data-width="560">
+  <ul class="list rounded-card border border-line bg-surface text-sm">
+    <li class="list-row items-center"><i data-lucide="check" class="size-4 text-success"></i>Condition remplie<span class="font-mono text-xs text-muted">valeur</span></li>
+    <li class="list-row items-center"><i data-lucide="x" class="size-4 text-danger"></i>Condition non remplie<span class="text-xs text-danger">raison</span></li>
+  </ul>
+</section>
+
+<section data-card="Pipeline" data-group="Motifs" data-slug="pipeline" data-width="760">
+  <ol class="grid grid-cols-4 gap-2 text-xs">
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 1</p><p class="text-muted">faite</p><progress class="progress progress-success mt-2 h-1" value="100" max="100"></progress></li>
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 2</p><p class="text-muted">en cours</p><progress class="progress progress-info mt-2 h-1" value="50" max="100"></progress></li>
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 3</p><p class="text-muted">à venir</p><progress class="progress mt-2 h-1" value="0" max="100"></progress></li>
+    <li class="rounded-control border border-line bg-surface p-2"><p class="font-medium">Étape 4</p><p class="text-muted">en échec</p><progress class="progress progress-error mt-2 h-1" value="100" max="100"></progress></li>
+  </ol>
+</section>

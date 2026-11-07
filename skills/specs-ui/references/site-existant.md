@@ -51,6 +51,21 @@ Faire correspondre l'existant au vocabulaire commun (voir `tailwind.md`) dans `t
 - Police non disponible sur Google Fonts (police propriétaire) : utiliser la plus proche (même famille de dessin, même chasse), et le noter dans les points ouverts.
 - Token manquant (pas de couleur de succès sur le site, par exemple) : le créer dans l'esprit de la palette, le marquer `/* créé, à valider */` et l'ajouter aux points ouverts.
 
+**Site sous daisyUI** (indice « daisyUI » du rapport, section « daisyUI theme ») : les couleurs ne sont pas dans `@theme` mais dans le thème daisyUI appliqué. C'est un thème du projet (`@plugin "daisyui/theme"`) ou un thème intégré (`light`, `corporate`…), dont les valeurs sont dans le paquet. Le rapport les donne en hexadécimal, avec le token qui leur correspond :
+
+| daisyUI | Token |
+|---|---|
+| `base-100`, `base-200`, `base-300`, `base-content` | `surface`, `surface-alt`, `line`, `ink` |
+| `primary`, `primary-content` | `primary`, `on-primary` |
+| `error`, `error-content` | `danger`, `on-danger` |
+| `radius-field`, `radius-box` | `radius-control`, `radius-card` |
+| `size-field` × 10 | `spacing-control` |
+
+- Les couleurs d'état de daisyUI (`success`, `warning`, `info`, `error`) sont des **fonds**, souvent clairs. Le token est une couleur de texte sur `surface` : la reprendre si elle passe AA (`check-contrast.mjs`), sinon la foncer dans la même teinte et mettre la couleur de daisyUI dans `<état>-soft`. Le noter dans les points ouverts.
+- `canvas`, `muted`, `line-strong` et la navigation n'existent pas chez daisyUI : les mesurer sur les captures.
+- `secondary`, `accent` et `neutral` n'ont pas de token : les garder seulement s'ils jouent un rôle visible, comme tokens propres au produit.
+- Déclarer daisyUI dans `sources/site.json` (`"daisyui"`, avec la version du site) : les maquettes emploient alors ses classes (`tailwind.md` §9).
+
 ## 4. Caler la reproduction (écran E0)
 
 Avant de dessiner quoi que ce soit de nouveau, reproduire une page existante en Tailwind, desktop et mobile : c'est l'écran **E0 · Existant**, badge « Existant ». Le placer dans les specs à côté de la capture réelle :

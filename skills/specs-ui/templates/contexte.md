@@ -27,6 +27,7 @@ Site construit dans `site/`, publié comme un seul artifact : {{URL}} (aussi dan
 ## Identité et disposition
 
 - **Thème** : {{nom}}, dans `tokens.css` ({{luminosité, couleur principale, polices, densité}}).
+- **Classes des composants** : {{suites d'utilitaires du catalogue (`tailwind.md` §6) | daisyUI <version>, déclaré dans `sources/site.json` (`tailwind.md` §9)}}.
 - **Disposition** : {{structure : navigation, organisation des écrans}} ; interactions : {{raccourcis, panneaux…}}.
 - **Coquilles** (`sources/shared/shells.html`) : `tpl-shell-desktop` ({{contenu}}), `tpl-shell-mobile` ({{contenu}}).
   - `data-nav` : {{liste des identifiants}}

@@ -79,8 +79,8 @@ Une nouvelle version d'un skill se réimporte de la même façon. Claude Code su
 
 | Skill                                                      | Version | Description                                                                                     |
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| [`specs-ui`](skills/specs-ui/README.md)                     | 3.7.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
-| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.5.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
+| [`specs-ui`](skills/specs-ui/README.md)                     | 3.8.0   | Specs UI maquettées en HTML + Tailwind (et daisyUI) : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
+| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.6.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
 | [`requirements-doc`](skills/requirements-doc/README.md) | 2.4.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés ; export vers l'application |
 | [`design-system`](skills/design-system/README.md)       | 1.2.0   | Design system React : tokens, classes sémantiques (du projet ou de daisyUI), shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
 
