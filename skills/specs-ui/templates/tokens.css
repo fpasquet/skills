@@ -8,7 +8,7 @@
  *
  * Les noms sont sémantiques (bg-primary, text-muted, rounded-card, h-control…) :
  * les maquettes et le code partagent le même vocabulaire. Valeurs en hexadécimal
- * pour que scripts/verifier-contrastes.mjs puisse les contrôler.
+ * pour que scripts/check-contrast.mjs puisse les contrôler.
  * Ajouter une ligne de commentaire quand une valeur vient d'une source précise
  * (variable CSS du site, charte, choix arbitré en itération).
  */

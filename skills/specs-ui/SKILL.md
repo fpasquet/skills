@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.7.3"
+  version: "3.7.4"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -136,7 +136,7 @@ Les templates contiennent un produit fictif (« Orbe », demandes clients) qui n
 
 ## Étape 0 · Cadrer
 
-1. **Où ?** Le projet vit dans un dépôt de specs, dans `<projet>/`. Un nouveau projet : demander, s'ils ne sont pas connus, le dépôt de specs (dédié au projet ou partagé avec d'autres, au choix de la personne) et, dans un dépôt partagé, le nom du dossier. Ne jamais créer le dossier dans le dépôt de l'application. Un dossier `specs/` dans l'application (disposition des versions 3.0 à 3.6) fonctionne toujours, `<projet>` valant `specs` : proposer de le déplacer (`depot-specs.md` §6).
+1. **Où ?** Le projet vit dans un dépôt de specs, dans `<projet>/`. Un nouveau projet : demander, s'ils ne sont pas connus, le dépôt de specs (dédié au projet ou partagé avec d'autres, au choix de la personne) et, dans un dépôt partagé, le nom du dossier : question et option recommandée dans `depot-specs.md` §1. Ne jamais créer le dossier dans le dépôt de l'application. Un dossier `specs/` dans l'application (disposition des versions 3.0 à 3.6) fonctionne toujours, `<projet>` valant `specs` : proposer de le déplacer (`depot-specs.md` §6).
 2. **Reprise ?** Si `<projet>/ui/` existe, lire `CONTEXTE.md` et reprendre à l'étape utile. Un projet à l'ancienne disposition (`specs-ui/` à la racine, versions 2.x) se range d'abord avec `node <skill>/scripts/migrate-layout.mjs <dossier>` (`--dry-run` pour voir), puis se reconstruit ; les artifacts gardent leur URL. Un projet sans `CONTEXTE.md` ni `sources/` (créé par une version 1.x, un document par lot) se migre d'abord :
    - `split.mjs` sur chaque document de specs, dans l'ordre des lots ;
    - ranger les anciens documents dans `<projet>/ui/archives/` ;
@@ -292,7 +292,7 @@ Une fois les développements lancés, les specs restent **la référence** : ell
 "status": { "e1": "done", "e2": "doing", "e3": { "status": "gap", "note": "Codex pas encore pris en charge" } }
 ```
 
-- Valeurs : `todo` (À développer, par défaut), `doing` (En cours), `done` (Livré), `gap` (Écart : l'application diffère des specs ; la note dit en quoi).
+- Valeurs : `todo` (À développer, par défaut), `doing` (En cours), `done` (Livré), `gap` (Écart : l'application diffère des specs ; la note dit en quoi). Un statut change dès qu'on l'apprend, par exemple `doing` quand une demande cite un écran en développement.
 - Le build remplace le badge « Nouveau » de chaque état par le statut, met une pastille dans la navigation et affiche l'avancement sur l'index des lots et l'accueil. Le cahier des charges reprend les statuts à l'extraction.
 
 **Un écart constaté pendant le développement** se tranche, puis se reporte dans le dépôt de specs, dans un commit qui cite la PR de code :
@@ -304,10 +304,10 @@ Une fois les développements lancés, les specs restent **la référence** : ell
 Puis, dans l'ordre :
 
 - reconstruire les specs ;
-- reporter l'écart dans le prototype s'il câble l'écran (skill `prototype-ui`, « Suivre les specs ») ;
+- reporter l'écart dans le prototype s'il a l'écran (skill `prototype-ui`, « Maintenir pendant les développements » : une page câblée se reporte, une page non câblée se régénère) ;
 - réextraire le cahier des charges et ajuster les critères touchés (skill `requirements-doc`, « Maintenir ») ;
 - publier les artifacts concernés (`prepare-publish.mjs … --check` dit lesquels sont en retard) ;
-- commiter les sources et les `.published.json` ensemble dans le dépôt de specs ;
+- commiter les sources et les `.published.json` ensemble dans le dépôt de specs (un livrable pas encore publié n'en a pas) ;
 - dans l'application, régénérer l'export du cahier des charges (`export.mjs`) et, si l'identité a changé, la copie des tokens (`tokens.mjs`), dans la PR de code si elle est encore ouverte.
 
 **Numérotation stable.** Une règle fonctionnelle garde son numéro : une nouvelle règle va à la fin de la liste, une règle abandonnée reste avec la mention « Retirée ». Un écran ou un état retiré garde son identifiant réservé. Les identifiants RF du cahier des charges viennent de ces numéros.

@@ -70,9 +70,9 @@ if (newLot && existsSync(join(sharedDir, 'shells.html'))) {
   <h2 class="text-xl font-semibold">Points ouverts</h2>
   <div class="mt-3 overflow-x-auto rounded-xl border border-doc-line bg-doc-card">
     <table class="w-full min-w-[640px] text-left text-[15px]">
-      <thead class="border-b border-doc-line text-sm text-doc-muted"><tr><th class="px-4 py-2 font-medium">Question</th><th class="px-4 py-2 font-medium">À trancher par</th><th class="px-4 py-2 font-medium">Écrans</th></tr></thead>
+      <thead class="border-b border-doc-line text-sm text-doc-muted"><tr><th class="px-4 py-2 font-medium">Question</th><th class="px-4 py-2 font-medium">Recommandé</th><th class="px-4 py-2 font-medium">À trancher par</th><th class="px-4 py-2 font-medium">Écrans</th></tr></thead>
       <tbody class="divide-y divide-doc-line">
-        <tr><td class="px-4 py-2.5">QUESTION</td><td class="px-4 py-2.5 text-doc-muted">QUI</td><td class="px-4 py-2.5">ÉCRANS</td></tr>
+        <tr><td class="px-4 py-2.5">QUESTION</td><td class="px-4 py-2.5">RÉPONSE RECOMMANDÉE</td><td class="px-4 py-2.5 text-doc-muted">QUI</td><td class="px-4 py-2.5">ÉCRANS</td></tr>
       </tbody>
     </table>
   </div>

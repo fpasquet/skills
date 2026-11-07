@@ -65,7 +65,7 @@ if (statSync(input).isDirectory()) {
     const site = JSON.parse(readFileSync(join(siteDir, '..', 'sources', 'site.json'), 'utf8'));
     const pending = [...(published['index.html'] !== hash('index.html') ? ['index.html'] : []), ...changed, ...removed.map((p) => `${p} (removed)`)];
     const where = site.artifact ? `artifact ${site.artifact}` : 'not published yet (no "artifact" in sources/site.json)';
-    console.log(pending.length ? `Specs UI: ${pending.length} page(s) not published, ${where}: ${pending.join(', ')}` : `Specs UI: published, up to date (${where}).`);
+    console.log(pending.length ? `Specs UI: ${pending.length} page(s) to publish, ${where}: ${pending.join(', ')}` : `Specs UI: published, up to date (${where}).`);
     process.exit(pending.length && process.argv.includes('--strict') ? 1 : 0);
   }
   const outDir = resolve(second);

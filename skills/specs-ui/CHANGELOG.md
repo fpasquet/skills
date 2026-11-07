@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.7.4 · 7 nov. 2026
+
+Retours d'essais par des agents (nouveau projet, migration, écart pendant les développements) :
+
+- `depot-specs.md` :
+  - le choix du dépôt se pose avec une option recommandée : le dépôt de specs déjà connu, sinon un dépôt dédié ;
+  - la ligne de renvoi à ajouter à l'`AGENTS.md` de l'application, existant ou nouveau ;
+  - l'export suit sur la branche de la PR de code, à demander si elle n'est pas connue ;
+  - un statut d'écran change dès qu'on l'apprend ;
+  - la migration dit son ordre : pousser le dépôt de specs, puis la PR de l'application, avec `git rm -r specs` seulement après le push et avec l'accord de la personne. Elle dit aussi où lire l'historique d'avant l'import, et qu'un artifact signalé en retard l'était déjà ; la feuille d'entrée bascule seule sur la copie des tokens.
+- Étape 7 : un statut change dès qu'on l'apprend ; le prototype se reporte (page câblée) ou se régénère (page non câblée), comme le dit `prototype-ui` ; un livrable jamais publié n'a pas de `.published.json`.
+- `redaction-specs.md` : un lot est un dossier de sources, et un lien vers un écran d'un autre lot s'écrit `#e12`, comme les autres (plus « un document par lot », de la version 1.x).
+- `split.mjs --new` : les points ouverts du squelette ont les quatre colonnes de `redaction-specs.md` (avec « Recommandé »).
+- Un lot créé avant la 3.7.3 garde son `<header>` jamais refermé : le refermer dans `000-header.html`, après la ligne des parcours, puis reconstruire.
+- `prepare-publish.mjs --check` : message plus clair (« page(s) to publish »). Gabarit `tokens.css` : le script de contraste s'appelle `check-contrast.mjs`.
+
 ## 3.7.3 · 7 nov. 2026
 
 - `split.mjs` garde l'en-tête du document en entier quand il contient des sections, comme les règles fonctionnelles du template : la ligne des parcours et la fermeture du `<header>` étaient perdues, et `build.mjs` signalait un `<header>` jamais refermé sur chaque lot créé par `--new`. Les sections de l'en-tête restent des sources à part ; un en-tête sans section se découpe comme avant.
