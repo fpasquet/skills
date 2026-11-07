@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.7.1 · 7 nov. 2026
+
+- `depot-specs.md` : les ADR que l'équipe écrit pendant les développements restent dans l'application, hors du dossier de l'export ; un ADR qui remplace une décision DT se reporte dans le cahier des charges (skill `requirements-doc`).
+
 ## 3.7.0 · 6 nov. 2026
 
 - **Dépôt de specs** : les specs, le prototype et le cahier des charges vivent dans un dépôt git dédié, un dossier par projet, et plus dans le dépôt de l'application, dont elles noyaient les PR. L'application n'en reçoit que l'export du cahier des charges (`export.mjs` du skill `requirements-doc`) et une copie des tokens (`tokens.mjs` du skill `design-system`).

@@ -55,6 +55,8 @@ Le `.gitignore` du dépôt écarte ce qui se reconstruit :
 
 Rien d'autre : ni maquettes, ni prototype, ni chiffrage. Ces fichiers sont générés et ne se modifient jamais dans l'application. `trace.mjs --strict` (sur l'export) et l'audit du design system (sur les tokens) signalent un fichier modifié à la main.
 
+Les ADR que l'équipe écrit pendant les développements restent dans l'application, hors du dossier de l'export. Un ADR qui remplace une décision DT du cahier des charges s'y reporte (`requirements-doc`, « Maintenir pendant les développements »).
+
 ## 4. Pendant les développements
 
 - **Le code ne modifie pas les specs.** Un écart se tranche comme à l'étape 7 de `specs-ui`, puis se reporte dans le dépôt de specs, dans un commit qui cite la PR de code (« aligné sur l'implémentation, orbe-app#123 »).
