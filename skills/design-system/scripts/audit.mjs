@@ -16,7 +16,9 @@
  *
  * Erreurs : couleur en dur, couleur de la palette de Tailwind, valeur ou variante arbitraire, attribut data-slot /
  * data-variant / data-size, feuille de composant non importée, sélecteur déclaré deux fois, `--color-muted` redéfini,
- * fond `bg-muted` de shadcn alors que `muted` est la couleur du texte.
+ * fond `bg-muted` de shadcn alors que `muted` est la couleur du texte ; avec daisyUI, thèmes intégrés qui écrasent les
+ * tokens, thème daisyUI qui ne pointe pas sur les tokens ou qui laisse des variables sans valeur, règle sur une classe de
+ * daisyUI hors de sa sous-couche de base (elle ne s'applique pas, ou écrase ses modificateurs et le JSX).
  * Avertissements : composant hors de son dossier, sans index.ts ou sans histoire, plusieurs composants par fichier,
  * import relatif entre composants partagés, animation sans prefers-reduced-motion, histoire hors de sa section,
  * @apply à valeur arbitraire, sélecteur sur un autre attribut data-* que data-state.
@@ -24,7 +26,7 @@
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
-import { detectProject, isDir, lintConfigText, parseArgs, read, readJsonc, rel, scaleChecker, walk } from './project.mjs';
+import { DAISYUI_THEME_VARIABLES, daisyuiCatalog, detectProject, isDir, lintConfigText, parseArgs, read, readJsonc, rel, scaleChecker, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['json', 'strict']);
 if (!positional[0] || !isDir(positional[0])) {
@@ -52,6 +54,10 @@ const RULES = {
   'muted-redefined': ['error', '--color-muted redefined by the theme: in the tokens it is the secondary text colour'],
   'shadcn-alias': ['error', 'components.json alias that tsconfig does not resolve: the shadcn CLI refuses to add components'],
   'muted-background': ['error', 'bg-muted is a shadcn background, but muted is the text colour of the tokens: use bg-surface-alt'],
+  'daisyui-builtin-theme': ['error', 'daisyUI built-in themes are on: they sit in the base layer and override the colour tokens; @plugin "daisyui" { themes: false; }, and a daisyUI theme on the tokens'],
+  'daisyui-theme-value': ['error', 'daisyUI theme with its own value: its colours and radii point at the tokens (var(--color-surface)) and never redeclare a token'],
+  'daisyui-theme-missing': ['error', 'daisyUI theme variable defined nowhere (built-in themes off): the components that read it lose their colour, size or border'],
+  'daisyui-layer': ['error', 'Rule on a daisyUI class outside its base sublayer: in @layer components it never applies, unlayered or in @utility it beats the modifiers of daisyUI (btn-sm) or the utilities of the JSX; write it in @layer utilities { @layer <base sublayer> { … } }'],
   'flat-component': ['warning', 'Component file at the root of ui/: move it to its folder (rehome.mjs)'],
   'missing-index': ['warning', 'Component folder without index.ts re-exporting its names'],
   'missing-story': ['warning', 'Stateless component without a *.stories.tsx next to it'],
@@ -72,7 +78,10 @@ const RULES = {
 // stable, déclarés par --allow-data (streamdown pour data-streamdown='link')
 // Base UI marque l'ouverture et les transitions par data-open, data-closed, data-starting-style et data-ending-style
 const baseUiData = project.primitives === 'base' ? ['open', 'closed', 'starting-style', 'ending-style'] : [];
-const allowedData = ['state', 'side', 'align', 'orientation', 'placeholder', ...baseUiData, ...String(options['allow-data'] ?? '').split(',').filter(Boolean)];
+// daisyUI change de thème par data-theme
+const allowedData = ['state', 'side', 'align', 'orientation', 'placeholder', ...baseUiData, ...(project.daisyui ? ['theme'] : []), ...String(options['allow-data'] ?? '').split(',').filter(Boolean)];
+// Classes de daisyUI (paquet installé, sinon racines connues) : elles vivent dans la couche des utilitaires
+const daisyui = project.daisyui ? daisyuiCatalog(project) : null;
 const dataSelector = new RegExp(`\\[data-(?!(${allowedData.join('|')})\\b)[\\w-]+`);
 const findings = Object.fromEntries(Object.keys(RULES).map((id) => [id, []]));
 const add = (id, file, line, detail) => findings[id].push({ file: rel(project, file), line, detail });
@@ -231,11 +240,14 @@ function definedBy(prelude) {
 for (const file of cssFiles) {
   const css = stripCssComments(read(file));
   const isTokens = file === project.tokens;
-  // Déclarations : une couleur en dur est une erreur, variable locale d'un composant comprise (--x: #…) ; seuls les
-  // tokens et le thème (bloc .dark) déclarent des valeurs
+  // Déclarations : une couleur en dur est une erreur, variable locale d'un composant comprise (--x: #…, --x-100: …) ;
+  // seuls les tokens et le thème (bloc .dark) déclarent des valeurs. Un thème daisyUI a sa propre règle
+  // (daisyui-theme-value)
+  const daisyuiThemeRanges = [...css.matchAll(/@plugin\s+(['"])daisyui\/theme\1\s*\{[^}]*\}/g)].map((m) => [m.index, m.index + m[0].length]);
   if (!isTokens) {
-    for (const match of css.matchAll(/(^|[;{\s])([a-z-]+)\s*:\s*([^;{}]+);/g)) {
+    for (const match of css.matchAll(/(^|[;{\s])(-{0,2}[a-z][a-z0-9-]*)\s*:\s*([^;{}]+);/g)) {
       if ((match[2].startsWith('--') && file === project.theme) || match[2] === 'apply') continue;
+      if (daisyuiThemeRanges.some(([from, to]) => match.index >= from && match.index < to)) continue;
       if (COLOR_LITERAL.test(match[3]) && !/^url\(/.test(match[3].trim())) {
         add('hardcoded-color', file, lineOf(css, match.index), `${match[2]}: ${match[3].trim()}`);
       }
@@ -276,6 +288,16 @@ for (const file of cssFiles) {
         // data-state, et les attributs que Radix pose sans équivalent ARIA (côté et alignement d'un calque, valeur
         // absente d'un Select), restent permis
         if (dataSelector.test(prelude)) add('data-selector', file, lineOf(css, i), prelude);
+        // Classe de daisyUI visée hors de sa sous-couche de base : daisyUI est dans la couche des utilitaires, sa règle de
+        // base dans la sous-couche la plus basse (daisyui.l1.l2.l3), ses modificateurs au-dessus
+        if (daisyui && inside(file, project.src)) {
+          const layers = stack.filter((p) => p.startsWith('@layer')).map((p) => p.replace(/^@layer\s+/, '')).join('.');
+          if (layers !== `utilities.${daisyui.baseLayer}`) {
+            for (const cls of definedBy(prelude).filter((c) => daisyui.has(c))) {
+              add('daisyui-layer', file, lineOf(css, i), `${prelude} (${layers || 'unlayered'}) → @layer utilities { @layer ${daisyui.baseLayer} { … } }`);
+            }
+          }
+        }
         if (/\[data-(slot|variant|size)\b/.test(prelude)) add('data-attribute', file, lineOf(css, i), prelude);
         if (inside(file, project.src) && file !== project.theme) {
           // Classe définie : la première du sujet de chaque sélecteur (dernier composé). Dans .card-header.border-b,
@@ -311,6 +333,45 @@ if (project.theme && project.tokens && /--color-muted\s*:/.test(read(project.tok
   for (const block of theme.matchAll(/@theme[^{]*\{([^}]*)\}/g)) {
     const at = block[1].search(/--color-muted\s*:/);
     if (at >= 0) add('muted-redefined', project.theme, lineOf(theme, block.index + at), '--color-muted');
+  }
+}
+
+// ---------- daisyUI : thèmes et surcharges ----------
+if (project.daisyui) {
+  const dz = project.daisyui;
+  const tokensCss = project.tokens ? stripCssComments(read(project.tokens)) : '';
+  const tokenNames = new Set([...tokensCss.matchAll(/(?:^|[;{\s])(--[\w-]+)\s*:/g)].map((m) => m[1]));
+  const hasColorTokens = [...tokenNames].some((name) => name.startsWith('--color-'));
+  const hasRadiusTokens = [...tokenNames].some((name) => /^--radius-(?!\*)/.test(name));
+  // Thèmes intégrés (couche base) : ils écrasent les tokens de même nom (couche theme), primary en tête
+  if (hasColorTokens && dz.builtinThemes.length && dz.plugin) {
+    add('daisyui-builtin-theme', dz.plugin.file, dz.plugin.line, `themes: ${dz.builtinThemes.join(', ')}`);
+  }
+  for (const theme of dz.themes) {
+    for (const variable of theme.variables) {
+      const detail = `${theme.name}: ${variable.name}: ${variable.value}`;
+      if (tokenNames.has(variable.name)) add('daisyui-theme-value', theme.file, variable.line, `${detail} (redeclares the token)`);
+      else if (variable.name.startsWith('--color-') && !/^var\(--color-[\w-]+\)$/.test(variable.value)) add('daisyui-theme-value', theme.file, variable.line, detail);
+      else if (hasRadiusTokens && /^--radius-(box|field|selector)$/.test(variable.name) && !/^var\(--radius-[\w-]+\)$/.test(variable.value)) {
+        add('daisyui-theme-value', theme.file, variable.line, detail);
+      }
+    }
+  }
+  // Thèmes intégrés coupés : chaque variable lue par les composants vient du thème par défaut ou des tokens
+  if (!dz.builtinThemes.length) {
+    const main = dz.themes.find((t) => t.isDefault) ?? dz.themes[0];
+    const defined = new Set([...(main?.variables ?? []).map((v) => v.name), ...tokenNames]);
+    const missing = DAISYUI_THEME_VARIABLES.filter((name) => !defined.has(name));
+    const at = main ?? dz.plugin;
+    if (missing.length && at) add('daisyui-theme-missing', at.file, at.line, `${main ? `${main.name}: ` : 'no daisyUI theme: '}${missing.join(', ')}`);
+  }
+  // @utility <classe de daisyUI> (documentation de daisyUI) : hors des sous-couches, il écrase les modificateurs (btn-sm,
+  // btn-circle) et, selon l'ordre de Tailwind, les utilitaires du JSX (btn font-bold reste en medium)
+  for (const file of cssFiles.filter((f) => inside(f, project.src))) {
+    const css = stripCssComments(read(file));
+    for (const m of css.matchAll(/@utility\s+([a-z][\w-]*)\s*\{/g)) {
+      if (daisyui.has(m[1])) add('daisyui-layer', file, lineOf(css, m.index), `@utility ${m[1]} → @layer utilities { @layer ${daisyui.baseLayer} { .${m[1]} { … } } }`);
+    }
   }
 }
 
@@ -501,9 +562,11 @@ const conventionFiles = [join(project.repo, '.claude', 'rules', 'design-system.m
 const docFiles = project.designSystemPackage ? [] : [...conventionFiles, ...walk(project.docs, ['.mdx'])];
 if (docFiles.length) {
   const allCss = walk(project.repo, ['.css']).map((file) => stripCssComments(read(file))).join('\n');
-  // Classes des feuilles, et utilitaires déclarés par @utility (body-s, focus-ring)
-  const known = new Set([...allCss.matchAll(/\.([a-z][\w-]*)|@utility\s+([a-z][\w-]*)/g)].map((m) => m[1] ?? m[2]));
-  const tokenNames = new Set([...`${read(project.tokens)}\n${read(project.theme)}`.matchAll(/--(?:color|text|container|spacing|radius|shadow|grid-template-columns|font)-([\w-]+)\s*:/g)].map((m) => m[1]));
+  // Classes des feuilles, utilitaires déclarés par @utility (body-s, focus-ring), et classes de daisyUI
+  const known = new Set([...allCss.matchAll(/\.([a-z][\w-]*)|@utility\s+([a-z][\w-]*)/g)].map((m) => m[1] ?? m[2]).concat([...(daisyui?.classes ?? [])]));
+  // Tokens, et variables du thème daisyUI (bg-base-100, text-primary-content, rounded-box)
+  const daisyuiNames = daisyui ? DAISYUI_THEME_VARIABLES.map((name) => name.replace(/^--(color|radius)-/, '')) : [];
+  const tokenNames = new Set([...`${read(project.tokens)}\n${read(project.theme)}`.matchAll(/--(?:color|text|container|spacing|radius|shadow|grid-template-columns|font)-([\w-]+)\s*:/g)].map((m) => m[1]).concat(daisyuiNames));
   const UTILITY = /^-?(bg|text|border|ring|outline|fill|stroke|rounded|shadow|h|w|min-w|min-h|max-w|max-h|size|p[xytrblse]?|m[xytrblse]?|gap(-[xy])?|grid|grid-cols|grid-rows|col|row|flex|items|justify|self|place|font|leading|tracking|space-[xy]|inset(-[xy])?|top|left|right|bottom|z|opacity|aria|data|group|peer|not|has|in|translate-[xy]|scale|rotate|animate|transition|duration|ease|line-clamp|truncate|whitespace|break|overflow|object|aspect|cursor|select|pointer-events|sr|focus|hover|active|disabled|placeholder|decoration|underline|list|divide|backdrop|blur|from|via|to|order|basis|grow|shrink|table|caption|align|content|columns|scrollbar)(-|$)/;
   // Noms de Tailwind (échelle, mots-clés) que l'utilitaire peut prendre sans token
   const TAILWIND_WORDS = /^(xs|sm|md|lg|xl|[2-9]xl|base|none|full|auto|screen|min|max|fit|px|prose|inner|current|inherit|transparent|black|white|left|right|center|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|svh|lvh|dvh|lg|subgrid)$/;
@@ -560,6 +623,20 @@ const layout = {
       ? 'eslint-plugin-tailwindcss: replace it with the better-tailwindcss fragment (references/setup.md)'
       : 'no Tailwind class lint',
   shadcn: project.componentsJson ? `style ${project.componentsJson.style ?? '?'}, cn from ${project.cnImport}` : 'no components.json',
+  ...(project.daisyui && {
+    daisyui: [
+      project.daisyui.version ?? 'version unknown',
+      project.daisyui.plugin ? null : 'installed but no @plugin "daisyui" in the stylesheets',
+      project.daisyui.builtinThemes.length ? `built-in themes ${project.daisyui.builtinThemes.join(', ')}` : 'built-in themes off',
+      ...project.daisyui.themes.map((t) => {
+        const own = t.variables.filter((v) => v.name.startsWith('--color-') && !/^var\(/.test(v.value)).length;
+        return `theme ${t.name}${t.isDefault ? ' (default)' : ''} ${own ? `with its own colours (${own})` : 'on the tokens'}`;
+      }),
+      daisyui.installed
+        ? `${daisyui.classes.size} classes`
+        : `${project.daisyui.dir ? 'no class sheets in the package' : 'package not installed'} (classes guessed from their roots)`,
+    ].filter(Boolean).join(', '),
+  }),
 };
 
 // ---------- Rapport ----------

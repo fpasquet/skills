@@ -91,11 +91,16 @@ Quand `specs/ui/tokens.css` existe, l'application l'importe directement (`@impor
 - `primary` a le même sens des deux côtés : seul `--primary-foreground` est ajouté.
 - `--radius` vient de `--radius-card`, et les rayons `sm`, `md`, `lg`, `xl` de shadcn en dérivent.
 
+## Thème daisyUI
+
+En mode daisyUI, `theme.css` ajoute un thème daisyUI dont chaque variable pointe sur un token (`--color-base-100: var(--color-surface)`, `--radius-field: var(--radius-control)`, `--size-field` tiré de `--spacing-control`), et la feuille d'entrée coupe les thèmes intégrés, qui écraseraient les tokens. `primary`, `success`, `warning` et `info` sont les tokens eux-mêmes. Correspondance complète et pièges : `daisyui.md`.
+
 ## Mode sombre
 
 La classe `dark` sur un ancêtre (`@custom-variant dark (&:is(.dark *))`) redéfinit les **mêmes** tokens de couleur dans le bloc `.dark` de `theme.css`. `scaffold.mjs` y liste les tokens de couleur en commentaire, avec leur valeur claire.
 
 - Un composant n'écrit jamais `dark:` pour une couleur : le token change seul. `dark:` reste pour un réglage qui n'est pas une couleur.
+- Avec daisyUI, son thème pointe sur les tokens et suit le bloc `.dark` sans thème sombre à lui.
 - Les contrastes sont vérifiés aussi en sombre.
 - Storybook montre les deux thèmes (barre d'outils). La page Tokens affiche les deux colonnes.
 

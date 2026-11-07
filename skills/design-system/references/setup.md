@@ -15,6 +15,7 @@ Une version plus récente s'adopte sur une branche : build de Storybook, histoir
 | Storybook | `storybook`, `@storybook/addon-docs`, `@storybook/addon-a11y`, `@storybook/addon-themes`, `@storybook/addon-vitest` ; Next.js : `@storybook/nextjs-vite` ; Vite : `@storybook/react-vite` |
 | Histoires dans le navigateur | `vitest`, `@vitest/browser`, `@vitest/browser-playwright`, `playwright` (ou `@playwright/test`) |
 | Lint | `eslint-plugin-better-tailwindcss` |
+| Classes de daisyUI (mode daisyUI) | `daisyui`, en dépendance de développement (`daisyui.md`) |
 
 - **Catalogue pnpm** (`catalog:` dans les `package.json`) : le script liste les versions à ajouter au catalogue de `pnpm-workspace.yaml` au lieu d'une commande `pnpm add`.
 - **Version plus ancienne dans le dépôt** : le script la signale. `@storybook/addon-vitest` demande vitest 4 ou plus. Si le reste du dépôt est en vitest 3, les paquets de Storybook prennent leur propre version dans un catalogue nommé, réservé au paquet du design system (`catalogs: { storybook: { vitest: … } }`, puis `"vitest": "catalog:storybook"`).
@@ -24,7 +25,7 @@ La CLI de shadcn se lance à sa version épinglée (`npx shadcn@<version> add �
 
 ## Feuille d'entrée
 
-Ordre des imports : Tailwind, animations, tokens, thème, classes. Le script ajoute ceux qui manquent après le dernier `@import` :
+Ordre des imports : Tailwind, animations, tokens, thème, classes. Le script ajoute ceux qui manquent après le dernier `@import`, puis, en mode daisyUI, le greffon sans ses thèmes intégrés :
 
 ```css
 @import 'tailwindcss';
@@ -32,6 +33,7 @@ Ordre des imports : Tailwind, animations, tokens, thème, classes. Le script ajo
 @import '../styles/tokens.css';        /* ou ../../../../specs/ui/tokens.css */
 @import '../styles/theme.css';
 @import '../styles/components.css';
+@plugin "daisyui" { themes: false; }   /* mode daisyUI seulement */
 ```
 
 - **Next.js** : les polices viennent de `next/font`. Les familles des tokens pointent sur ses variables dans un `@theme inline` de la feuille d'entrée (`--font-sans: var(--font-inter), ui-sans-serif, …`), et `body` reçoit `@apply bg-canvas font-sans text-ink antialiased`.

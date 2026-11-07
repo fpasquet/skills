@@ -79,7 +79,7 @@ Une nouvelle version d'un skill se réimporte de la même façon. Claude Code su
 | [`specs-ui`](skills/specs-ui/README.md)                     | 3.6.0   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
 | [`prototype-ui`](skills/prototype-ui/README.md)             | 2.4.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
 | [`requirements-doc`](skills/requirements-doc/README.md) | 2.3.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés |
-| [`design-system`](skills/design-system/README.md)       | 1.0.0   | Design system React : tokens, classes sémantiques, shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
+| [`design-system`](skills/design-system/README.md)       | 1.1.0   | Design system React : tokens, classes sémantiques (du projet ou de daisyUI), shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
 
 Les trois skills de conception publient leur résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et gardent une copie locale. `design-system` travaille dans le code de l'application : il s'utilise depuis Claude Code ou un autre agent de code, pas depuis le chat.
 
@@ -107,7 +107,7 @@ mon-projet/
 
 ### Le design system de l'application
 
-`design-system` installe dans l'application les tokens des specs (`specs/ui/tokens.css`, importés sans copie), un thème shadcn/ui pointé sur ces tokens, des classes sémantiques et Storybook. Il marche aussi sans specs : il tire alors les tokens et les classes du code existant, ou migre un design system en place.
+`design-system` installe dans l'application les tokens des specs (`specs/ui/tokens.css`, importés sans copie), un thème shadcn/ui pointé sur ces tokens, des classes sémantiques et Storybook. Avec daisyUI, ses classes deviennent les classes sémantiques et son thème pointe sur les mêmes tokens. Il marche aussi sans specs : il tire alors les tokens et les classes du code existant, ou migre un design system en place.
 
 ### Pendant les développements
 

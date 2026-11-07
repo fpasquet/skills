@@ -1,0 +1,14 @@
+/*
+ * Boutons : classes de daisyUI (btn, btn-primary, btn-sm…), réglées par le thème daisyUI de theme.css (--radius-field,
+ * --size-field, --border, --depth). Ce fichier ne garde que les écarts du projet, dans la sous-couche où daisyUI range
+ * la règle de base de .btn : ses modificateurs (btn-sm, btn-square, btn-primary), rangés au-dessus, et les utilitaires
+ * du JSX (btn font-bold) l'emportent toujours. Ni @layer components (daisyUI y gagnerait), ni @utility btn (il écraserait
+ * les modificateurs, et parfois le JSX).
+ */
+@layer utilities {
+  @layer daisyui.l1.l2.l3 {
+    .btn {
+      @apply font-medium;
+    }
+  }
+}
