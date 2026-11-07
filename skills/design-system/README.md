@@ -32,7 +32,7 @@ npx skills add <source> --skill design-system -g
 
 `<source>` vaut `<compte>/skills` depuis GitHub, ou le chemin d'une copie locale du dépôt (`~/www/skills`).
 
-Il fonctionne seul. Avec `specs-ui`, l'application importe les tokens des specs (`specs/ui/tokens.css`) : les maquettes et le code partagent les mêmes valeurs.
+Il fonctionne seul. Avec `specs-ui`, dont les specs vivent dans un dépôt de specs à part, l'application garde une copie de leurs tokens, avec leur provenance : les maquettes et le code partagent les mêmes valeurs, et l'audit signale une copie modifiée à la main.
 
 ## Exemples de demandes
 
@@ -41,6 +41,7 @@ Il fonctionne seul. Avec `specs-ui`, l'application importe les tokens des specs 
 - « On migre de Tailwind v3 et de nos CSS Modules vers des classes sémantiques et Storybook. »
 - « Fais l'état des lieux du design system : qu'est-ce qui ne respecte pas les conventions ? »
 - « Ajoute un mode sombre. »
+- « Les couleurs ont changé dans les specs : mets à jour les tokens de l'application. »
 
 ## Ce que le skill pose dans le projet
 
@@ -50,7 +51,7 @@ Il fonctionne seul. Avec `specs-ui`, l'application importe les tokens des specs 
 ├── vitest.config.ts                     # projet « stories » : chaque histoire dans Chromium, avec axe
 ├── eslint.design-system.mjs             # classes Tailwind, data-*, un composant par fichier
 └── src/
-    ├── styles/tokens.css                # (sans specs) tokens à remplir
+    ├── styles/tokens.css                # tokens à remplir, ou copie de ceux des specs
     ├── styles/theme.css                 # shadcn → tokens, mode sombre, mises en page nommées
     ├── styles/components.css            # rassemble les feuilles des composants et de classes/
     ├── styles/utilities.css             # focus-ring
@@ -69,6 +70,7 @@ Aucun fichier existant n'est écrasé. Les dépendances à installer sont affich
 | `scripts/scaffold.mjs` | Socle du design system, sans rien écraser |
 | `scripts/rehome.mjs` | Composant ajouté par la CLI de shadcn : rangé dans son dossier, réécrit en classes sémantiques, premier jet de son CSS ; découpe aussi un fichier qui contient plusieurs composants |
 | `scripts/retoken.mjs` | Classes de shadcn d'une application réécrites avec les tokens du design system |
+| `scripts/tokens.mjs` | Copie des tokens des specs avec leur provenance (et bascule l'ancien import de `specs/ui/tokens.css`), contrôle de cette copie (en retard, modifiée à la main) |
 | `references/` | Mise en place, tokens, composants, Storybook, migration |
 | `templates/` | Gabarits : tokens, thème, classes, Storybook, pages de documentation, ESLint, conventions, mémoire, composant modèle (`button`) |
 
