@@ -12,7 +12,9 @@
  *   --strict   avec --check : code de sortie 1 si la copie n'est pas à jour
  *   --force    remplace un fichier de tokens qui n'est pas une copie des specs, ou une copie modifiée à la main
  *
- * La copie remplace le fichier de tokens que la feuille d'entrée importe, sinon <styles>/tokens.css. Les tokens
+ * La copie remplace le fichier de tokens que la feuille d'entrée importe, sinon <styles>/tokens.css. Une feuille
+ * d'entrée qui importait directement les tokens des specs (ancienne disposition, specs/ dans l'application) importe
+ * ensuite la copie. Les tokens
  * ajoutés et retirés sont listés : un token retiré casse les classes qui l'utilisent (audit.mjs les trouve), un token
  * de couleur ajouté demande sa valeur sombre dans le bloc .dark de theme.css si l'application a un mode sombre.
  */
@@ -52,10 +54,10 @@ if (source && resolve(source) === resolve(target)) {
   process.exit(2);
 }
 const notes = [];
-if (project.tokens && isSpecsTokens(project.tokens)) {
-  notes.push(
-    `The entry stylesheet imports the specs file directly (${relative(process.cwd(), project.tokens)}, old layout with specs/ in the application): once the specs live in the specs repository, import ${rel(project, target)} instead.`,
-  );
+// Ancienne disposition : la feuille d'entrée importe directement les tokens des specs
+const legacyImport = project.tokens && isSpecsTokens(project.tokens) && project.entry ? project.tokens : null;
+if (legacyImport && options.check) {
+  notes.push(`${rel(project, project.entry)} imports the specs tokens directly (${rel(project, legacyImport)}, old layout): copy them with --from, which also switches the import to ${rel(project, target)}.`);
 }
 if (project.tokensInTheme) notes.push(`${rel(project, project.theme)} holds the tokens: split them first (SKILL.md, step 2), the copy goes to ${rel(project, target)}.`);
 
@@ -108,6 +110,20 @@ const darkMode = /\.dark\s*\{/.test(read(project.theme ?? join(project.styles, '
 const newColors = added.filter((name) => name.startsWith('--color-'));
 if (darkMode && newColors.length && current) console.log(`Dark mode: give ${newColors.join(', ')} a value in the .dark block of theme.css.`);
 const entry = project.entry;
+// L'entrée importait les tokens des specs : elle importe désormais la copie
+if (legacyImport) {
+  let switched = false;
+  const css = read(entry).replace(/@import\s+(['"])([^'"]+)\1/g, (match, quote, path) => {
+    if (resolve(dirname(entry), path) !== resolve(legacyImport)) return match;
+    switched = true;
+    const to = relative(dirname(entry), target).split(sep).join('/');
+    return `@import ${quote}${to.startsWith('.') ? to : `./${to}`}${quote}`;
+  });
+  if (switched) {
+    if (!options['dry-run']) writeFileSync(entry, css);
+    console.log(`${options['dry-run'] ? 'Would switch' : 'Switched'} the import of ${rel(project, entry)} from ${rel(project, legacyImport)} to ${shown}.`);
+  }
+}
 if (entry && !new RegExp(`@import\\s+['"][^'"]*${target.split(sep).at(-1).replace('.', '\\.')}['"]`).test(read(entry))) {
   notes.push(`${rel(project, entry)} does not import ${shown} yet: scaffold.mjs adds it, or add the @import after Tailwind.`);
 }

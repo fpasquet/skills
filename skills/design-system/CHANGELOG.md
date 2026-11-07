@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 1.1.1 · 07/11/2026
+
+- `tokens.mjs` fait importer la copie par une feuille d'entrée qui importait encore les tokens des specs (`specs/ui/tokens.css`, ancienne disposition) ; ses notes donnent les chemins depuis l'application. `SKILL.md` dit depuis où se lisent `<app>` et `--from`, et où se note le chemin du dépôt de specs.
+
 ## 1.1.0 · 06/11/2026
 
 - **Tokens des specs copiés, plus importés** : les specs du skill `specs-ui` vivent dans un dépôt de specs, à part, et l'application ne peut plus importer leur `tokens.css`. Elle en garde une copie, précédée d'un commentaire de provenance (dépôt, chemin, empreinte), qu'on ne modifie jamais à la main.

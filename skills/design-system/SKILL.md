@@ -12,7 +12,7 @@ description: >
   bibliothèque de composants) ou d'ajouter un composant d'interface partagé, même sans dire « design system ».
 metadata:
   author: fpasquet
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Design system React : tokens, classes sémantiques, shadcn/ui, Storybook
@@ -115,7 +115,7 @@ Détails, Next.js ou Vite, CI : `references/setup.md`.
   node <skill>/scripts/tokens.mjs <app> --check [--from <projet>/ui]  # à jour ? modifiée à la main ? (--strict en CI)
   ```
 
-  Le script liste les tokens ajoutés et retirés. Il refuse de remplacer un fichier qui n'est pas une copie des specs, ou une copie modifiée à la main, sans `--force` : comparer d'abord. `<projet>/ui` se lit depuis le dossier courant, en général le clone du dépôt de specs à côté de l'application ; noter son chemin dans la mémoire.
+  Le script liste les tokens ajoutés et retirés. Il refuse de remplacer un fichier qui n'est pas une copie des specs, ou une copie modifiée à la main, sans `--force` : comparer d'abord. `<app>` et `<projet>/ui` se lisent depuis le dossier courant, quel qu'il soit. Le chemin du clone du dépôt de specs est noté dans la mémoire par `scaffold.mjs --specs` ; sans design system, l'en-tête de la copie donne le dépôt et le chemin source. Une feuille d'entrée qui importait encore `specs/ui/tokens.css` (ancienne disposition) importe la copie après le premier passage.
 - **Toujours** :
   - une ligne par token, en hexadécimal, avec un commentaire d'usage (la page Tokens les affiche) ;
   - des échelles restreintes : les noms de Tailwind (`p-4`, `text-sm`), famille remise à zéro puis seuls les pas retenus redéclarés, jamais une échelle nommée (`p-m`) ;

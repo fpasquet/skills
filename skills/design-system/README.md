@@ -70,7 +70,7 @@ Aucun fichier existant n'est écrasé. Les dépendances à installer sont affich
 | `scripts/scaffold.mjs` | Socle du design system, sans rien écraser |
 | `scripts/rehome.mjs` | Composant ajouté par la CLI de shadcn : rangé dans son dossier, réécrit en classes sémantiques, premier jet de son CSS ; découpe aussi un fichier qui contient plusieurs composants |
 | `scripts/retoken.mjs` | Classes de shadcn d'une application réécrites avec les tokens du design system |
-| `scripts/tokens.mjs` | Copie des tokens des specs avec leur provenance, et contrôle de cette copie (en retard, modifiée à la main) |
+| `scripts/tokens.mjs` | Copie des tokens des specs avec leur provenance (et bascule l'ancien import de `specs/ui/tokens.css`), contrôle de cette copie (en retard, modifiée à la main) |
 | `references/` | Mise en place, tokens, composants, Storybook, migration |
 | `templates/` | Gabarits : tokens, thème, classes, Storybook, pages de documentation, ESLint, conventions, mémoire, composant modèle (`button`) |
 
