@@ -3,12 +3,12 @@
  * Découpe un document de specs existant (un seul gros fichier HTML) en sources par écran,
  * pour ne plus avoir à lire ni réécrire le document entier (voir SKILL.md, « Sources par écran »).
  *
- * Usage : node split.mjs specs/ui/<lot>.html [--name <lot>] [--force]
- *         node split.mjs --new <lot> --root specs/ui     nouveau lot à partir du template du skill
+ * Usage : node split.mjs <projet>/ui/<lot>.html [--name <lot>] [--force]
+ *         node split.mjs --new <lot> --root <projet>/ui     nouveau lot à partir du template du skill
  *
- * Écrit specs/ui/sources/<lot>/ (lot.json, style.css si besoin, 000-header.html, un NNN-<id>.html par
+ * Écrit <projet>/ui/sources/<lot>/ (lot.json, style.css si besoin, 000-header.html, un NNN-<id>.html par
  * section, templates.html) et place les coquilles (<template id="tpl-shell-…">) dans
- * specs/ui/sources/shared/shells.html si elles n'y sont pas encore. Les anciennes conventions
+ * <projet>/ui/sources/shared/shells.html si elles n'y sont pas encore. Les anciennes conventions
  * (attributs en français) sont renommées au passage. Ne modifie pas le document : le reconstruire
  * ensuite avec build.mjs et le vérifier avec capture.mjs avant de travailler sur les sources.
  */
@@ -23,7 +23,7 @@ const newLot = valueOf('--new');
 // Nouveau lot : on découpe le template du skill dans le dossier des specs indiqué par --root
 const file = newLot ? join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'specs.html') : args.find((a, i) => !a.startsWith('--') && !['--name', '--root', '--new'].includes(args[i - 1]));
 if (!file || (newLot && !valueOf('--root'))) {
-  console.error('Usage: node split.mjs specs/ui/<lot>.html [--name <lot>] [--force] | node split.mjs --new <lot> --root specs/ui');
+  console.error('Usage: node split.mjs <projet>/ui/<lot>.html [--name <lot>] [--force] | node split.mjs --new <lot> --root <projet>/ui');
   process.exit(2);
 }
 const name = newLot ?? valueOf('--name') ?? basename(file, '.html');
@@ -70,9 +70,9 @@ if (newLot && existsSync(join(sharedDir, 'shells.html'))) {
   <h2 class="text-xl font-semibold">Points ouverts</h2>
   <div class="mt-3 overflow-x-auto rounded-xl border border-doc-line bg-doc-card">
     <table class="w-full min-w-[640px] text-left text-[15px]">
-      <thead class="border-b border-doc-line text-sm text-doc-muted"><tr><th class="px-4 py-2 font-medium">Question</th><th class="px-4 py-2 font-medium">À trancher par</th><th class="px-4 py-2 font-medium">Écrans</th></tr></thead>
+      <thead class="border-b border-doc-line text-sm text-doc-muted"><tr><th class="px-4 py-2 font-medium">Question</th><th class="px-4 py-2 font-medium">Recommandé</th><th class="px-4 py-2 font-medium">À trancher par</th><th class="px-4 py-2 font-medium">Écrans</th></tr></thead>
       <tbody class="divide-y divide-doc-line">
-        <tr><td class="px-4 py-2.5">QUESTION</td><td class="px-4 py-2.5 text-doc-muted">QUI</td><td class="px-4 py-2.5">ÉCRANS</td></tr>
+        <tr><td class="px-4 py-2.5">QUESTION</td><td class="px-4 py-2.5">RÉPONSE RECOMMANDÉE</td><td class="px-4 py-2.5 text-doc-muted">QUI</td><td class="px-4 py-2.5">ÉCRANS</td></tr>
       </tbody>
     </table>
   </div>
@@ -145,7 +145,33 @@ for (const m of body.matchAll(/<section\b[^>]*>|<\/section>/g)) {
   }
 }
 const pad = (n) => String(n).padStart(3, '0');
-writeFileSync(join(lotDir, '000-header.html'), body.slice(0, sections[0]?.start ?? 0).trim() + '\n');
+// En-tête : tout ce qui précède la première section, ou le <header> du document en entier quand il contient des
+// sections (règles fonctionnelles du template). Ces sections deviennent des sources à part, comme les autres :
+// l'en-tête garde le reste (parcours) et sa balise fermante, sinon la page s'ouvre sur un <header> jamais refermé.
+let headerHtml = body.slice(0, sections[0]?.start ?? 0);
+const headerStart = body.search(/^\s*(?:<!--[\s\S]*?-->\s*)*<header\b/);
+if (headerStart === 0 && sections.length) {
+  let level = 0;
+  let headerEnd = -1;
+  for (const m of body.matchAll(/<header\b[^>]*>|<\/header>/g)) {
+    level += m[0].startsWith('</') ? -1 : 1;
+    if (level === 0) {
+      headerEnd = m.index + m[0].length;
+      break;
+    }
+  }
+  const inner = sections.filter((section) => section.end <= headerEnd);
+  if (headerEnd > 0 && inner.length) {
+    headerHtml = '';
+    let from = 0;
+    for (const section of inner) {
+      headerHtml += body.slice(from, section.start);
+      from = section.end;
+    }
+    headerHtml = (headerHtml + body.slice(from, headerEnd)).replace(/\n\s*\n(\s*\n)+/g, '\n\n');
+  }
+}
+writeFileSync(join(lotDir, '000-header.html'), headerHtml.trim() + '\n');
 sections.forEach((s, i) => {
   const html = body.slice(s.start, s.end);
   const heading = html.match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/)?.[1]?.replace(/<[^>]+>/g, '').trim() ?? '';
