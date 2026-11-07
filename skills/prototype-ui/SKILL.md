@@ -10,7 +10,7 @@ description: >
   sans prononcer le mot « prototype ».
 metadata:
   author: fpasquet
-  version: "2.5.0"
+  version: "2.5.1"
 ---
 
 # Prototype UI à partir des specs
@@ -153,6 +153,6 @@ Dans le dépôt de specs, commiter `src/`, `fiches/`, `PROTOTYPE.md`, `site/.pub
 Quand l'application se construit, le prototype garde son rôle de **support de tests utilisateurs et de démos** ; il ne suit pas le code, il suit les specs.
 
 - **Pages câblées** : à chaque évolution des specs qui les touche (`drift.mjs`), reporter le changement comme ci-dessus, dans le même changement que les specs quand c'est possible.
-- **Pages non câblées** : les régénérer (`scaffold.mjs --pages eN --force`), puis `--mark`.
+- **Pages non câblées** : les régénérer (`scaffold.mjs --pages eN --force`), puis `--mark`. Le scaffold dépose aussi les coquilles des specs dans `src/_from-specs/shells.html` : reporter ce qui a changé dans `src/shells.html`, puis supprimer `src/_from-specs/`.
 - **Parcours dépassé** : quand l'application livrée couvre un parcours (statut « Livré » dans les specs), les tests utilisateurs se font sur l'application. Noter le parcours « figé » dans `PROTOTYPE.md` plutôt que de continuer à le maintenir.
 - Reconstruire, contrôler, republier les fichiers modifiés, et commiter les sources et `site/.published.json` avec les specs.

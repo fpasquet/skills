@@ -79,10 +79,10 @@ Une nouvelle version d'un skill se réimporte de la même façon. Claude Code su
 
 | Skill                                                      | Version | Description                                                                                     |
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| [`specs-ui`](skills/specs-ui/README.md)                     | 3.7.3   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
-| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.5.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
-| [`requirements-doc`](skills/requirements-doc/README.md) | 2.4.2   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés ; export vers l'application |
-| [`design-system`](skills/design-system/README.md)       | 1.1.0   | Design system React : tokens, classes sémantiques, shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
+| [`specs-ui`](skills/specs-ui/README.md)                     | 3.7.4   | Specs UI maquettées en HTML + Tailwind : propositions d'identité, écrans desktop et mobile annotés, parcours, règles |
+| [`prototype-ui`](skills/prototype-ui/README.md)             | 2.5.1   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
+| [`requirements-doc`](skills/requirements-doc/README.md) | 2.4.3   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés ; export vers l'application |
+| [`design-system`](skills/design-system/README.md)       | 1.1.1   | Design system React : tokens, classes sémantiques, shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
 
 Les trois skills de conception publient leur résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et gardent une copie locale. `design-system` travaille dans le code de l'application : il s'utilise depuis Claude Code ou un autre agent de code, pas depuis le chat.
 
