@@ -18,10 +18,14 @@
     JSX l'emportent encore. Une règle de `@layer components` sur une classe de daisyUI ne s'applique pas ;
     `@utility btn`, que propose la documentation de daisyUI, écrase `btn-circle` et parfois le JSX
     (`btn font-bold` restait en medium) ;
+  - `--border` est l'épaisseur des bordures chez daisyUI : en mode daisyUI, le thème de shadcn ne le déclare pas. Sa
+    couleur (`var(--color-line)`, hors couche) l'emporterait sur le thème daisyUI : `btn` passerait à 3px, `input`,
+    `checkbox` et `card-border` perdraient leur bordure. `--color-border` pointe sur le token dans `@theme inline`, que
+    `retoken.mjs` lit aussi (`border-border` → `border-line`) ;
   - audit : ligne `daisyui` dans l'en-tête, et règles `daisyui-builtin-theme`, `daisyui-theme-value` (valeur propre
-    ou token redéclaré), `daisyui-theme-missing` (variable sans valeur) et `daisyui-layer` (règle hors de la
-    sous-couche de base, nom lu dans la version installée) ; les classes de daisyUI sont connues des contrôles de la
-    documentation ; `data-theme` est permis dans les sélecteurs ;
+    ou token redéclaré), `daisyui-theme-missing` (variable sans valeur), `daisyui-border` (couleur sous le nom
+    `--border`) et `daisyui-layer` (règle hors de la sous-couche de base, nom lu dans la version installée) ; les
+    classes de daisyUI sont connues des contrôles de la documentation ; `data-theme` est permis dans les sélecteurs ;
   - `rehome.mjs` refuse une classe qui reprend un nom de daisyUI (`card`, `card-title`), signale l'équivalent de
     daisyUI d'un composant de shadcn (`dialog` → `modal`) et laisse ses classes dans le JSX ;
   - `retoken.mjs` réécrit les couleurs et rayons de daisyUI avec les tokens (`bg-base-100` → `bg-surface`,

@@ -17,7 +17,12 @@ paquet installé), ou avec `--classes daisyui`. L'audit l'indique (ligne `daisyu
 - `daisyui` s'installe en dépendance de développement, à la version de `templates/versions.json`.
 - La feuille d'entrée déclare le greffon après ses `@import` : `@plugin "daisyui" { themes: false; }`.
 - `theme.css` reçoit le thème `app`, marqué `default` et pointé sur les tokens (section suivante). Les variables de
-  shadcn y restent, pour les composants de shadcn que daisyUI n'a pas.
+  shadcn y restent, pour les composants de shadcn que daisyUI n'a pas, sauf `--border`.
+- **`--border`** est l'épaisseur des bordures chez daisyUI (`border: var(--border) solid …`), et la couleur des
+  bordures chez shadcn. Le `--border: var(--color-line)` de shadcn, déclaré dans `:root` hors couche, l'emporte sur le
+  thème daisyUI : `btn` passe à 3px (`medium`), `input`, `checkbox` et `card-border` perdent leur bordure. En mode
+  daisyUI, `theme.css` ne déclare donc pas `--border`, et `--color-border` pointe directement sur le token dans
+  `@theme inline` (`border-border` garde sa couleur). L'audit le signale (`daisyui-border`).
 - **Pourquoi `themes: false`** : les thèmes intégrés sont dans la couche `base`, qui l'emporte sur la couche `theme`
   des tokens. Avec `@plugin "daisyui";`, `light` remplace `--color-primary` par le sien dans toute l'application, et
   `dark` s'applique dès que le système est en sombre. L'audit le signale (`daisyui-builtin-theme`).
@@ -50,7 +55,8 @@ Chaque variable de daisyUI pointe sur un token. Une couleur se change dans les t
 - Avec les thèmes intégrés coupés, chaque variable lue par les composants doit venir du thème `app` ou des tokens.
   Sinon le composant perd sa couleur ou sa bordure : `border-width: var(--border)` n'a pas de valeur de repli.
 - L'audit vérifie le thème : thème intégré actif (`daisyui-builtin-theme`), valeur propre ou token redéclaré
-  (`daisyui-theme-value`), variable sans valeur (`daisyui-theme-missing`).
+  (`daisyui-theme-value`), variable sans valeur (`daisyui-theme-missing`), couleur sous le nom `--border`
+  (`daisyui-border`).
 
 ## Partir d'un projet qui utilise déjà daisyUI
 

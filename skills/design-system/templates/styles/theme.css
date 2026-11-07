@@ -16,6 +16,8 @@
  *
  * `primary` a le même sens dans les tokens, daisyUI et shadcn. `muted` est, dans les tokens, la couleur du texte
  * secondaire (`text-muted`), que shadcn appelle `muted-foreground` : `--color-muted` n'est jamais redéfini ici.
+ * `--border` est l'épaisseur des bordures de daisyUI (1px) : la couleur de bordure de shadcn ne prend pas ce nom, elle
+ * pointe directement sur le token (`--color-border` du bloc @theme inline).
  */
 /* end:daisyui */
 @custom-variant dark (&:is(.dark *));
@@ -57,7 +59,9 @@
   --accent-foreground: var(--color-ink);
   --destructive: var(--color-danger);
   --destructive-foreground: var(--color-on-danger);
+  /* if:own */
   --border: var(--color-line);
+  /* end:own */
   --input: var(--color-line-strong);
   --ring: var(--color-primary);
   --radius: var(--radius-card);
@@ -134,7 +138,13 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  /* if:own */
   --color-border: var(--border);
+  /* end:own */
+  /* if:daisyui */
+  /* --border est l'épaisseur des bordures de daisyUI : une couleur à ce nom annulerait celles de btn, input et card */
+  --color-border: var(--color-line);
+  /* end:daisyui */
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);

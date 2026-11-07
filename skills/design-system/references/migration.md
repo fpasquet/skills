@@ -77,7 +77,7 @@ Composants rangés par niveaux (Atomic design : `Atoms`, `Molecules`, `Organisms
 
 Thèmes intégrés (`@plugin "daisyui";`) ou thème du projet à valeurs propres (`@plugin "daisyui/theme" { --color-base-100: oklch(…) }`), classes de daisyUI et couleurs de daisyUI dans le JSX (`bg-base-200`, `text-base-content`). On garde daisyUI : ses valeurs passent dans les tokens et son thème pointe dessus.
 
-1. **Socle et tokens** : `scaffold.mjs <app> --mode migrate` (mode daisyUI repéré seul) pré-remplit les tokens avec le thème en place ; compléter et vérifier les contrastes, passer le greffon en `themes: false`, supprimer l'ancien thème, puis `retoken.mjs <app>` (couleurs de daisyUI → tokens) dans le même lot. L'audit ne doit plus avoir de `daisyui-*`.
+1. **Socle et tokens** : `scaffold.mjs <app> --mode migrate` (mode daisyUI repéré seul) pré-remplit les tokens avec le thème en place ; compléter et vérifier les contrastes, passer le greffon en `themes: false`, supprimer l'ancien thème, retirer le `--border` de shadcn s'il est en place (`daisyui-border`), puis `retoken.mjs <app>` (couleurs de daisyUI → tokens) dans le même lot. L'audit ne doit plus avoir de `daisyui-*`.
 2. **Règles sur les classes de daisyUI** (`@layer components { .btn … }`, `@utility btn`) : elles passent dans la sous-couche de base de daisyUI (`daisyui-layer`).
 3. **Composants** : les listes de classes répétées (`btn btn-primary btn-sm`) deviennent des composants de `<ui>` sur le modèle `templates/ui/button-daisyui/`, un lot par famille, avec leurs histoires.
 

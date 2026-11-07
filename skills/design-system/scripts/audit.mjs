@@ -58,6 +58,7 @@ const RULES = {
   'daisyui-builtin-theme': ['error', 'daisyUI built-in themes are on: they sit in the base layer and override the colour tokens; @plugin "daisyui" { themes: false; }, and a daisyUI theme on the tokens'],
   'daisyui-theme-value': ['error', 'daisyUI theme with its own value: its colours and radii point at the tokens (var(--color-surface)) and never redeclare a token'],
   'daisyui-theme-missing': ['error', 'daisyUI theme variable defined nowhere (built-in themes off): the components that read it lose their colour, size or border'],
+  'daisyui-border': ['error', '--border is the border width of daisyUI (1px): a colour under this name (--border: var(--color-line) of shadcn) cancels the borders of btn, input, card; drop it and write --color-border: var(--color-line) in @theme inline'],
   'daisyui-layer': ['error', 'Rule on a daisyUI class outside its base sublayer: in @layer components it never applies, unlayered or in @utility it beats the modifiers of daisyUI (btn-sm) or the utilities of the JSX; write it in @layer utilities { @layer <base sublayer> { … } }'],
   'flat-component': ['warning', 'Component file at the root of ui/: move it to its folder (rehome.mjs)'],
   'missing-index': ['warning', 'Component folder without index.ts re-exporting its names'],
@@ -294,7 +295,7 @@ for (const file of cssFiles) {
         if (daisyui && inside(file, project.src)) {
           const layers = stack.filter((p) => p.startsWith('@layer')).map((p) => p.replace(/^@layer\s+/, '')).join('.');
           if (layers !== `utilities.${daisyui.baseLayer}`) {
-            for (const cls of definedBy(prelude).filter((c) => daisyui.has(c))) {
+            if (definedBy(prelude).some((c) => daisyui.has(c))) {
               add('daisyui-layer', file, lineOf(css, i), `${prelude} (${layers || 'unlayered'}) → @layer utilities { @layer ${daisyui.baseLayer} { … } }`);
             }
           }
@@ -369,6 +370,15 @@ if (project.daisyui) {
     const missing = DAISYUI_THEME_VARIABLES.filter((name) => !defined.has(name));
     const at = main ?? dz.plugin;
     if (missing.length && at) add('daisyui-theme-missing', at.file, at.line, `${main ? `${main.name}: ` : 'no daisyUI theme: '}${missing.join(', ')}`);
+  }
+  // --border : épaisseur des bordures chez daisyUI (border: var(--border) solid …). Une couleur à ce nom, comme celle de
+  // shadcn dans :root, l'emporte sur le thème daisyUI (couche base) : les bordures disparaissent ou passent à 3px
+  for (const file of cssFiles.filter((f) => inside(f, project.src) || f === project.theme)) {
+    const css = stripCssComments(read(file));
+    for (const m of css.matchAll(/(?:^|[;{\s])--border\s*:\s*([^;{}]+);/g)) {
+      const value = m[1].trim();
+      if (!/^(0|[\d.]+(px|rem|em)|calc\(.*\)|var\(--border[\w-]*\))$/.test(value)) add('daisyui-border', file, lineOf(css, m.index), `--border: ${value}`);
+    }
   }
   // @utility <classe de daisyUI> (documentation de daisyUI) : hors des sous-couches, il écrase les modificateurs (btn-sm,
   // btn-circle) et, selon l'ordre de Tailwind, les utilitaires du JSX (btn font-bold reste en medium)

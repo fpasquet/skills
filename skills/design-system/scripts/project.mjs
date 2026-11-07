@@ -370,7 +370,9 @@ export function daisyuiCatalog(project) {
       // Classes de base, sans les variantes de point de rupture que daisyUI génère (.sm\:btn) ni les décimales (.75rem)
       // ni les noms de ses sous-couches (@layer daisyui.l1.l2)
       if (selector.startsWith('@')) continue;
-      for (const c of selector.matchAll(/\.((?:\\.|[\w-])+)/g)) if (/^[a-z][\w-]*$/.test(c[1]) && !/^l\d$/.test(c[1])) classes.add(`${prefix}${c[1]}`);
+      // Classes d'état génériques des bibliothèques de calendrier que daisyUI met en forme (is-disabled, is-hidden) : un
+      // projet peut les employer pour lui
+      for (const c of selector.matchAll(/\.((?:\\.|[\w-])+)/g)) if (/^[a-z][\w-]*$/.test(c[1]) && !/^(l\d|is-[\w-]+)$/.test(c[1])) classes.add(`${prefix}${c[1]}`);
     }
   }
   const roots = new Set(DAISYUI_ROOTS.map((r) => `${prefix}${r}`));
@@ -455,8 +457,12 @@ export function shadcnTokenizer(project) {
   // Thème daisyUI pointé sur les tokens (--color-base-100: var(--color-surface)) : bg-base-100 → bg-surface
   const daisyuiVariables = (project.daisyui?.themes ?? []).filter((t) => t.isDefault || project.daisyui.themes.length === 1).flatMap((t) => t.variables);
   const daisyuiColors = daisyuiVariables.map((v) => [v.name.match(/^--color-([\w-]+)$/)?.[1], v.value.match(/^var\(--color-([\w-]+)\)$/)?.[1]]).filter(([from, to]) => from && to);
+  // Couleur de shadcn pointée sur un token dans @theme inline (mode daisyUI : --color-border: var(--color-line), --border
+  // étant l'épaisseur des bordures de daisyUI)
+  const inlineBlock = themeCss.match(/@theme\s+inline\s*\{([^}]*)\}/)?.[1] ?? '';
   const themeColors = [
     ...[...rootBlock.matchAll(/--([\w-]+)\s*:\s*var\(--color-([\w-]+)\)/g)].map((m) => [m[1], m[2]]),
+    ...[...inlineBlock.matchAll(/--color-([\w-]+)\s*:\s*var\(--color-([\w-]+)\)/g)].map((m) => [m[1], m[2]]),
     ...daisyuiColors,
   ].filter(([from, to]) => from !== to);
   const colorMap = new Map(themeColors.filter(([from]) => !hasToken(`color-${from}`)));
