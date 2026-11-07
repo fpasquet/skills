@@ -2,10 +2,10 @@
 /**
  * Prépare la publication du prototype avec l'outil Artifact.
  *
- *   node prepare-publish.mjs specs/prototype <out-dir>    prépare la page principale et liste les pages à envoyer
+ *   node prepare-publish.mjs <projet>/prototype <out-dir>    prépare la page principale et liste les pages à envoyer
  *                                                         (--all : tous les fichiers, pour un nouvel artifact)
- *   node prepare-publish.mjs specs/prototype --confirm    à lancer après une publication réussie
- *   node prepare-publish.mjs specs/prototype --check      dit si l'artifact est en retard sur le site local
+ *   node prepare-publish.mjs <projet>/prototype --confirm    à lancer après une publication réussie
+ *   node prepare-publish.mjs <projet>/prototype --check      dit si l'artifact est en retard sur le site local
  *                                                         (--strict : code de sortie 1 s'il l'est, pour la CI)
  *
  * La page principale (site/index.html, l'accueil des scénarios) est publiée sans enveloppe : l'outil
@@ -21,7 +21,7 @@ import { createHash } from 'node:crypto';
 const [input, second] = process.argv.slice(2);
 const siteDir = input && join(resolve(input), 'site');
 if (!siteDir || !second || !existsSync(join(siteDir, 'index.html'))) {
-  console.error('Usage: node prepare-publish.mjs specs/prototype <out-dir> | specs/prototype --confirm | specs/prototype --check [--strict]   (run build.mjs first)');
+  console.error('Usage: node prepare-publish.mjs <projet>/prototype <out-dir> | <projet>/prototype --confirm | <projet>/prototype --check [--strict]   (run build.mjs first)');
   process.exit(2);
 }
 const stripEnvelope = (html) =>
@@ -65,4 +65,4 @@ console.log(`Main page (file_path): ${main}`);
 console.log(published['index.html'] === hash('index.html') ? 'Main page unchanged since the last publish.' : 'Main page changed.');
 console.log(`Files to send in "files" (${changed.length} changed${removed.length ? `, ${removed.length} removed` : ''}, ${pages.length - 1 - changed.length} unchanged and kept online):`);
 console.log(JSON.stringify(files, null, 2));
-console.log('After a successful publish: node prepare-publish.mjs <specs/prototype> --confirm');
+console.log('After a successful publish: node prepare-publish.mjs <<projet>/prototype> --confirm');
