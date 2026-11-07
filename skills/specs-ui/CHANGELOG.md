@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.7.3 · 7 nov. 2026
+
+- `split.mjs` garde l'en-tête du document en entier quand il contient des sections, comme les règles fonctionnelles du template : la ligne des parcours et la fermeture du `<header>` étaient perdues, et `build.mjs` signalait un `<header>` jamais refermé sur chaque lot créé par `--new`. Les sections de l'en-tête restent des sources à part ; un en-tête sans section se découpe comme avant.
+
 ## 3.7.2 · 7 nov. 2026
 
 - **Dépôt de specs dédié ou partagé**, au choix de la personne : `depot-specs.md` décrit les deux organisations (livrables à la racine d'un dépôt dédié, `<projet>` valant `.`, ou un dossier par projet dans un dépôt partagé), comment choisir, et la migration vers un dépôt dédié neuf (`git pull` de l'historique extrait). L'étape 0 demande laquelle pour un nouveau projet.

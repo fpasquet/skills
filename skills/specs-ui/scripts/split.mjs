@@ -145,7 +145,33 @@ for (const m of body.matchAll(/<section\b[^>]*>|<\/section>/g)) {
   }
 }
 const pad = (n) => String(n).padStart(3, '0');
-writeFileSync(join(lotDir, '000-header.html'), body.slice(0, sections[0]?.start ?? 0).trim() + '\n');
+// En-tête : tout ce qui précède la première section, ou le <header> du document en entier quand il contient des
+// sections (règles fonctionnelles du template). Ces sections deviennent des sources à part, comme les autres :
+// l'en-tête garde le reste (parcours) et sa balise fermante, sinon la page s'ouvre sur un <header> jamais refermé.
+let headerHtml = body.slice(0, sections[0]?.start ?? 0);
+const headerStart = body.search(/^\s*(?:<!--[\s\S]*?-->\s*)*<header\b/);
+if (headerStart === 0 && sections.length) {
+  let level = 0;
+  let headerEnd = -1;
+  for (const m of body.matchAll(/<header\b[^>]*>|<\/header>/g)) {
+    level += m[0].startsWith('</') ? -1 : 1;
+    if (level === 0) {
+      headerEnd = m.index + m[0].length;
+      break;
+    }
+  }
+  const inner = sections.filter((section) => section.end <= headerEnd);
+  if (headerEnd > 0 && inner.length) {
+    headerHtml = '';
+    let from = 0;
+    for (const section of inner) {
+      headerHtml += body.slice(from, section.start);
+      from = section.end;
+    }
+    headerHtml = (headerHtml + body.slice(from, headerEnd)).replace(/\n\s*\n(\s*\n)+/g, '\n\n');
+  }
+}
+writeFileSync(join(lotDir, '000-header.html'), headerHtml.trim() + '\n');
 sections.forEach((s, i) => {
   const html = body.slice(s.start, s.end);
   const heading = html.match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/)?.[1]?.replace(/<[^>]+>/g, '').trim() ?? '';
