@@ -140,6 +140,7 @@ window.PROTO_ACTIONS = {
 - Modale : même principe, avec le voile de la maquette sous `x-show`. `Échap` ferme si la maquette l'indique.
 - Onglets : `tab` dans le `x-data`, `:aria-current="tab === 'sessions' && 'page'"` sur l'onglet, un panneau par onglet sous `x-show`. Reprendre le style actif de la maquette avec `:class`.
 - Raccourcis montrés dans la maquette (⌘K, Échap) : les câbler avec `@keydown.window`, s'ils font partie d'un parcours.
+- **Specs sous daisyUI** (`site.json` des specs → `daisyui`) : le build charge les mêmes feuilles et le même thème que les specs. Les classes de la maquette restent ; seuls les états passent à Alpine. Une fenêtre `modal modal-open absolute` de la maquette perd `absolute` (la page du prototype est l'écran entier) et prend `:class="open && 'modal-open'"` ; un menu `dropdown dropdown-open` prend `:class="open && 'dropdown-open'"` ; un onglet garde `tab` avec `:aria-selected="tab === 'sessions'"` ; une case en `span` prend `:aria-checked`.
 
 ## 10. Coquilles et blocs partagés
 

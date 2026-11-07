@@ -6,7 +6,8 @@
  *
  * Sources (<projet>/prototype/src/) : prototype.json (titre, specs, scénarios, pages), data.js, actions.js,
  * shells.html (coquilles et templates), pages/eN.html (une page par écran).
- * L'identité vient du projet de specs indiqué par prototype.json → specs : tokens.css et polices du premier lot.
+ * L'identité vient du projet de specs indiqué par prototype.json → specs : tokens.css et polices du premier lot ;
+ * daisyUI aussi, quand les specs le déclarent (site.json → daisyui) : feuilles des composants de la page et thème.
  *
  * Sortie (<projet>/prototype/site/) : index.html (accueil : scénarios, exploration libre, liste des écrans) et une
  * page par écran. Chaque page embarque Tailwind, Alpine.js, Lucide, l'état simulé (store), les actions,
@@ -17,6 +18,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, unlink
 import { execFileSync } from 'node:child_process';
 import { join, dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiVersion } from './daisyui.mjs';
 
 const args = process.argv.slice(2);
 const root = args[0] && !args[0].startsWith('--') && resolve(args[0]);
@@ -42,6 +44,15 @@ const tokenValue = (name, fallback) => theme.match(new RegExp(`${name}\\s*:\\s*(
 const site = JSON.parse(read(join(specsDir, 'sources', 'site.json'), '{}'));
 const firstLot = (site.lots ?? []).find((l) => existsSync(join(specsDir, 'sources', l, 'lot.json')));
 const fonts = config.fonts ?? (firstLot ? JSON.parse(read(join(specsDir, 'sources', firstLot, 'lot.json'))).fonts : '');
+// daisyUI déclaré par les specs (site.json → daisyui) : mêmes feuilles et même thème pointé sur les tokens que les specs
+let daisyui;
+try {
+  daisyui = daisyuiVersion(site);
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
+}
+const pageTheme = daisyui ? daisyuiTheme(theme) : theme;
 
 // Tailwind compilé au build (affichage immédiat, pas de compilation dans le navigateur) si la CLI est
 // disponible : <projet>/prototype/node_modules (npm install), variable TAILWIND_CLI, ou tailwindcss dans le PATH.
@@ -70,7 +81,7 @@ function compileCss(html, name) {
   const input = join(workDir, `${name}.css`);
   const output = join(workDir, `${name}.out.css`);
   writeFileSync(page, `${html}\n${chrome}\n<script>${data}\n${actions}</script>`);
-  writeFileSync(input, `@import "tailwindcss" source(none);\n@source "./${name}.html";\n${theme}\n${baseCss}\n`);
+  writeFileSync(input, `@import "tailwindcss" source(none);\n@source "./${name}.html";\n${pageTheme}\n${baseCss}\n`);
   try {
     execFileSync(tailwindCli, ['-i', input, '-o', output, '--minify'], { cwd: workDir, stdio: ['ignore', 'ignore', 'pipe'] });
   } catch (e) {
@@ -151,6 +162,7 @@ function usedTemplates(html) {
 
 function renderPage(title, body, name) {
   const pageTemplates = usedTemplates(body);
+  const daisyuiFiles = daisyui ? daisyuiComponents(`${body}\n${pageTemplates.map((t) => t.html).join('\n')}`) : [];
   const html = `<!doctype html>
 <html lang="fr">
 <head>
@@ -169,10 +181,10 @@ ${checkHook.trim()}
   html { background: ${tokenValue('--color-canvas', '#ffffff')}; }
   html:not(.proto-ready) body { opacity: 0; }${tailwindCli ? '' : '\n  html.proto-ready body { opacity: 1; transition: opacity 0.12s ease-out; }'}
 </style>
-${fonts ? `<link rel="stylesheet" href="${fonts}">\n` : ''}${tailwindCli ? '<style>/*__TAILWIND__*/</style>' : '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>'}
+${fonts ? `<link rel="stylesheet" href="${fonts}">\n` : ''}${daisyuiFiles.length ? `${daisyuiHead(daisyui, daisyuiFiles)}\n` : ''}${tailwindCli ? '<style>/*__TAILWIND__*/</style>' : '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>'}
 ${vendorTag(vendor[1])}
 ${vendorTag(vendor[0])}
-${tailwindCli ? '' : `<style type="text/tailwindcss">\n  ${theme.replace(/\n/g, '\n  ')}\n  ${baseCss}\n</style>\n`}</head>
+${tailwindCli ? '' : `<style type="text/tailwindcss">\n  ${pageTheme.replace(/\n/g, '\n  ')}\n  ${baseCss}\n</style>\n`}</head>
 <body>
 ${body}
 
