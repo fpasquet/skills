@@ -164,6 +164,7 @@ readme += `\n## Identifiants\n\n`;
 readme += `- **RF-…** règles fonctionnelles, **CA-…** critères d'acceptation, **NF-…** exigences non fonctionnelles, **DT-…** décisions techniques.\n`;
 readme += `- Un identifiant ne change jamais de sens et n'est jamais réutilisé : un critère abandonné reste, barré et marqué « Retiré ».\n`;
 readme += `- Un test cite le critère qu'il vérifie dans son nom (« CA-CONN-27 · refuse une clé d'API »). La couverture se mesure avec \`trace.mjs\` du skill \`requirements-doc\` : \`node <skill>/scripts/trace.mjs ${destFromApp}\`.\n`;
+readme += `- Les décisions **DT-…** viennent du cahier des charges. Une décision prise pendant les développements (ADR de l'équipe, hors de ce dossier) qui en remplace une se reporte dans le cahier des charges, qui marque la DT « Remplacée ».\n`;
 readme += `- Ces fichiers ne se modifient pas ici. Un écart entre le code et ces exigences se reporte dans les specs ou le cahier des charges, puis l'export suivant met ce dossier à jour.\n`;
 docs.unshift({ path: 'README.md', text: readme.trim() });
 

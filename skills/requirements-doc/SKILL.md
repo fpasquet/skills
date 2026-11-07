@@ -14,7 +14,7 @@ description: >
   même sans prononcer le mot « cahier des charges ».
 metadata:
   author: fpasquet
-  version: "2.4.0"
+  version: "2.4.1"
 ---
 
 # Cahier des charges à partir des specs
@@ -157,6 +157,8 @@ Le cahier des charges vit dans le dépôt de specs (`<projet>/requirements/`), e
 - Un nouveau critère prend le numéro suivant du lot, même s'il s'insère au milieu de la liste.
 - Un critère abandonné reste, barré et marqué « Retiré (date, raison) ».
 - Un critère modifié garde son numéro si la vérification reste la même ; sinon il est retiré et remplacé.
+
+**Décisions techniques et ADR de l'équipe.** Les décisions **DT-…** se prennent dans le cahier des charges (`60-architecture.md`, 6.7) et arrivent toutes dans un seul fichier de l'export, `architecture.md`. Une décision prise pendant les développements peut s'écrire en ADR dans l'application (par exemple `docs/adr/`, un fichier par décision, écrit à la main), jamais dans le dossier de l'export. Un ADR qui remplace une DT se reporte dans le cahier des charges : la DT reste, marquée « Remplacée par ADR-… (date) », et l'export suivant le montre. Sans cela, l'export contredit le code.
 
 **Traçabilité avec le code.** Un test cite le critère qu'il vérifie dans son nom (« CA-CONN-27 · refuse une clé d'API »).
 

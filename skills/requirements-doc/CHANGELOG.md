@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.4.1 · 07/11/2026
+
+- **Décisions techniques et ADR** : les décisions DT restent dans un seul fichier de l'export (`architecture.md`). Les ADR que l'équipe écrit pendant les développements vivent dans l'application, hors du dossier de l'export ; un ADR qui remplace une DT se reporte dans le cahier des charges, qui marque la DT « Remplacée par ADR-… ». Le `README.md` de l'export le rappelle.
+
 ## 2.4.0 · 06/11/2026
 
 - **Dépôt de specs** : le cahier des charges vit avec les specs et le prototype dans un dépôt dédié, séparé du code de l'application (`references/depot-specs.md` du skill `specs-ui`). `<projet>` désigne le dossier du projet dans ce dépôt ; l'ancienne disposition (`specs/` dans l'application) fonctionne toujours.
