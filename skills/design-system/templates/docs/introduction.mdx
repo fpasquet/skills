@@ -9,17 +9,32 @@ _À compléter : le parti pris visuel en deux phrases (couleurs, densité, forme
 ## Trois couches
 
 1. **Tokens** : `{{tokens}}`, source unique des couleurs, polices, tailles, rayons et hauteurs (page _Tokens_).
+{/* if:own */}
 2. **Classes sémantiques** : dans `@layer components`, le CSS de chaque composant à côté de lui
    (`{{ui}}/button/button.css`), les classes sans composant dans `{{styles}}/classes` ; `{{styles}}/components.css` les
    rassemble (`btn`, `btn-primary`, `card`, `form-input`, `badge-success`…), à la manière de daisyUI (page _Classes_).
    Les ajustements ponctuels restent en utilitaires Tailwind dans le JSX.
 3. **Composants** : `{{ui}}` (shadcn/ui sur {{primitives}}). Leurs variantes typées (CVA) posent ces classes :
    `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
+{/* end:own */}
+{/* if:daisyui */}
+2. **Classes sémantiques** : celles de daisyUI (`btn`, `btn-primary`, `card`, `badge-success`…), réglées par son thème,
+   lui-même pointé sur les tokens (`{{styles}}/theme.css`), et celles du projet pour ce que daisyUI n'a pas, dans
+   `{{styles}}/classes` ou à côté de leur composant (page _Classes_). Les ajustements ponctuels restent en utilitaires
+   Tailwind dans le JSX.
+3. **Composants** : `{{ui}}`. Leurs variantes typées (CVA) posent les classes de daisyUI :
+   `<Button variant="primary" size="sm">` rend `btn btn-primary btn-sm`.
+{/* end:daisyui */}
 
 ## Règles
 
 - Un style répété va dans une classe sémantique ; un ajustement ponctuel reste un utilitaire.
+{/* if:own */}
 - Les couleurs passent par les tokens (`bg-surface`, `text-muted`) ou les variables de shadcn (`bg-background`).
+{/* end:own */}
+{/* if:daisyui */}
+- Les couleurs passent par les tokens (`bg-surface`, `text-muted`), plutôt que par les noms de daisyUI ou de shadcn.
+{/* end:daisyui */}
 - Aucune valeur arbitraire (`w-[720px]`, `text-[13px]`) : l'échelle de Tailwind, un token ou une entrée nommée du thème.
 - Le focus clavier est toujours visible (`focus-ring`) ; les rôles et attributs ARIA viennent des primitives {{primitives}}.
 

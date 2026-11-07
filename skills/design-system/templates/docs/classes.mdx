@@ -4,9 +4,24 @@ import { Meta, Unstyled } from '@storybook/addon-docs/blocks';
 
 # Classes sémantiques
 
+{/* if:own */}
 Déclarées à côté de leur composant (`{{ui}}/<composant>/<composant>.css`), ou dans `{{styles}}/classes` pour les
 classes sans composant, et rassemblées par `{{styles}}/components.css` (`@layer components`, `@apply` pour les cas
-simples, CSS standard pour les états). Les variantes sont des classes de modificateur (`btn-primary`, `sheet-right`) ;
+simples, CSS standard pour les états).
+{/* end:own */}
+{/* if:daisyui */}
+Celles de daisyUI d'abord (`btn`, `card`, `badge`, `input`…), réglées par son thème, pointé sur les tokens
+(`{{styles}}/theme.css`). Le projet ajoute les siennes pour ce que daisyUI n'a pas, à côté de leur composant ou dans
+`{{styles}}/classes`, rassemblées par `{{styles}}/components.css`. Le réglage global d'une classe de daisyUI, ou une
+classe posée avec elle, s'écrit dans la sous-couche de base de daisyUI (`@layer utilities { @layer daisyui.l1.l2.l3 { … } }`) :
+ses modificateurs et les utilitaires du JSX l'emportent encore.
+{/* end:daisyui */}
+{/* if:own */}
+Les variantes sont des classes de modificateur (`btn-primary`, `sheet-right`) ;
+{/* end:own */}
+{/* if:daisyui */}
+Les variantes sont des classes de modificateur (`btn-primary`, `badge-soft`) ;
+{/* end:daisyui */}
 les états passent par les attributs d'accessibilité et les pseudo-classes (`aria-selected`, `aria-invalid`, `:focus`,
 `:disabled`). {{stateAttributesShort}} Les composants de
 `{{ui}}` les posent ; le JSX peut aussi les utiliser directement, par exemple sur un lien : `<a className="btn btn-outline">`.
@@ -15,3 +30,6 @@ Chaque famille de classes a sa section ci-dessous, avec un exemple rendu dans `<
 design system s'ajoute ici dans le même changement (`audit.mjs` signale celles qui manquent).
 
 {/* Une section par famille : ## Boutons, ## Cartes et encadrés, ## Formulaires, ## Badges… */}
+{/* if:daisyui */}
+{/* Avec daisyUI : une section par composant de daisyUI utilisé, avec les variantes retenues par le projet et ses réglages. */}
+{/* end:daisyui */}

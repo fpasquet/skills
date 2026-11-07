@@ -18,6 +18,7 @@ de chaque étape, sous 120 lignes. Les conventions sont dans `{{rule}}`, pas ici
 ## Mode et état
 
 - Mode : {{mode}} (création à partir de l'existant, maintenance ou migration).
+- Classes : {{classesLibrary}}.
 - Dernier audit ({{date}}) : à remplir avec les compteurs d'`audit.mjs` (erreurs, avertissements).
 
 ## Décisions
@@ -30,4 +31,4 @@ de chaque étape, sous 120 lignes. Les conventions sont dans `{{rule}}`, pas ici
 
 ## Versions
 
-<!-- Versions épinglées de shadcn (CLI), Storybook, Tailwind, eslint-plugin-better-tailwindcss. -->
+<!-- Versions épinglées de shadcn (CLI), Storybook, Tailwind, eslint-plugin-better-tailwindcss{{daisyuiMemory}}. -->

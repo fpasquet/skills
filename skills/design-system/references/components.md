@@ -12,6 +12,8 @@ Un composant partagé vit dans son dossier :
 
 Un composant à plusieurs parties a un fichier par sous-composant (`dialog-content.tsx`, `dialog-title.tsx`…), tous ré-exportés par `index.ts`. Le modèle complet est dans `templates/ui/button/`.
 
+Avec daisyUI, un composant que daisyUI a s'écrit sur ses classes (modèle `templates/ui/button-daisyui/`, `daisyui.md`) ; la suite de cette fiche vaut pour les composants de shadcn que daisyUI n'a pas, et pour les composants maison.
+
 ## Composant de shadcn : relire ce que `rehome.mjs` a produit
 
 `rehome.mjs` fait le travail mécanique et rend un compte rendu. La relecture suit cet ordre :
