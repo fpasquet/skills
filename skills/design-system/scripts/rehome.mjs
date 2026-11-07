@@ -36,7 +36,7 @@ if (!appDir || !name || !isDir(appDir)) {
 }
 const project = detectProject(appDir, options);
 // Classes de daisyUI : elles restent dans le JSX, et aucune classe du composant ne reprend leur nom
-const daisyui = project.daisyui ? daisyuiCatalog(project) : null;
+const daisyui = project.classes === 'daisyui' ? daisyuiCatalog(project) : null;
 // Échelle d'espacement restreinte (--spacing-*: initial) : plus de variable --spacing, donc plus de --spacing(n)
 const readIf = (file) => (file && existsSync(file) ? readFileSync(file, 'utf8') : '');
 const spacingRestricted = /--spacing-\*\s*:\s*initial/.test(`${readIf(project.tokens)}\n${readIf(project.theme)}`);

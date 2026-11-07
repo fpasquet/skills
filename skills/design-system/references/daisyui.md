@@ -1,8 +1,9 @@
 # daisyUI
 
 Avec daisyUI 5 (Tailwind v4), les classes sémantiques du design system sont celles de daisyUI, réglées par les tokens.
-`scaffold.mjs` passe dans ce mode quand l'application utilise déjà daisyUI (`@plugin "daisyui"` dans une feuille, ou
-paquet installé), ou avec `--classes daisyui`. L'audit l'indique (ligne `daisyui`).
+`scaffold.mjs` passe dans ce mode quand une feuille de l'application déclare daisyUI (`@plugin "daisyui"`), ou avec
+`--classes daisyui`. L'audit l'indique (ligne `daisyui`). Le paquet installé seul ne change pas le mode : sans
+greffon, daisyUI ne génère aucune classe, et l'audit n'applique pas ses règles `daisyui-*`.
 
 | Couche | Classes du projet (par défaut) | daisyUI |
 |---|---|---|
@@ -77,6 +78,29 @@ Chaque variable de daisyUI pointe sur un token. Une couleur se change dans les t
    - Un projet qui change de thème par `data-theme` garde cet attribut : le bloc s'écrit
      `[data-theme='dark'] { … }` et la variante `@custom-variant dark (&:is([data-theme='dark'] *));`.
 6. Les règles qui visaient les classes de daisyUI passent dans sa sous-couche de base (section suivante).
+
+## Passer des classes du projet à daisyUI
+
+Un design system à classes du projet (`btn`, `badge`, `card`, `toggle`…) reprend souvent des noms de daisyUI. Dès que
+le greffon est déclaré, les deux styles se mêlent sur chaque classe homonyme.
+
+1. Installer daisyUI, puis `scaffold.mjs <app> --mode migrate --classes daisyui` : le greffon s'ajoute à la feuille
+   d'entrée. Un `theme.css` existant est gardé : y reporter le thème daisyUI du gabarit, retirer `--border` de
+   `:root` et écrire `--color-border: var(--color-line)` dans `@theme inline` (`daisyui-border`).
+2. `audit.mjs <app> --rule daisyui-layer --limit 0` liste chaque règle du projet sur un nom de daisyUI. Trois cas :
+   - **même composant** (`btn`, `badge`, `card`, `alert`, `checkbox`) : le composant passe sur les classes de daisyUI
+     (modèle `templates/ui/button-daisyui/`), et sa feuille ne garde que les écarts du projet, dans la sous-couche de
+     base ;
+   - **autre composant sous le même nom** : la classe du projet est renommée. Le `Toggle` de shadcn est un bouton
+     bascule, le `toggle` de daisyUI un interrupteur : sous `toggle`, le bouton prend la couleur et l'opacité de
+     l'interrupteur, et son contraste tombe sous 4,5:1 ;
+   - **règle d'un autre composant sur une classe de daisyUI** (`.prompt-tools .btn[aria-pressed='true']`) : elle passe
+     dans la sous-couche de base. Elle l'emporte encore sur `btn-ghost`, qui ne change que `--btn-bg`.
+3. Les variantes changent de nom : `btn-danger` devient `btn-error`, `btn-icon` devient `btn-square`. Les chercher dans
+   le JSX et dans les pages de documentation (`doc-unknown-name`).
+4. Un lot par famille, histoires comprises. Tant qu'une famille n'est pas réécrite, ses classes mêlent les deux styles :
+   le contrôle d'accessibilité attrape les contrastes, pas la forme. Comparer les histoires à l'œil, avant et après.
+5. `eslint --fix` remet l'ordre des classes : celles de daisyUI se rangent parmi les utilitaires.
 
 ## La cascade : où écrire une règle
 

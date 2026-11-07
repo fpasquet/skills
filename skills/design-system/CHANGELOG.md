@@ -3,9 +3,14 @@
 ## 1.2.0 · 07/11/2026
 
 - **daisyUI 5** : ses classes peuvent devenir les classes sémantiques du design system, réglées par les tokens
-  (`references/daisyui.md`). Mode repéré seul (`@plugin "daisyui"` ou paquet installé), ou choisi par
-  `scaffold.mjs --classes daisyui`. Éprouvé sur une application Vite qui utilisait daisyUI avec ses thèmes
-  (Storybook 10, histoires rendues dans Chromium, accessibilité bloquante, lint) :
+  (`references/daisyui.md`). Mode repéré seul (`@plugin "daisyui"` dans une feuille ; le paquet installé seul ne le
+  change pas et n'active pas les règles `daisyui-*`), ou choisi par `scaffold.mjs --classes daisyui`. Éprouvé sur une
+  application Vite qui utilisait daisyUI avec ses thèmes, et sur une application Next.js en monorepo dont le design
+  system à classes du projet passe à daisyUI (Storybook 10, histoires rendues dans Chromium, accessibilité bloquante,
+  lint) :
+  - passage des classes du projet à daisyUI (`daisyui.md`) : classe homonyme d'un même composant réécrite sur
+    daisyUI, d'un autre composant renommée (`toggle`, bouton bascule contre interrupteur), variantes renommées
+    (`btn-danger` → `btn-error`) ;
   - thème daisyUI `app` pointé sur les tokens dans `theme.css` (`--color-base-100` sur `surface`, `--radius-field` sur
     `radius-control`, `--size-field` tiré de `--spacing-control`), à côté des variables de shadcn ; `primary`,
     `success`, `warning` et `info` restent les tokens eux-mêmes ; mode sombre par le bloc `.dark`, que daisyUI suit ;

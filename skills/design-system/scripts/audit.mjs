@@ -59,7 +59,7 @@ const RULES = {
   'daisyui-theme-value': ['error', 'daisyUI theme with its own value: its colours and radii point at the tokens (var(--color-surface)) and never redeclare a token'],
   'daisyui-theme-missing': ['error', 'daisyUI theme variable defined nowhere (built-in themes off): the components that read it lose their colour, size or border'],
   'daisyui-border': ['error', '--border is the border width of daisyUI (1px): a colour under this name (--border: var(--color-line) of shadcn) cancels the borders of btn, input, card; drop it and write --color-border: var(--color-line) in @theme inline'],
-  'daisyui-layer': ['error', 'Rule on a daisyUI class outside its base sublayer: in @layer components it never applies, unlayered or in @utility it beats the modifiers of daisyUI (btn-sm) or the utilities of the JSX; write it in @layer utilities { @layer <base sublayer> { … } }'],
+  'daisyui-layer': ['error', 'Rule on a daisyUI class outside its base sublayer: in @layer components it never applies, unlayered or in @utility it beats the modifiers of daisyUI (btn-sm) or the utilities of the JSX; write it in @layer utilities { @layer <base sublayer> { … } }; a class of the project that names another component than the daisyUI one (toggle button vs toggle switch) is renamed instead (references/daisyui.md)'],
   'flat-component': ['warning', 'Component file at the root of ui/: move it to its folder (rehome.mjs)'],
   'missing-index': ['warning', 'Component folder without index.ts re-exporting its names'],
   'missing-story': ['warning', 'Stateless component without a *.stories.tsx next to it'],
@@ -82,8 +82,9 @@ const RULES = {
 const baseUiData = project.primitives === 'base' ? ['open', 'closed', 'starting-style', 'ending-style'] : [];
 // daisyUI change de thème par data-theme
 const allowedData = ['state', 'side', 'align', 'orientation', 'placeholder', ...baseUiData, ...(project.daisyui ? ['theme'] : []), ...String(options['allow-data'] ?? '').split(',').filter(Boolean)];
-// Classes de daisyUI (paquet installé, sinon racines connues) : elles vivent dans la couche des utilitaires
-const daisyui = project.daisyui ? daisyuiCatalog(project) : null;
+// Classes de daisyUI (paquet installé, sinon racines connues) : elles vivent dans la couche des utilitaires. Sans
+// greffon déclaré, daisyUI ne génère rien : ni ses classes ni sa cascade ne comptent
+const daisyui = project.daisyui?.plugin ? daisyuiCatalog(project) : null;
 const dataSelector = new RegExp(`\\[data-(?!(${allowedData.join('|')})\\b)[\\w-]+`);
 const findings = Object.fromEntries(Object.keys(RULES).map((id) => [id, []]));
 const add = (id, file, line, detail) => findings[id].push({ file: rel(project, file), line, detail });
@@ -343,7 +344,7 @@ const tokensCopy = project.tokens ? parseTokensCopy(read(project.tokens)) : null
 if (tokensCopy?.edited) add('tokens-copy-edited', project.tokens, 1, tokensCopy.source);
 
 // ---------- daisyUI : thèmes et surcharges ----------
-if (project.daisyui) {
+if (project.daisyui?.plugin) {
   const dz = project.daisyui;
   const tokensCss = project.tokens ? stripCssComments(read(project.tokens)) : '';
   const tokenNames = new Set([...tokensCss.matchAll(/(?:^|[;{\s])(--[\w-]+)\s*:/g)].map((m) => m[1]));
@@ -641,15 +642,19 @@ const layout = {
   ...(project.daisyui && {
     daisyui: [
       project.daisyui.version ?? 'version unknown',
-      project.daisyui.plugin ? null : 'installed but no @plugin "daisyui" in the stylesheets',
-      project.daisyui.builtinThemes.length ? `built-in themes ${project.daisyui.builtinThemes.join(', ')}` : 'built-in themes off',
-      ...project.daisyui.themes.map((t) => {
-        const own = t.variables.filter((v) => v.name.startsWith('--color-') && !/^var\(/.test(v.value)).length;
-        return `theme ${t.name}${t.isDefault ? ' (default)' : ''} ${own ? `with its own colours (${own})` : 'on the tokens'}`;
-      }),
-      daisyui.installed
-        ? `${daisyui.classes.size} classes`
-        : `${project.daisyui.dir ? 'no class sheets in the package' : 'package not installed'} (classes guessed from their roots)`,
+      // Sans greffon, daisyUI ne génère rien : ni thème ni classes à décrire, et pas de règle daisyui-*
+      ...(project.daisyui.plugin
+        ? [
+            project.daisyui.builtinThemes.length ? `built-in themes ${project.daisyui.builtinThemes.join(', ')}` : 'built-in themes off',
+            ...project.daisyui.themes.map((t) => {
+              const own = t.variables.filter((v) => v.name.startsWith('--color-') && !/^var\(/.test(v.value)).length;
+              return `theme ${t.name}${t.isDefault ? ' (default)' : ''} ${own ? `with its own colours (${own})` : 'on the tokens'}`;
+            }),
+            daisyui.installed
+              ? `${daisyui.classes.size} classes`
+              : `${project.daisyui.dir ? 'no class sheets in the package' : 'package not installed'} (classes guessed from their roots)`,
+          ]
+        : ['installed but no @plugin "daisyui" in the stylesheets: classes of the project, rules daisyui-* off']),
     ].filter(Boolean).join(', '),
   }),
 };

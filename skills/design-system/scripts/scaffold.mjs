@@ -217,7 +217,7 @@ const values = {
       }),
 };
 if (!write(theme, fill(template('styles/theme.css'), values)) && withDaisyui && !project.daisyui?.themes.some((t) => t.file === theme && t.variables.some((v) => /^var\(--color-/.test(v.value)))) {
-  notes.push(`${rel(project, theme)} kept: add the daisyUI theme on the tokens (section if:daisyui of templates/styles/theme.css), see references/daisyui.md.`);
+  notes.push(`${rel(project, theme)} kept: add the daisyUI theme on the tokens (section if:daisyui of templates/styles/theme.css), drop --border from :root and write --color-border: var(--color-line) in @theme inline (audit rule daisyui-border), see references/daisyui.md.`);
 }
 write(componentsCss, fill(template('styles/components.css'), { ...values, ui: posix(relative(project.root, project.ui)) }));
 write(join(dirname(componentsCss), 'utilities.css'), template('styles/utilities.css'));
@@ -282,6 +282,9 @@ if (withDaisyui && project.daisyui) {
   if (darkSource) {
     notes.push(`Dark mode came from the daisyUI theme ${darkSource} (prefers-color-scheme): to keep it, fill the .dark block of ${rel(project, theme)} with its values, and set the class dark on <html> (references/daisyui.md).`);
   }
+}
+if (!withDaisyui && project.daisyui && !project.daisyui.plugin) {
+  notes.push('daisyUI is installed but no stylesheet declares @plugin "daisyui": the classes of the project are kept. To switch to the classes of daisyUI: --classes daisyui (references/daisyui.md, « Passer des classes du projet à daisyUI »).');
 }
 if (withDaisyui && !project.daisyui) notes.push('daisyUI: install it (dependencies above), then read references/daisyui.md before the first component.');
 

@@ -81,7 +81,7 @@ Thèmes intégrés (`@plugin "daisyui";`) ou thème du projet à valeurs propres
 2. **Règles sur les classes de daisyUI** (`@layer components { .btn … }`, `@utility btn`) : elles passent dans la sous-couche de base de daisyUI (`daisyui-layer`).
 3. **Composants** : les listes de classes répétées (`btn btn-primary btn-sm`) deviennent des composants de `<ui>` sur le modèle `templates/ui/button-daisyui/`, un lot par famille, avec leurs histoires.
 
-Le détail est dans `daisyui.md`. Pour quitter daisyUI au profit des classes du projet, chaque composant reçoit sa feuille (classes du projet) avant que le greffon ne soit retiré, au dernier lot.
+Le détail est dans `daisyui.md`. Pour passer des classes du projet à daisyUI, voir `daisyui.md` (« Passer des classes du projet à daisyUI »). Pour quitter daisyUI au profit des classes du projet, chaque composant reçoit sa feuille (classes du projet) avant que le greffon ne soit retiré, au dernier lot.
 
 ## Depuis Tailwind v3
 

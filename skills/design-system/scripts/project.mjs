@@ -244,9 +244,10 @@ export function detectProject(appDir, overrides = {}) {
     peerOnly: (name) => Boolean(pkg.peerDependencies?.[name] && !pkg.dependencies?.[name] && !pkg.devDependencies?.[name]),
     // Import de `cn` : le paquet officiel `cn` de shadcn s'il est installé, sinon l'alias utils de components.json
     cnImport: deps.cn ? 'cn' : (componentsJson?.aliases?.utils ?? '@/lib/utils'),
-    // Classes sémantiques : celles de daisyUI quand le projet l'utilise, sinon celles du projet (à la daisyUI)
+    // Classes sémantiques : celles de daisyUI quand une feuille déclare son greffon, sinon celles du projet (à la
+    // daisyUI). Le paquet seul ne génère aucune classe : il ne change pas le mode
     daisyui,
-    classes: overrides.classes ?? (daisyui ? 'daisyui' : 'own'),
+    classes: overrides.classes ?? (daisyui?.plugin ? 'daisyui' : 'own'),
   };
 }
 
@@ -310,9 +311,10 @@ function detectDaisyui(root, sheets, deps) {
   const dir = packageDirOf(root, 'daisyui');
   const version = (dir && readJsonc(join(dir, 'package.json'))?.version) ?? deps.daisyui?.replace(/^[^\d]*/, '') ?? null;
   const themesOption = plugin?.options.themes;
-  // Sans option, daisyUI pose light (défaut) et dark (préférence du système)
-  const builtinThemes =
-    themesOption === undefined
+  // Sans option, daisyUI pose light (défaut) et dark (préférence du système) ; sans greffon déclaré, aucun thème
+  const builtinThemes = !plugin
+    ? []
+    : themesOption === undefined
       ? ['light', 'dark']
       : themesOption === 'false'
         ? []
