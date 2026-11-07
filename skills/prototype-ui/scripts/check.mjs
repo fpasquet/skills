@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Contrôle le prototype construit (specs/prototype/site), du moins coûteux au plus coûteux.
+ * Contrôle le prototype construit (<projet>/prototype/site), du moins coûteux au plus coûteux.
  *
- * Usage : node check.mjs specs/prototype [output-dir] [--pages e2,e13] [--sheet] [--scenarios]
+ * Usage : node check.mjs <projet>/prototype [output-dir] [--pages e2,e13] [--sheet] [--scenarios]
  *
  *   (par défaut)   contrôles sans image :
  *                  - statiques : liens et go('…') vers des pages absentes, départs de scénarios, restes de
@@ -16,7 +16,7 @@
  *   --pages e2,e13 limite aux pages dont le nom commence par ces identifiants (index : --pages index ;
  *                  étapes des scénarios : --pages scenarios)
  *
- * Images dans output-dir (par défaut specs/prototype/.check). Nécessite Chrome ou Chromium (variable
+ * Images dans output-dir (par défaut <projet>/prototype/.check). Nécessite Chrome ou Chromium (variable
  * CHROME_PATH si le chemin n'est pas standard, CHROME_ARGS pour des options en plus, « --no-sandbox » dans un
  * conteneur). Aucune dépendance. Code de sortie 1 si un problème bloquant.
  */
@@ -35,7 +35,7 @@ const [input, outputArg] = args.filter((a, i) => !a.startsWith('--') && !WITH_VA
 const root = input && resolve(input);
 const siteDir = root && join(root, 'site');
 if (!root || !existsSync(siteDir)) {
-  console.error('Usage: node check.mjs specs/prototype [output-dir] [--pages e2,e13] [--sheet]   (run build.mjs first)');
+  console.error('Usage: node check.mjs <projet>/prototype [output-dir] [--pages e2,e13] [--sheet]   (run build.mjs first)');
   process.exit(2);
 }
 const outputDir = resolve(outputArg ?? join(root, '.check'));
@@ -67,6 +67,17 @@ const baseArgs = ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--vir
 const pageUrl = (file, params) => `${pathToFileURL(join(siteDir, file)).href}?${params}`;
 const run = promisify(execFile);
 const dumpDom = async (url, size) => (await run(chrome, [...baseArgs, freshProfile(), `--window-size=${size}`, '--dump-dom', url], { encoding: 'utf8', timeout: 90000, maxBuffer: 64 * 1024 * 1024 })).stdout;
+// Chrome démarre-t-il avec un profil vierge ? Sinon chaque page attendrait son délai (90 s) et serait signalée à tort
+// comme plantée
+try {
+  await run(chrome, [...baseArgs, freshProfile(), '--dump-dom', 'data:text/html,ok'], { encoding: 'utf8', timeout: 30000 });
+} catch {
+  profiles.forEach((dir) => rmSync(dir, { recursive: true, force: true }));
+  console.error(
+    `Chrome does not start with a fresh profile (${chrome}): no page was checked. In a container, add CHROME_ARGS=--no-sandbox; a sandbox that blocks Chrome's own network can also hang it. Otherwise, ask the person to open the prototype.`,
+  );
+  process.exit(1);
+}
 // Quatre Chrome à la fois au plus
 const pool = async (items, worker, size = 4) => {
   const queue = [...items];
@@ -194,7 +205,7 @@ for (const r of runs) {
     continue;
   }
   if (!result) {
-    blocking.push(`${t.label} (${device}): check results missing (page crashed before load, or built without check-hook)`);
+    blocking.push(`${t.label} (${device}): check results missing (page crashed or timed out before load, for instance when Chrome cannot reach the web fonts or the CDN; or built without check-hook)`);
     continue;
   }
   if (!result.alpine) blocking.push(`${t.label}: Alpine.js did not start (CDN unreachable?)`);

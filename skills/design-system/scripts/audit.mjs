@@ -24,7 +24,7 @@
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
-import { detectProject, isDir, lintConfigText, parseArgs, read, readJsonc, rel, scaleChecker, walk } from './project.mjs';
+import { detectProject, isDir, lintConfigText, parseArgs, parseTokensCopy, read, readJsonc, rel, scaleChecker, walk } from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['json', 'strict']);
 if (!positional[0] || !isDir(positional[0])) {
@@ -50,6 +50,7 @@ const RULES = {
   'breakpoint-literal': ['warning', 'Media query on a literal width: use the breakpoint tokens (@variant md, theme(--breakpoint-md))'],
   'react18-ref': ['warning', 'Control written for React 19 (ref as a prop): in React 18 its ref is dropped, wrap it in forwardRef'],
   'muted-redefined': ['error', '--color-muted redefined by the theme: in the tokens it is the secondary text colour'],
+  'tokens-copy-edited': ['error', 'Copy of the specs tokens edited by hand: change the specs, then copy again with tokens.mjs'],
   'shadcn-alias': ['error', 'components.json alias that tsconfig does not resolve: the shadcn CLI refuses to add components'],
   'muted-background': ['error', 'bg-muted is a shadcn background, but muted is the text colour of the tokens: use bg-surface-alt'],
   'flat-component': ['warning', 'Component file at the root of ui/: move it to its folder (rehome.mjs)'],
@@ -314,6 +315,10 @@ if (project.theme && project.tokens && /--color-muted\s*:/.test(read(project.tok
   }
 }
 
+// Copie des tokens des specs (dépôt de specs) modifiée dans l'application
+const tokensCopy = project.tokens ? parseTokensCopy(read(project.tokens)) : null;
+if (tokensCopy?.edited) add('tokens-copy-edited', project.tokens, 1, tokensCopy.source);
+
 // ---------- Feuilles importées par components.css ----------
 if (project.componentsCss) {
   const css = read(project.componentsCss);
@@ -545,7 +550,7 @@ const preview = project.storybook ? walk(project.storybook, ['.ts', '.tsx', '.js
 const layout = {
   entry: rel(project, project.entry),
   tokens: project.tokens
-    ? `${rel(project, project.tokens)} (${tokensCount} tokens${project.tokensInTheme ? ', in theme.css: move them to tokens.css' : ''})`
+    ? `${rel(project, project.tokens)} (${tokensCount} tokens${project.tokensInTheme ? ', in theme.css: move them to tokens.css' : ''}${tokensCopy ? `, copy of ${tokensCopy.source}` : ''})`
     : 'none',
   theme: rel(project, project.theme),
   components: project.componentsCss ? `${rel(project, project.componentsCss)} (${(read(project.componentsCss).match(/@import/g) ?? []).length} imports)` : 'none',

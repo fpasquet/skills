@@ -6,7 +6,7 @@ Instructions pour les agents qui modifient ce dépôt. La documentation destiné
 
 Catalogue de skills d'agents, installés avec le CLI [`skills`](https://github.com/vercel-labs/skills) (`npx skills add`). Les skills suivent la [spécification Agent Skills](https://agentskills.io/specification) et ne dépendent d'aucun agent en particulier.
 
-Les trois skills forment une chaîne : `specs-ui` (specs maquettées) → `prototype-ui` (prototype cliquable) → `requirements-doc` (cahier des charges, document pour l'équipe de développement). Les deux derniers lisent le projet produit par le premier. `design-system` travaille dans le code de l'application (tokens, classes sémantiques, shadcn/ui, Storybook) ; il importe les tokens des specs quand elles existent, et marche aussi sans elles.
+Les trois skills forment une chaîne : `specs-ui` (specs maquettées) → `prototype-ui` (prototype cliquable) → `requirements-doc` (cahier des charges, document pour l'équipe de développement). Les deux derniers lisent le projet produit par le premier. Leurs livrables vivent dans un **dépôt de specs**, séparé du code de l'application (`skills/specs-ui/references/depot-specs.md`). `design-system` travaille dans le code de l'application (tokens, classes sémantiques, shadcn/ui, Storybook) ; il copie les tokens des specs quand elles existent, et marche aussi sans elles. L'application reçoit aussi l'export du cahier des charges (`export.mjs` de `requirements-doc`).
 
 ## Invariants
 
@@ -32,7 +32,7 @@ Le CLI parse le frontmatter en YAML et, en cas d'erreur, **ignore le skill sans 
 
 ## Espaces de travail
 
-Les projets produits par les skills (`specs/ui/`, `specs/prototype/`, `specs/requirements/`, anciennement `specs-ui/`, `prototype-ui/`, `cdc/`) vivent dans le dossier du projet concerné, **jamais dans ce dépôt**. Pour tester un skill, travailler dans un dossier à part. Le `.gitignore` exclut `*-workspace/` par sécurité.
+Les projets produits par les skills (`<projet>/ui/`, `<projet>/prototype/`, `<projet>/requirements/` dans un dépôt de specs ; anciennement `specs/…` dans le dépôt de l'application, ou `specs-ui/`, `prototype-ui/`, `cdc/`) vivent hors de ce dépôt, **jamais dans ce dépôt**. Pour tester un skill, travailler dans un dossier à part. Le `.gitignore` exclut `*-workspace/` par sécurité.
 
 Ne jamais supprimer ni déplacer un espace de travail existant sans accord : ses fichiers `.published.json` et les URL d'artifacts de sa mémoire de projet permettent de mettre à jour les artifacts déjà publiés.
 

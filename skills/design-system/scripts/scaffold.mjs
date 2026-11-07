@@ -7,17 +7,32 @@
  * Aucun fichier existant n'est écrasé : il est gardé et signalé. Seule la feuille d'entrée est complétée par les
  * @import qui lui manquent. Les dépendances ne sont pas installées : la commande à lancer est affichée.
  *
- * Usage : node scaffold.mjs <app-dir> [--mode create|maintain|migrate] [--tokens <file>] [--rule <file>] [--dry-run]
- *                            [--src …] [--ui …] [--components …] [--entry …] [--styles …] [--docs …]
- *   --tokens  fichier de tokens existant (par défaut : celui que la feuille d'entrée importe, sinon specs/ui/tokens.css
- *             à la racine du dépôt, sinon un nouveau <styles>/tokens.css à remplir)
+ * Usage : node scaffold.mjs <app-dir> [--mode create|maintain|migrate] [--specs <projet>/ui] [--tokens <file>] [--rule <file>]
+ *                            [--dry-run] [--src …] [--ui …] [--components …] [--entry …] [--styles …] [--docs …]
+ *   --specs   specs du skill specs-ui, dans le dépôt de specs (dossier <projet>/ui ou son tokens.css, depuis le dossier
+ *             courant) : leurs tokens sont copiés dans <styles>/tokens.css avec leur provenance (tokens.mjs les recopie)
+ *   --tokens  fichier de tokens existant de l'application (par défaut : celui que la feuille d'entrée importe, sinon
+ *             specs/ui/tokens.css à la racine du dépôt, ancienne disposition, sinon un nouveau <styles>/tokens.css)
  *   --rule    où écrire les conventions (par défaut .claude/rules/design-system.md si le dépôt a .claude/rules/,
  *             sinon docs/design-system.md)
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cssImports, detectProject, isDir, lintConfigText, parseArgs, read, rel } from './project.mjs';
+import {
+  cssImports,
+  detectProject,
+  isDir,
+  isSpecsTokens,
+  lintConfigText,
+  parseArgs,
+  parseTokensCopy,
+  read,
+  rel,
+  sourceLabel,
+  specsTokensFile,
+  tokensCopy,
+} from './project.mjs';
 
 const { options, positional } = parseArgs(process.argv.slice(2), ['dry-run']);
 if (!positional[0] || !isDir(positional[0])) {
@@ -28,6 +43,16 @@ const templates = join(dirname(fileURLToPath(import.meta.url)), '..', 'templates
 const template = (path) => readFileSync(join(templates, path), 'utf8');
 const versions = JSON.parse(template('versions.json'));
 const project = detectProject(positional[0], options);
+// Tokens des specs : le dépôt de specs est à part, ses tokens se copient (l'application ne peut pas les importer)
+const specsSource = options.specs ? specsTokensFile(options.specs) : null;
+if (specsSource && !existsSync(specsSource)) {
+  console.error(`Specs tokens not found: ${specsSource} (--specs takes the specs folder, <projet>/ui, or its tokens.css).`);
+  process.exit(2);
+}
+if (options.tokens && !resolve(project.root, options.tokens).startsWith(project.repo)) {
+  console.error('--tokens names a file of the application. For the tokens of a specs repository, pass --specs <projet>/ui: they are copied, not imported.');
+  process.exit(2);
+}
 const dry = options['dry-run'];
 const written = [];
 const kept = [];
@@ -64,6 +89,7 @@ function sheetsOf(file) {
 const fill = (text, values) => text.replace(/\{\{(\w+)\}\}/g, (match, key) => (key in values ? values[key] : match));
 
 // ---------- Tokens ----------
+// Ancienne disposition : specs/ dans le dépôt de l'application, tokens importés sans copie
 const specsTokens = join(project.repo, 'specs', 'ui', 'tokens.css');
 // Couleurs déclarées par la feuille d'entrée elle-même (shadcn d'origine) : ce ne sont pas encore des tokens
 const tokensInEntry = project.tokens && project.tokens === project.entry;
@@ -71,14 +97,35 @@ const tokensInEntry = project.tokens && project.tokens === project.entry;
 // les conventions citent déjà
 const tokens = project.tokensInTheme
   ? join(project.styles, 'tokens.css')
-  : (!tokensInEntry && project.tokens) || (existsSync(specsTokens) ? specsTokens : join(project.styles, 'tokens.css'));
+  : specsSource
+    ? (!tokensInEntry && project.tokens && !isSpecsTokens(project.tokens) && project.tokens) || join(project.styles, 'tokens.css')
+    : (!tokensInEntry && project.tokens) || (existsSync(specsTokens) ? specsTokens : join(project.styles, 'tokens.css'));
 const tokensFromSpecs = tokens === specsTokens;
+const tokensCopied = Boolean(specsSource) && !project.tokensInTheme;
+if (tokensCopied) {
+  const existing = read(tokens);
+  if (!existing) {
+    write(tokens, tokensCopy(specsSource));
+  } else if (parseTokensCopy(existing)) {
+    kept.push(rel(project, tokens));
+    notes.push(`${rel(project, tokens)} is already a copy of the specs tokens: node <skill>/scripts/tokens.mjs ${positional[0]} --from ${options.specs} refreshes it.`);
+  } else {
+    kept.push(rel(project, tokens));
+    notes.push(
+      `${rel(project, tokens)} holds the application tokens, not a copy of the specs: compare them with ${relative(process.cwd(), specsSource)}, then replace them with tokens.mjs --from ${options.specs} --force.`,
+    );
+  }
+} else if (tokensFromSpecs) {
+  notes.push(
+    `${fromRepo(specsTokens)} is imported directly (old layout, specs/ in the application). Once the specs move to the specs repository, copy their tokens: node <skill>/scripts/tokens.mjs ${positional[0]} --from <projet>/ui.`,
+  );
+}
 if (project.tokensInTheme) {
   notes.push(
     `${rel(project, project.theme)} holds the tokens of the project: at step 2, move them to ${rel(project, join(project.styles, 'tokens.css'))} with the names of references/tokens.md (restricted scales, no responsive token), and keep in theme.css only the shadcn variables of templates/styles/theme.css.`,
   );
 }
-if (!project.tokensInTheme && !existsSync(tokens) && write(tokens, template('styles/tokens.css'))) {
+if (!project.tokensInTheme && !tokensCopied && !existsSync(tokens) && write(tokens, template('styles/tokens.css'))) {
   notes.push(
     tokensInEntry
       ? `${rel(project, tokens)}: template values. ${rel(project, project.entry)} declares the colours itself (:root, .dark, @theme inline): move their values into the tokens with the names of references/tokens.md, point the shadcn variables of theme.css at them, then delete them from the entry (step 2).`
@@ -87,7 +134,7 @@ if (!project.tokensInTheme && !existsSync(tokens) && write(tokens, template('sty
 }
 
 // ---------- Thème, classes, utilitaires ----------
-const tokensCss = existsSync(tokens) ? read(tokens) : template('styles/tokens.css');
+const tokensCss = existsSync(tokens) ? read(tokens) : tokensCopied ? read(specsSource) : template('styles/tokens.css');
 const colorTokens = [...tokensCss.matchAll(/^\s*(--color-[\w-]+)\s*:\s*([^;]+);/gm)];
 const darkTokens = colorTokens.map(([, name, value]) => `  /* ${name}: ; clair : ${value.trim()} */`).join('\n');
 const theme = project.theme ?? join(project.styles, 'theme.css');
@@ -218,9 +265,11 @@ const ruleValues = {
   entry: fromRepo(entry),
   memory: fromRepo(memory),
   cn: project.cnImport === 'cn' ? 'paquet officiel `cn` de shadcn' : `\`${project.cnImport}\``,
-  tokensSource: tokensFromSpecs
-    ? ' Le fichier est partagé avec les maquettes des specs (skill `specs-ui`) : une couleur, un rayon ou une police se change dans les specs, jamais dans l\'application.'
-    : '',
+  tokensSource: tokensCopied
+    ? ' Le fichier est une copie des tokens des specs (skill `specs-ui`, dépôt de specs) : une couleur, un rayon ou une police se change dans les specs, puis `tokens.mjs` recopie le fichier ; jamais dans l\'application.'
+    : tokensFromSpecs
+      ? ' Le fichier est partagé avec les maquettes des specs (skill `specs-ui`) : une couleur, un rayon ou une police se change dans les specs, jamais dans l\'application.'
+      : '',
 };
 let ruleText = fill(template('rule.md'), { ...ruleValues, uiAlias: project.componentsJson?.aliases?.ui ?? '@/…' });
 // Composants d'interface et blocs partagés dans le même dossier (paquet de composants d'un monorepo) : une seule mention
@@ -244,7 +293,21 @@ if (write(rule, ruleText) && !rule.startsWith(rulesDir)) {
 }
 write(
   memory,
-  dedupe(fill(template('memory.md'), { ...values, entry: fromRepo(entry), rule: fromRepo(rule), mode: options.mode ?? 'create', date: new Date().toISOString().slice(0, 10) })),
+  dedupe(
+    fill(template('memory.md'), {
+      ...values,
+      entry: fromRepo(entry),
+      rule: fromRepo(rule),
+      mode: options.mode ?? 'create',
+      date: new Date().toISOString().slice(0, 10),
+      // Copie des specs : provenance, et chemin du clone local pour recopier avec tokens.mjs --from
+      specsTokens: tokensCopied
+        ? `${sourceLabel(specsSource)}, clone local \`${posix(relative(project.repo, dirname(specsSource)))}\` (\`tokens.mjs --from\`)`
+        : tokensFromSpecs
+          ? `\`${fromRepo(specsTokens)}\`, importé tel quel (ancienne disposition)`
+          : 'aucun',
+    }),
+  ),
 );
 
 // ---------- Dépendances ----------

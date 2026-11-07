@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.7.0 · 7 nov. 2026
+
+- **Dépôt de specs** : les specs, le prototype et le cahier des charges vivent dans un dépôt git séparé du code de l'application, dont elles noyaient les PR. Ce dépôt est dédié à un projet (livrables à sa racine, `<projet>` vaut `.`) ou partagé entre plusieurs projets (un dossier par projet), au choix de la personne. L'application n'en reçoit que l'export du cahier des charges (`export.mjs` du skill `requirements-doc`) et une copie des tokens (`tokens.mjs` du skill `design-system`).
+- `references/depot-specs.md`, commun aux skills de la chaîne, décrit :
+  - les deux organisations et comment choisir, avec une option recommandée (le dépôt de specs déjà connu, sinon un dépôt dédié), la structure et le `.gitignore` ;
+  - le travail avec deux clones côte à côte, ou une session web qui ouvre les deux dépôts, et la ligne de renvoi à ajouter à l'`AGENTS.md` de l'application ;
+  - les images du produit et ce que reçoit l'application. Les ADR que l'équipe écrit pendant les développements restent dans l'application, hors du dossier de l'export ; un ADR qui remplace une décision DT se reporte dans le cahier des charges ;
+  - les écarts pendant les développements : l'export suit sur la branche de la PR de code, et un statut d'écran change dès qu'on l'apprend ;
+  - le partage par les artifacts : version figée, partage hors de l'organisation, retours des relecteurs extérieurs ;
+  - la migration d'un projet dont `specs/` est dans l'application, avec son historique (`git subtree`, découpé depuis `origin/main`). On repère d'abord les branches non fusionnées qui touchent `specs/`, à fusionner ou à reporter en fusion à trois. Les artifacts se contrôlent avec la version des skills épinglée par l'application. Le README du projet se réécrit pour le dépôt de specs. On pousse le dépôt de specs, puis une seule PR dans l'application : export, copie des tokens, renvoi dans `AGENTS.md`, retrait de ce qui ne servait qu'aux specs, et `git rm -r specs` seulement après le push et avec l'accord de la personne.
+- `<projet>` désigne le dossier du projet dans les consignes et les messages des scripts. L'étape 0 demande le dépôt de specs et son organisation pour un nouveau projet. L'étape 7 reporte un écart dans le dépôt de specs, dans un commit qui cite la PR de code ; le prototype se reporte (page câblée) ou se régénère (page non câblée), et un livrable jamais publié n'a pas de `.published.json`. Un dossier `specs/` dans l'application fonctionne toujours (`<projet>` vaut `specs`).
+- `migrate-layout.mjs` renvoie à la migration vers le dépôt de specs ; `pack.mjs` archive n'importe quel dossier de projet.
+- **Corrigé** :
+  - `split.mjs` garde l'en-tête du document en entier quand il contient des sections, comme les règles fonctionnelles du template : la ligne des parcours et la fermeture du `<header>` étaient perdues, et `build.mjs` signalait un `<header>` jamais refermé sur chaque lot créé par `--new`. Un lot créé avant cette version garde ce défaut : refermer le `<header>` dans `000-header.html`, après la ligne des parcours, puis reconstruire.
+  - `split.mjs --new` : les points ouverts du squelette ont les quatre colonnes de `redaction-specs.md` (avec « Recommandé »).
+  - `redaction-specs.md` : un lot est un dossier de sources, et un lien vers un écran d'un autre lot s'écrit `#e12`, comme les autres (plus « un document par lot », de la version 1.x).
+  - `prepare-publish.mjs --check` : message plus clair (« page(s) to publish »). Gabarit `tokens.css` : le script de contraste s'appelle `check-contrast.mjs`.
+
 ## 3.6.0 · 17 oct. 2026
 
 - **Chat claude.ai** : `references/claude-ai.md`, commun aux trois skills de la chaîne, dit comment travailler sans l'outil Artifact de Claude Code ni disque durable. Il couvre la reprise par archive, la publication en un seul fichier, les contrôles sans navigateur et le réseau filtré. `SKILL.md` y renvoie dès que l'environnement est reconnu.

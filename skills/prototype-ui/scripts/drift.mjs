@@ -2,9 +2,9 @@
 /**
  * Dit quels écrans des specs ont changé depuis que le prototype les a repris, sans lire les pages.
  *
- * Usage : node drift.mjs specs/prototype                 écrans modifiés dans les specs depuis la dernière reprise
- *         node drift.mjs specs/prototype --mark [e3,e5]  note les écrans comme repris (tous sans liste)
- *         node drift.mjs specs/prototype --strict        code de sortie 1 s'il y a un écart (CI)
+ * Usage : node drift.mjs <projet>/prototype                 écrans modifiés dans les specs depuis la dernière reprise
+ *         node drift.mjs <projet>/prototype --mark [e3,e5]  note les écrans comme repris (tous sans liste)
+ *         node drift.mjs <projet>/prototype --strict        code de sortie 1 s'il y a un écart (CI)
  *
  * L'empreinte d'un écran couvre ses fichiers sources dans les specs (sources/<lot>/NNN-eN*.html) ;
  * l'identité (tokens.css) et les coquilles partagées sont suivies à part. Les empreintes reprises sont
@@ -18,7 +18,7 @@ import { createHash } from 'node:crypto';
 const args = process.argv.slice(2);
 const root = args[0] && !args[0].startsWith('--') && resolve(args[0]);
 if (!root || !existsSync(join(root, 'src', 'prototype.json'))) {
-  console.error('Usage: node drift.mjs specs/prototype [--mark [e3,e5]] [--strict]');
+  console.error('Usage: node drift.mjs <projet>/prototype [--mark [e3,e5]] [--strict]');
   process.exit(2);
 }
 const config = JSON.parse(readFileSync(join(root, 'src', 'prototype.json'), 'utf8'));

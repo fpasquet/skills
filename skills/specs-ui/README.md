@@ -9,20 +9,33 @@ Skill pour agents IA (Claude Code…) qui produit des **spécifications UI maque
    - à définir : propose **trois propositions** qui diffèrent par la **disposition** (navigation, organisation de l'écran, manière de travailler) et par le **thème** (palette, typographie, formes, densité), sur le même écran en desktop et mobile. On choisit une proposition ou on combine (« disposition C avec le thème A »), en essayant les thèmes en direct sur la page ;
    - site existant : **extrait** couleurs, polices, rayons et structure (URL ou code source), puis reproduit une page existante pour caler la fidélité.
 3. **Inventorie** les écrans et les parcours, et les fait valider avant de dessiner.
-4. **Rédige les specs** en sources par écran (`specs/ui/sources/`), construites par `build.mjs` en un site multi-pages (une page par écran). Chaque écran a une maquette desktop (1280 × 820) et mobile (390 × 844), une note, le flux (Depuis / Ensuite) et des annotations numérotées. S'y ajoutent les règles fonctionnelles, les parcours, les points ouverts, le journal des itérations et une annexe sur l'identité.
+4. **Rédige les specs** en sources par écran (`<projet>/ui/sources/`), construites par `build.mjs` en un site multi-pages (une page par écran). Chaque écran a une maquette desktop (1280 × 820) et mobile (390 × 844), une note, le flux (Depuis / Ensuite) et des annotations numérotées. S'y ajoutent les règles fonctionnelles, les parcours, les points ouverts, le journal des itérations et une annexe sur l'identité.
 5. **Itère** sur les retours, sans toucher aux écrans déjà validés. Les relecteurs annotent directement les pages publiées : bouton « Retours », clic sur un point d'une maquette ou d'un texte, correction ou question, puis export Markdown à coller dans la conversation. Chaque retour y cite l'écran, l'état, le cadre et le fichier source, pour une correction ciblée.
 6. **Publie** le site comme un seul artifact claude.ai multi-pages ; une mise à jour ne republie que les pages modifiées. Dans le chat claude.ai, le site devient un seul fichier HTML autonome, et le projet se garde d'une conversation à l'autre dans une archive `specs.zip`.
 7. **Prépare la suite**, en option : Design System pour Claude Design, prototype cliquable (skill `prototype-ui`), cahier des charges (skill `requirements-doc`).
-8. **Suit l'implémentation** : les specs vivent dans le dépôt de l'application (`specs/ui/`, sources versionnées, site HTML reconstruit à la demande), chaque écran porte son statut (À développer, En cours, Livré, Écart), et un écart constaté pendant le développement se reporte dans les specs, puis dans le prototype et le cahier des charges.
+8. **Suit l'implémentation** : les specs vivent dans un dépôt de specs, à part du code de l'application (`<projet>/ui/`, sources versionnées, site HTML reconstruit à la demande). Chaque écran porte son statut (À développer, En cours, Livré, Écart), et un écart constaté pendant le développement se reporte dans les specs, puis dans le prototype et le cahier des charges. L'application n'en reçoit que l'export du cahier des charges et une copie des tokens : ses PR restent lisibles.
 
-La mémoire du projet, `specs/ui/CONTEXTE.md`, permet de reprendre le travail sans relire les specs : les agents lisent et modifient de petits fichiers plutôt que des documents de 300 Ko.
+La mémoire du projet, `<projet>/ui/CONTEXTE.md`, permet de reprendre le travail sans relire les specs : les agents lisent et modifient de petits fichiers plutôt que des documents de 300 Ko.
 
-Les tokens (`tokens.css`, bloc `@theme` Tailwind v4) et les classes des maquettes sont repris tels quels pendant les développements.
+Les tokens (`tokens.css`, bloc `@theme` Tailwind v4) et les classes des maquettes sont repris tels quels pendant les développements, par une copie que le skill `design-system` tient à jour.
+
+`<projet>` désigne le dossier des livrables d'un projet dans le dépôt de specs. Ce dépôt est dédié à un projet, ou partagé entre plusieurs avec un dossier par projet : c'est votre choix, les skills fonctionnent de la même façon.
+
+```text
+orbe-specs/            dépôt dédié : <projet> vaut .
+├── ui/                specs (ce skill)
+├── prototype/         prototype (skill prototype-ui)
+└── requirements/      cahier des charges (skill requirements-doc)
+
+specs/                 dépôt partagé : <projet> vaut orbe, atlas…
+├── orbe/              ui/, prototype/, requirements/
+└── atlas/…
+```
 
 ## Structure
 
 ```
-specs/ui/
+specs-ui/
 ├── SKILL.md                         workflow
 ├── references/
 │   ├── tailwind.md                  tokens, cadres, annotations, catalogue de composants
@@ -30,7 +43,8 @@ specs/ui/
 │   ├── propositions.md              construire 3 propositions : disposition + thème
 │   ├── site-existant.md             extraire et reproduire l'identité d'un site
 │   ├── redaction-specs.md           inventaire, anatomie d'un écran, états, itérations
-│   └── claude-ai.md                 chat claude.ai : archive du projet, version autonome, réseau (trois skills)
+│   ├── claude-ai.md                 chat claude.ai : archive du projet, version autonome, réseau (trois skills)
+│   └── depot-specs.md               dépôt de specs : structure, ce que reçoit l'application, partage, migration
 ├── templates/
 │   ├── propositions.html            3 dispositions × 3 thèmes, combinables en direct
 │   ├── specs.html                   document de specs (2 écrans d'exemple)
@@ -45,8 +59,8 @@ specs/ui/
     ├── check-contrast.mjs           contrôle WCAG AA des tokens
     ├── prepare-publish.mjs          pages à publier, --check : artifact en retard sur le site local
     ├── bundle.mjs                   version autonome en un seul fichier HTML (specs, prototype, cahier des charges)
-    ├── pack.mjs                     archive specs/ en .zip et la restaure (chat claude.ai)
-    ├── migrate-layout.mjs           range specs-ui/, prototype-ui/, cdc/ dans specs/
+    ├── pack.mjs                     archive le dossier du projet en .zip et le restaure (chat claude.ai)
+    ├── migrate-layout.mjs           range specs-ui/, prototype-ui/, cdc/ (versions 1.x, 2.x) dans specs/
     ├── extract-identity.mjs         identité d'un site ou d'un code, captures
     ├── upgrade.mjs                  mise à niveau d'un document ancien sans sources
     ├── typography.mjs               typographie française
@@ -67,11 +81,12 @@ specs/ui/
 - « Voici notre charte (bleu #003b71, police Marianne) : maquette le parcours de dépôt de dossier, desktop et mobile. »
 - « Sur E3, remplace la modale par un panneau latéral et ajoute un filtre par auteur. »
 - « E5 est livré, E6 est en cours ; sur E3 le code n'affiche pas Codex, note l'écart. »
+- « Déplace les specs du dépôt de l'application vers mon dépôt de specs, avec leur historique. »
 
 ## Installation
 
 ```bash
-# Dans le projet courant (choix de l'agent en interactif)
+# Dans le dépôt de specs (choix de l'agent en interactif)
 npx skills add <source> --skill specs-ui
 
 # Globalement, pour tous vos projets

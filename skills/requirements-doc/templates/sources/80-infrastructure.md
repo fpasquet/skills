@@ -38,6 +38,8 @@
 
 {{Accès, réseau, chiffrement, analyses de vulnérabilités, mises à jour.}}
 
+<!-- export:skip -->
 ### 8.10 Coûts estimés
 
 {{Coût mensuel en fourchette par poste, et hypothèses de volume.}}
+<!-- /export:skip -->

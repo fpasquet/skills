@@ -16,7 +16,7 @@ Trois différences commandent tout le reste :
 
 ## 2. Reprendre un projet : l'archive `specs.zip`
 
-L'archive du dossier `specs/` tient lieu de dépôt git d'une conversation à l'autre.
+L'archive du dossier du projet (`<projet>/`, comme dans le dépôt de specs : `depot-specs.md`) tient lieu de dépôt git d'une conversation à l'autre. Elle garde le nom du dossier ; un projet du dépôt de specs s'archive de la même façon pour passer dans le chat.
 
 - **Début de conversation** : si la personne joint `specs.zip`, la restaurer dans un dossier de travail, puis lire la mémoire du skill (`CONTEXTE.md`, `PROTOTYPE.md` ou `REQUIREMENTS.md`) comme d'habitude :
 
@@ -28,7 +28,7 @@ L'archive du dossier `specs/` tient lieu de dépôt git d'une conversation à l'
 - **Fin de chaque étape qui modifie le projet** : refaire l'archive, la livrer, et rappeler à la personne de la télécharger et de la joindre à la prochaine conversation.
 
   ```sh
-  node <specs-ui>/scripts/pack.mjs specs /mnt/user-data/outputs/specs.zip
+  node <specs-ui>/scripts/pack.mjs <projet> /mnt/user-data/outputs/specs.zip
   ```
 
   L'archive laisse de côté ce qui se reconstruit (sites construits, `node_modules/`, `publish/`) : après restauration, relancer `build.mjs` avant de publier.
@@ -39,9 +39,9 @@ L'archive du dossier `specs/` tient lieu de dépôt git d'une conversation à l'
 
 | Livrable | Commande |
 |---|---|
-| Specs | `node <specs-ui>/scripts/bundle.mjs specs/ui/site /mnt/user-data/outputs/specs-<projet>.html` |
-| Prototype | `node <specs-ui>/scripts/bundle.mjs specs/prototype/site /mnt/user-data/outputs/prototype-<projet>.html` |
-| Cahier des charges | `node <specs-ui>/scripts/bundle.mjs specs/requirements/requirements.html /mnt/user-data/outputs/cahier-des-charges-<projet>.html`, plus `requirements.md` copié dans `outputs/` |
+| Specs | `node <specs-ui>/scripts/bundle.mjs <projet>/ui/site /mnt/user-data/outputs/specs-<produit>.html` |
+| Prototype | `node <specs-ui>/scripts/bundle.mjs <projet>/prototype/site /mnt/user-data/outputs/prototype-<produit>.html` |
+| Cahier des charges | `node <specs-ui>/scripts/bundle.mjs <projet>/requirements/requirements.html /mnt/user-data/outputs/cahier-des-charges-<produit>.html`, plus `requirements.md` copié dans `outputs/` |
 
 - Présenter le fichier à la personne : elle l'ouvre dans l'aperçu de claude.ai, le télécharge, l'ouvre dans un navigateur ou le joint à un message. Chaque page garde ses liens, ses ancres (`#e3b`) et, pour le prototype, ses données d'une page à l'autre.
 - Une nouvelle version remplace le fichier entier : il n'y a ni `.published.json` à confirmer, ni URL à noter. Garder dans la mémoire du projet les URL d'artifacts déjà publiées depuis Claude Code : elles resservent si le projet y revient.
@@ -64,6 +64,6 @@ export CHROME_ARGS=--no-sandbox   # le conteneur n'offre pas le bac à sable de 
 
 ## 5. Réseau
 
-- **npm** : autorisé par défaut. `npm install` dans `specs/prototype/` compile Tailwind au build.
+- **npm** : autorisé par défaut. `npm install` dans `<projet>/prototype/` compile Tailwind au build.
 - **Site existant** (étape 1B de `specs-ui`) : `extract-identity.mjs` télécharge le site, ce que le filtre bloque par défaut. Proposer à la personne soit d'ajouter le domaine du site aux domaines autorisés, soit de joindre des captures d'écran et la feuille de style du site. Le script repasse par curl quand `fetch` échoue, car curl suit le proxy du bac à sable.
 - Une commande bloquée par le filtre répond souvent par une erreur 403 ou un échec de résolution : ne pas réessayer en boucle, dire quel domaine manque.
