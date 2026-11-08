@@ -10,7 +10,10 @@ const escape = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/
 
 export function inline(text) {
   const codes = [];
-  let s = text.replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(escape(c)) - 1}\u0000`);
+  // Accent grave échappé (\`) : un caractère, jamais le début d'un code
+  let s = text
+    .replaceAll('\\`', '\u0003')
+    .replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(escape(c)) - 1}\u0000`);
   // Ancres explicites <a id="…"></a> et <br>, seules balises gardées
   const anchors = [];
   s = s.replace(/<a id="([^"]+)"><\/a>/g, (_, id) => `\u0001${anchors.push(id) - 1}\u0001`).replace(/<br\s*\/?>/g, '\u0002');
@@ -28,7 +31,8 @@ export function inline(text) {
     .replace(/(^|[\s(«])\*([^*\s][^*]*?)\*(?=[\s).,;:!?»]|$)/g, '$1<em>$2</em>')
     .replace(/\u0001(\d+)\u0001/g, (_, i) => `<span id="${anchors[i]}" class="anchor"></span>`)
     .replace(/\u0002/g, '<br>')
-    .replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
+    .replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`)
+    .replaceAll('\u0003', '`');
   return linkIds(s);
 }
 

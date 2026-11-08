@@ -29,7 +29,7 @@ import { join, resolve, relative, dirname, basename, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { loadConfig, configPath, specsDirOf } from './config.mjs';
-import { anchorHeadings, include, slug, sourceFiles } from './assemble.mjs';
+import { anchorHeadings, CODE_BLOCKS, include, slug, sourceFiles } from './assemble.mjs';
 
 const args = process.argv.slice(2);
 const valueOf = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : null);
@@ -75,8 +75,8 @@ function stripSkipped(text, file) {
 /** Applique `fn` au texte hors des blocs de code. */
 const outsideCode = (text, fn) =>
   text
-    .split(/(```[\s\S]*?```)/g)
-    .map((part) => (part.startsWith('```') ? part : fn(part)))
+    .split(CODE_BLOCKS)
+    .map((part, index) => (index % 2 ? part : fn(part)))
     .join('');
 
 /** Remonte les titres pour que le premier niveau du fichier soit #. */

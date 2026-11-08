@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 2.4.2 · 08/11/2026
+
+- **Trois accents graves dans une phrase** ne tronquent plus le document. L'assemblage, l'export et le contrôle prenaient ```…``` pour un bloc de code où qu'il soit : une annotation des specs qui en citait un s'appariait avec le bloc suivant, et tout ce qui se trouvait entre les deux perdait ses ancres (parties « manquantes », liens cassés). Seule une clôture en début de ligne ouvre désormais un bloc.
+- `extract.mjs` échappe ces accents graves (\`\`\`), que la page HTML affiche tels quels ; `check.mjs` signale ceux qui restent au milieu d'une ligne.
+
 ## 2.4.1 · 08/11/2026
 
 - **Statut « À faire évoluer »** des specs (`change`, specs-ui 3.9.0) repris à l'extraction de l'inventaire.

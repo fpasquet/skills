@@ -45,13 +45,17 @@ export function include(sourcesDir, text, missing = [], depth = 0) {
  * Titres des niveaux donnés (hors blocs de code) : ancre explicite <a id> devant le texte, quel que soit le moteur
  * de rendu Markdown. Renvoie le texte et la liste des titres ({ level, text, id }).
  */
+/** Blocs de code délimités par ``` en début de ligne, capturés pour que split les garde aux rangs impairs. */
+export const CODE_BLOCKS = /(^ {0,3}```[^\n]*\n[\s\S]*?^ {0,3}```[^\n]*$)/gm;
+
 export function anchorHeadings(doc, minLevel = 2, maxLevel = 3) {
   const headings = [];
   const pattern = new RegExp(`^(#{${minLevel},${maxLevel}}) (?!<a id=)(.+)$`, 'gm');
   const text = doc
-    .split(/(```[\s\S]*?```)/g)
-    .map((part) =>
-      part.startsWith('```')
+    // Blocs de code : une clôture en début de ligne ; trois accents graves dans une phrase n'en ouvrent pas
+    .split(CODE_BLOCKS)
+    .map((part, index) =>
+      index % 2
         ? part
         : part.replace(pattern, (_, hashes, title) => {
             const id = slug(title);
