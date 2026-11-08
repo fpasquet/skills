@@ -1,7 +1,7 @@
 /**
  * daisyUI dans le prototype, quand le produit l'emploie (specs : `sources/site.json` → `"daisyui": "<version>"`).
  *
- * Les pages chargent depuis le CDN les seules feuilles de daisyUI utiles : ses propriétés de base et les composants
+ * Les pages intègrent les seules feuilles de daisyUI utiles : ses propriétés de base et les composants
  * dont une classe apparaît dans la page. Jamais `daisyui.css` : il contient les thèmes intégrés, rangés dans la couche
  * base, qui l'emportent sur les tokens. Un thème pointé sur les tokens règle les composants, avec la même
  * correspondance que le skill design-system dans l'application (`templates/styles/theme.css`, section daisyUI) : les
@@ -10,6 +10,11 @@
  * Copie du module du skill specs-ui (`scripts/daisyui.mjs`), qui le partage avec ses propres scripts : les deux se
  * modifient ensemble. La déclaration vient du projet de specs (`<projet>/ui/sources/site.json`).
  */
+
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
 
 // Feuilles de composants de daisyUI 5 (dossier components/ du paquet) dont la classe racine diffère du nom du fichier
 const ROOTS = {
@@ -65,16 +70,35 @@ export function daisyuiComponents(html) {
 
 /**
  * Balises de l'en-tête : ordre des couches de Tailwind déclaré avant les feuilles de daisyUI (sans lui, leurs
- * `@layer base` et `@layer utilities` passeraient devant `theme` et `components`), puis les feuilles du CDN.
+ * `@layer base` et `@layer utilities` passeraient devant `theme` et `components`), puis les feuilles elles-mêmes,
+ * intégrées à la page : un artifact n'accepte une feuille externe que de Google Fonts, un `<link>` vers le CDN y est
+ * bloqué sans erreur visible (fenêtres sans fond, boutons nus). Chaque feuille est lue une fois sur le CDN, puis gardée
+ * dans le cache local (`~/.cache/specs-ui/daisyui/<version>/`).
  */
 export function daisyuiHead(version, files) {
-  const cdn = `https://cdn.jsdelivr.net/npm/daisyui@${version}`;
   return [
     '<!-- daisyUI : feuilles des composants de la page ; thème pointé sur les tokens (bloc tailwindcss) -->',
     '<style>@layer theme, base, components, utilities;</style>',
-    ...BASE.map((name) => `<link rel="stylesheet" href="${cdn}/base/${name}.css">`),
-    ...files.map((name) => `<link rel="stylesheet" href="${cdn}/components/${name}.css">`),
+    `<style>\n${[...BASE.map((name) => `base/${name}`), ...files.map((name) => `components/${name}`)]
+      .map((path) => daisyuiCss(version, `${path}.css`).trim())
+      .join('\n')}\n</style>`,
   ].join('\n');
+}
+
+/** Feuille de daisyUI à cette version : cache local, sinon CDN (curl, pour rester synchrone). */
+function daisyuiCss(version, path) {
+  const file = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'specs-ui', 'daisyui', version, path);
+  if (existsSync(file)) return readFileSync(file, 'utf8');
+  const url = `https://cdn.jsdelivr.net/npm/daisyui@${version}/${path}`;
+  let css;
+  try {
+    css = execFileSync('curl', ['-fsSL', '--max-time', '30', url], { encoding: 'utf8' });
+  } catch {
+    throw new Error(`daisyUI: cannot download ${url} (network needed once per version, then cached in ${dirname(file)})`);
+  }
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, css);
+  return css;
 }
 
 /**
