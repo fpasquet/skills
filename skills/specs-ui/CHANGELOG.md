@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.1 · 8 nov. 2026
+
+- **daisyUI dans un artifact** : les feuilles de ses composants sont intégrées à chaque page au lieu d'être liées au CDN. Un artifact n'accepte une feuille externe que de Google Fonts : le `<link>` vers jsdelivr y était bloqué sans erreur visible, et les fenêtres, interrupteurs et boutons s'affichaient sans style (fenêtre E4c posée sur la page). Chaque feuille est lue une fois sur le CDN, puis gardée dans `~/.cache/specs-ui/daisyui/<version>/`. Même changement dans la copie du module du skill `prototype-ui`.
+
 ## 3.8.0 · 7 nov. 2026
 
 - **Produit sous daisyUI** : `sources/site.json` → `"daisyui": "5.7.50"` (version exacte), et les maquettes emploient ses classes (`btn btn-primary`, `badge badge-soft badge-success`, `tabs` > `tab`), que les développeurs reprennent telles quelles (`tailwind.md` §9). Éprouvé sur un projet jetable (écrans, prototype, version autonome, export Claude Design) et en non-régression sur un projet réel de 34 pages, identique octet pour octet sans la déclaration.
