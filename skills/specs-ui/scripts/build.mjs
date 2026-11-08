@@ -32,7 +32,7 @@
  * Statut d'implémentation (site.json → implementation) : todo (défaut), doing, done, gap. Le badge remplace
  * le badge « Nouveau » de chaque état, et l'avancement apparaît dans la navigation, l'index du lot et l'accueil.
  *
- * daisyUI (site.json → daisyui, version exacte) : chaque page charge depuis le CDN les feuilles des composants de
+ * daisyUI (site.json → daisyui, version exacte) : chaque page intègre les feuilles des composants de
  * daisyUI qu'elle emploie, et un thème daisyUI pointé sur les tokens (scripts/daisyui.mjs).
  *
  * Sortie : ui/site/index.html, site/<lot>/index.html, site/<lot>/eN.html, site/propositions.html.

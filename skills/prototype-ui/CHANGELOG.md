@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.6.1 · 08/11/2026
+
+- **daisyUI dans un artifact** : `scripts/daisyui.mjs`, copie du module de `specs-ui` (3.8.1), intègre les feuilles des composants aux pages au lieu de les lier au CDN. Un artifact n'accepte une feuille externe que de Google Fonts : les fenêtres, interrupteurs et boutons s'y affichaient sans style. Chaque feuille est lue une fois sur le CDN, puis gardée dans `~/.cache/specs-ui/daisyui/<version>/`.
+
 ## 2.6.0 · 07/11/2026
 
 - **Specs sous daisyUI** (`site.json` des specs → `daisyui`) : `build.mjs` charge les mêmes feuilles de composants et le même thème pointé sur les tokens que les specs, en Tailwind compilé comme en mode CDN (rendus identiques). `scripts/daisyui.mjs` est la copie du module de `specs-ui`. `alpine.md` §9 : câbler une fenêtre (`:class="open && 'modal-open'"`), un menu déroulant, un onglet (`:aria-selected`) et une case (`:aria-checked`) en gardant les classes de la maquette.
