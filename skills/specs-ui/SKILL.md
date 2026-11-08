@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.8.1"
+  version: "3.9.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -290,11 +290,12 @@ Une fois les développements lancés, les specs restent **la référence** : ell
 **Statut d'implémentation.** L'activer dans `sources/site.json` (`"implementation": true`), puis le tenir à jour dans le `lot.json` de chaque lot :
 
 ```json
-"status": { "e1": "done", "e2": "doing", "e3": { "status": "gap", "note": "Codex pas encore pris en charge" } }
+"status": { "e1": "done", "e2": "doing", "e3": { "status": "gap", "note": "Codex pas encore pris en charge" }, "e4": "change", "e4d": "todo" }
 ```
 
-- Valeurs : `todo` (À développer, par défaut), `doing` (En cours), `done` (Livré), `gap` (Écart : l'application diffère des specs ; la note dit en quoi). Un statut change dès qu'on l'apprend, par exemple `doing` quand une demande cite un écran en développement.
-- Le build remplace le badge « Nouveau » de chaque état par le statut, met une pastille dans la navigation et affiche l'avancement sur l'index des lots et l'accueil. Le cahier des charges reprend les statuts à l'extraction.
+- Valeurs : `todo` (À développer, par défaut), `doing` (En cours), `done` (Livré), `change` (À faire évoluer : l'écran est livré, mais des états ajoutés ou retouchés restent à développer ; la note dit lesquels), `gap` (Écart : l'application diffère des specs ; la note dit en quoi). Un statut change dès qu'on l'apprend, par exemple `doing` quand une demande cite un écran en développement.
+- Un état peut porter son propre statut, sous son identifiant (`"e4d": "todo"`) : un écran livré auquel on ajoute un état passe en `change`, et seul l'état ajouté ou retouché est marqué « À développer ». Une fois tout développé, l'écran repasse en `done` et les statuts d'état se retirent.
+- Le build remplace le badge « Nouveau » de chaque état par le statut (celui de l'état s'il en a un, sinon celui de l'écran), met une pastille dans la navigation et affiche l'avancement sur l'index des lots et l'accueil. Le cahier des charges reprend les statuts à l'extraction.
 
 **Un écart constaté pendant le développement** se tranche, puis se reporte dans le dépôt de specs, dans un commit qui cite la PR de code :
 

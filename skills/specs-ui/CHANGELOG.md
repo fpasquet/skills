@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.9.0 · 8 nov. 2026
+
+- **Statut « À faire évoluer »** (`change`, couleur `doc-changed`) : un écran livré auquel on ajoute ou retouche des états ne repasse plus à « À développer », ni ne reste « Livré » à tort. La pastille de navigation et l'avancement le distinguent.
+- **Statut par état** : `lot.json` → `status` accepte l'identifiant d'un état (`"e4d": "todo"`) ; son badge remplace celui de l'écran sur ce seul état. Un écran `change` marque ainsi ses états livrés « Livré » et les nouveaux « À développer ».
+
 ## 3.8.1 · 8 nov. 2026
 
 - **daisyUI dans un artifact** : les feuilles de ses composants sont intégrées à chaque page au lieu d'être liées au CDN. Un artifact n'accepte une feuille externe que de Google Fonts : le `<link>` vers jsdelivr y était bloqué sans erreur visible, et les fenêtres, interrupteurs et boutons s'affichaient sans style (fenêtre E4c posée sur la page). Chaque feuille est lue une fois sur le CDN, puis gardée dans `~/.cache/specs-ui/daisyui/<version>/`. Même changement dans la copie du module du skill `prototype-ui`.
