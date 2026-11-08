@@ -98,9 +98,13 @@ function statusOf(lot, screen, fallback = 'todo') {
   if (!STATUSES[code]) invalidStatuses.add(`${screen}: ${code}`);
   return { code: STATUSES[code] ? code : 'todo', note: typeof raw === 'object' ? raw.note ?? '' : '', ...STATUSES[STATUSES[code] ? code : 'todo'] };
 }
-// Un état peut avoir son propre statut (« e2e »: "todo" dans un écran « e2 »: "change") ; sinon, celui de l'écran
-const stateStatus = (lot, section, screenStatus) =>
-  tracking && section.id && section.id !== section.screen && lot.status?.[section.id] !== undefined ? statusOf(lot, section.id) : screenStatus;
+// Un état peut avoir son propre statut (« e2e »: "todo" dans un écran « e2 »: "change") ; sinon, celui de l'écran.
+// Dans un écran à faire évoluer, un état sans statut propre est livré : seuls les états ajoutés ou retouchés en ont un.
+function stateStatus(lot, section, screenStatus) {
+  if (!tracking || !section.id || section.id === section.screen) return screenStatus;
+  if (lot.status?.[section.id] !== undefined) return statusOf(lot, section.id);
+  return screenStatus?.code === 'change' ? statusOf(lot, section.id, 'done') : screenStatus;
+}
 const statusBadge = (st) => `<span data-status="${st.code}" class="rounded bg-${st.color}/15 px-1.5 py-0.5 font-doc text-xs font-semibold text-${st.color}">${st.label}</span>`;
 const statusDot = (st) => `<span title="${st.label}" class="inline-block size-2 rounded-full bg-${st.color}"></span>`;
 // Le badge de statut remplace le badge « Nouveau » du titre de chaque état (ou s'ajoute à la fin du titre)
