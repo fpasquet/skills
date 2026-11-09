@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.4.1 · 08/11/2026
+
+- **Statut « À faire évoluer »** des specs (`change`, specs-ui 3.9.0) repris à l'extraction de l'inventaire.
+
 ## 2.4.0 · 07/11/2026
 
 - **Dépôt de specs** : le cahier des charges vit avec les specs et le prototype dans un dépôt séparé du code de l'application (`references/depot-specs.md` du skill `specs-ui`). `<projet>` désigne le dossier du projet dans ce dépôt ; l'ancienne disposition (`specs/` dans l'application) fonctionne toujours.

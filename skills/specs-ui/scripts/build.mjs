@@ -15,7 +15,8 @@
  *   ui/sources/shared/*.html        <template> partagés par tous les lots : shells.html (coquilles),
  *                                   components.html (composants communs : en-tête de projet…)
  *   ui/sources/<lot>/lot.json       { "label", "title", "fonts", "screens": { "e13": "titre court" },
- *                                   "status": { "e13": "done", "e14": { "status": "gap", "note": "…" } } }
+ *                                   "status": { "e13": "done", "e14": { "status": "gap", "note": "…" },
+ *                                               "e15": "change", "e15c": "todo" } } (un état peut avoir le sien)
  *                                   Un lot sans écran (revue, décisions à prendre) n'a que des sections ; "summary"
  *                                   le décrit sur l'accueil du site.
  *   ui/sources/<lot>/style.css      (facultatif) CSS propre au lot
@@ -84,16 +85,25 @@ const STATUSES = {
   todo: { label: 'À développer', color: 'doc-muted' },
   doing: { label: 'En cours', color: 'doc-accent' },
   done: { label: 'Livré', color: 'doc-new' },
+  // Livré, mais des états ajoutés ou retouchés restent à développer : l'écran évolue
+  change: { label: 'À faire évoluer', color: 'doc-changed' },
   gap: { label: 'Écart', color: 'doc-gap' },
 };
 const tracking = site.implementation === true;
 const invalidStatuses = new Set();
-function statusOf(lot, screen) {
+function statusOf(lot, screen, fallback = 'todo') {
   if (!tracking) return null;
-  const raw = lot.status?.[screen] ?? 'todo';
+  const raw = lot.status?.[screen] ?? fallback;
   const code = typeof raw === 'string' ? raw : raw.status;
   if (!STATUSES[code]) invalidStatuses.add(`${screen}: ${code}`);
   return { code: STATUSES[code] ? code : 'todo', note: typeof raw === 'object' ? raw.note ?? '' : '', ...STATUSES[STATUSES[code] ? code : 'todo'] };
+}
+// Un état peut avoir son propre statut (« e2e »: "todo" dans un écran « e2 »: "change") ; sinon, celui de l'écran.
+// Dans un écran à faire évoluer, un état sans statut propre est livré : seuls les états ajoutés ou retouchés en ont un.
+function stateStatus(lot, section, screenStatus) {
+  if (!tracking || !section.id || section.id === section.screen) return screenStatus;
+  if (lot.status?.[section.id] !== undefined) return statusOf(lot, section.id);
+  return screenStatus?.code === 'change' ? statusOf(lot, section.id, 'done') : screenStatus;
 }
 const statusBadge = (st) => `<span data-status="${st.code}" class="rounded bg-${st.color}/15 px-1.5 py-0.5 font-doc text-xs font-semibold text-${st.color}">${st.label}</span>`;
 const statusDot = (st) => `<span title="${st.label}" class="inline-block size-2 rounded-full bg-${st.color}"></span>`;
@@ -104,7 +114,7 @@ function withStatus(html, st) {
   return html.replace(/(<h2\b[^>]*>)([\s\S]*?)(<\/h2>)/, (_, open, inner, close) => `${open}${NEW_BADGE.test(inner) ? inner.replace(NEW_BADGE, statusBadge(st)) : `${inner}${statusBadge(st)}`}${close}`);
 }
 function progress(pages) {
-  const counts = Object.fromEntries(['done', 'doing', 'gap', 'todo'].map((k) => [k, pages.filter((p) => p.status?.code === k).length]));
+  const counts = Object.fromEntries(['done', 'change', 'doing', 'gap', 'todo'].map((k) => [k, pages.filter((p) => p.status?.code === k).length]));
   return Object.entries(counts).filter(([, n]) => n).map(([k, n]) => `${statusDot(STATUSES[k])} ${n} ${STATUSES[k].label.toLowerCase()}`).join(' · ');
 }
 
@@ -287,7 +297,7 @@ for (const lot of lots) {
     const next = lot.pages[i + 1];
     const pager = `<div class="mt-16 flex justify-between gap-4 border-t border-doc-line pt-4 text-sm">${prev ? `<a href="${relativeTo(p.path, prev.path)}" class="hover:text-doc-accent">← ${prev.screen.toUpperCase()} · ${prev.title}</a>` : '<span></span>'}${next ? `<a href="${relativeTo(p.path, next.path)}" class="hover:text-doc-accent">${next.screen.toUpperCase()} · ${next.title} →</a>` : '<span></span>'}</div>`;
     const note = p.status?.note ? `<p class="mb-6 max-w-[100ch] rounded-xl border border-doc-line border-l-4 border-l-${p.status.color} bg-doc-card px-5 py-3 text-sm"><b class="font-semibold">${p.status.label}</b> · ${p.status.note}</p>` : '';
-    const body = [lotNav(lot, p.path), note, ...p.sections.map((s) => withStatus(rewriteLinks(s.html, p.path), p.status)), pager].filter(Boolean).join('\n\n');
+    const body = [lotNav(lot, p.path), note, ...p.sections.map((s) => withStatus(rewriteLinks(s.html, p.path), stateStatus(lot, s, p.status))), pager].filter(Boolean).join('\n\n');
     checkStructure(p.path, body);
     pages.set(p.path, renderPage({ title: `${p.screen.toUpperCase()} · ${p.title} · ${site.title}`, fonts: lot.fonts, lotStyle: lot.style, templates: usedTemplates(body, allTemplates), body }));
   });

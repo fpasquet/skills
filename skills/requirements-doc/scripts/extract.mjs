@@ -123,7 +123,7 @@ const specsLink = (lot, screen) => (specsUrl ? `[specs](${specsUrl}) · \`${lot}
 
 // Inventaire
 // Statut d'implémentation des écrans (specs : site.json → implementation, lot.json → status)
-const STATUS_LABELS = { todo: 'À développer', doing: 'En cours', done: 'Livré', gap: 'Écart' };
+const STATUS_LABELS = { todo: 'À développer', doing: 'En cours', done: 'Livré', change: 'À faire évoluer', gap: 'Écart' };
 const tracking = site.implementation === true;
 const statusOf = (lot, screen) => {
   const raw = lot.status[screen] ?? 'todo';
