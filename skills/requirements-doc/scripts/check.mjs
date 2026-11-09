@@ -16,6 +16,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { CODE_BLOCKS } from './assemble.mjs';
 import { loadConfig, specsDirOf } from './config.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
@@ -34,7 +35,10 @@ const slug = (text) =>
 // Texte hors blocs de code (les diagrammes ne comptent pas pour les titres ni les gabarits)
 const fences = doc.match(/^```/gm) ?? [];
 if (fences.length % 2) problems.push('a code block (```) is not closed');
-const prose = doc.replace(/```[\s\S]*?```/g, '');
+// Trois accents graves au milieu d'une ligne : certains moteurs de rendu y ouvrent un bloc de code
+const inline = doc.split('\n').filter((line) => !/^ {0,3}```/.test(line) && /(^|[^\\])```/.test(line));
+if (inline.length) problems.push(`triple backticks inside a line (${inline.length}), escape them: ${inline[0].trim().slice(0, 80)}`);
+const prose = doc.replace(CODE_BLOCKS, '');
 
 // Parties attendues (titres de niveau 2, par mots-clés)
 const h2 = [...prose.matchAll(/^## (.+)$/gm)].map((m) => m[1].toLowerCase());

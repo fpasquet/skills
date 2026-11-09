@@ -50,6 +50,8 @@ function md(html) {
   )
     .replace(/\*\*\s*\*\*/g, '')
     .replace(/\s+/g, ' ')
+    // Trois accents graves dans le texte des specs ouvriraient un bloc de code dans le Markdown : échappés
+    .replace(/`{3,}/g, (run) => '\\`'.repeat(run.length))
     .trim();
 }
 // e13a → E13a (écran en capitales, état en minuscule, comme dans les specs)
