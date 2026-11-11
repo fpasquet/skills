@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.9.1 · 9 nov. 2026
+
+- `build.mjs` signale un écran « À faire évoluer » (`change`) dont aucun état n'a son propre statut : chacun de ses états s'affichait « Livré » sur sa page, et seul l'index du lot disait que l'écran évoluait. L'avertissement nomme les écrans et rappelle de marquer les états ajoutés `todo` et les états retouchés `change`.
+- L'avertissement des statuts inconnus cite aussi `change` parmi les valeurs permises.
+- La note d'un écran « À faire évoluer » commence par les états qui évoluent ; ce qui est déjà livré vient après, sans liste d'états.
+
 ## 3.9.0 · 8 nov. 2026
 
 - **Statut « À faire évoluer »** (`change`, couleur `doc-changed`) : un écran livré auquel on ajoute ou retouche des états ne repasse plus à « À développer », ni ne reste « Livré » à tort. La pastille de navigation et l'avancement le distinguent.

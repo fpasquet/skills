@@ -381,6 +381,11 @@ if (removed.length) console.log(`Removed pages without source: ${removed.join(',
 if (usedAssets.size) console.log(`Images: ${usedAssets.size} cited, copied from ${relative(process.cwd(), assetsDir) || assetsDir}.`);
 if (removedAssets.length) console.log(`Removed images no page cites: ${removedAssets.join(', ')}`);
 if (missingAssets.length) console.log(`WARNING: images not found in ${relative(process.cwd(), assetsDir) || assetsDir} (${missingAssets.length}): ${missingAssets.join(', ')}`);
-if (invalidStatuses.size) console.log(`WARNING: unknown implementation status (todo, doing, done, gap): ${[...invalidStatuses].join(', ')}`);
+if (invalidStatuses.size) console.log(`WARNING: unknown implementation status (todo, doing, done, change, gap): ${[...invalidStatuses].join(', ')}`);
+// Écran « À faire évoluer » sans aucun état marqué : tous ses états s'affichent « Livré », et rien ne dit ce qui reste à développer
+const changeWithoutStates = tracking
+  ? lots.flatMap((lot) => lot.pages.filter((p) => p.status?.code === 'change' && !p.sections.some((s) => s.id && s.id !== p.screen && lot.status?.[s.id] !== undefined)).map((p) => `${lot.name}/${p.screen}`))
+  : [];
+if (changeWithoutStates.length) console.log(`WARNING: screens to evolve (change) without any state marked, all their states show as delivered: ${changeWithoutStates.join(', ')}. Mark the added states "todo" and the retouched ones "change" in lot.json → status (e.g. "e4d": "todo").`);
 if (unbalanced.size) console.log(`WARNING: unclosed or extra tags, the layout breaks after them (${unbalanced.size}): ${[...unbalanced].join(', ')}`);
 if (unresolved.size) console.log(`WARNING: unresolved links (${unresolved.size}): ${[...unresolved].slice(0, 15).join(', ')}${unresolved.size > 15 ? ', …' : ''}`);
