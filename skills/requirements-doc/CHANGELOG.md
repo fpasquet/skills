@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 2.4.3 · 20/11/2026
+
+- **La construction de la page HTML ne boucle plus** sur une ligne qui commence par `|` sans ouvrir de tableau (pas de ligne de séparation à la suite) : le rendu n'avançait plus et ajoutait des paragraphes vides jusqu'à saturer la mémoire de Node. La ligne s'affiche désormais en paragraphe.
+- **Usage des tokens** (`identite.md`) : seul le commentaire écrit sur la ligne d'un token le décrit. Le titre de section de la ligne suivante (`/* Surfaces */`) n'est plus attribué au token précédent, et un commentaire sur plusieurs lignes tient dans une seule cellule au lieu de casser le tableau, ce qui déclenchait la boucle ci-dessus.
+
 ## 2.4.2 · 08/11/2026
 
 - **Trois accents graves dans une phrase** ne tronquent plus le document. L'assemblage, l'export et le contrôle prenaient ```…``` pour un bloc de code où qu'il soit : une annotation des specs qui en citait un s'appariait avec le bloc suivant, et tout ce qui se trouvait entre les deux perdait ses ancres (parties « manquantes », liens cassés). Seule une clôture en début de ligne ouvre désormais un bloc.
