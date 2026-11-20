@@ -164,8 +164,9 @@ function blocks(lines) {
       );
       continue;
     }
-    // Paragraphe
-    const body = [];
+    // Paragraphe : la première ligne lui revient toujours, même une ligne « | … » qui n'ouvre pas de tableau,
+    // sinon la boucle ne progresse plus
+    const body = [lines[i++].trim()];
     while (i < lines.length && lines[i].trim() && !/^(#{1,6} |\s*```|\s*\||\s*>)/.test(lines[i]) && !marker.test(lines[i])) body.push(lines[i++].trim());
     out.push(`<p>${inline(body.join(' '))}</p>`);
   }

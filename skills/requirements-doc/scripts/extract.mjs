@@ -182,7 +182,11 @@ write('points-ouverts.md', open);
 // Identité visuelle (tokens)
 const tokens = existsSync(join(specsDir, 'tokens.css')) ? readFileSync(join(specsDir, 'tokens.css'), 'utf8') : '';
 const theme = tokens.match(/@theme\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-const rows = [...theme.matchAll(/--([\w-]+)\s*:\s*([^;]+);\s*(?:\/\*\s*([^*]*?)\s*\*\/)?/g)].map((m) => `| \`${m[1]}\` | \`${m[2].trim()}\` | ${m[3] ?? ''} |`);
+// Seul le commentaire qui suit la déclaration sur sa ligne la décrit : celui de la ligne suivante est un titre de
+// section. Un commentaire sur plusieurs lignes tient dans une seule cellule.
+const rows = [...theme.matchAll(/--([\w-]+)\s*:\s*([^;]+);[ \t]*(?:\/\*([\s\S]*?)\*\/)?/g)].map(
+  (m) => `| \`${m[1]}\` | \`${m[2].trim()}\` | ${(m[3] ?? '').replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|')} |`,
+);
 write('identite.md', header('tokens.css') + (rows.length ? `| Token | Valeur | Usage |\n|---|---|---|\n${rows.join('\n')}\n` : '_Aucun tokens.css trouvé._\n'));
 
 console.log(`Extracted ${lots.length} lot(s), ${lots.reduce((n, l) => n + l.states.length, 0)} screen state(s), ${openPoints.length} open point(s) into ${outDir}:`);
