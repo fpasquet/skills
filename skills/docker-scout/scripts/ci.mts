@@ -5,7 +5,9 @@
  *
  *   node ci.mts <dir> [options]        (<dir> : espace de travail, dont scout.json donne le build)
  *
- *   --gate fixable|new|report   fixable : échoue sur une faille critique ou haute corrigeable (défaut)
+ *   --gate fixable|app|new|report
+ *                               fixable : échoue sur une faille critique ou haute corrigeable (défaut)
+ *                               app     : comme fixable, sans les failles de l'image de base (--ignore-base)
  *                               new     : en PR, échoue si la PR ajoute une telle faille ; ailleurs, rapport seul
  *                               report  : n'échoue jamais
  *   --severity critical,high    sévérités surveillées
@@ -19,6 +21,8 @@
  *   --branch main --cron "17 5 * * 1" --runner ubuntu-24.04 --workflow .github/workflows/docker-scout.yml
  *   --no-dependabot             ne pas proposer Dependabot
  *   --stdout                    affiche le workflow sans rien écrire
+ *   --steps                     affiche les seules étapes Scout, à ajouter après le build d'un job existant
+ *   --image-ref <ref>           avec --steps : image construite par ce job (ex. '${{ matrix.app }}:ci')
  *   --force                     remplace un workflow existant
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -28,7 +32,7 @@ import { fail, loadConfig, parseArgs, readJson, writeJson } from './lib.mts';
 import type { Analysis, SecretNote } from './types.mts';
 
 const options = parseArgs(process.argv.slice(2), {
-  flags: ['sarif', 'source', 'issue', 'stdout', 'force', 'no-dependabot'], multi: ['secret', 'build-arg', 'login'],
+  flags: ['sarif', 'source', 'issue', 'stdout', 'steps', 'force', 'no-dependabot'], multi: ['secret', 'build-arg', 'login'],
 });
 const [dir] = options.positionals;
 const config = dir ? loadConfig(dir) : {};
@@ -36,7 +40,7 @@ if (!dir || !config.image) throw fail('usage : node ci.mts <dir> [options] ; <di
 const { values, lists, flags } = options;
 const root = resolve(dir, config.root ?? '..');
 const gate = values.gate ?? 'fixable';
-if (!['fixable', 'new', 'report'].includes(gate)) fail('--gate : fixable, new ou report.');
+if (!['fixable', 'app', 'new', 'report'].includes(gate)) fail('--gate : fixable, app, new ou report.');
 const branch = values.branch ?? 'main';
 const workflow = values.workflow ?? '.github/workflows/docker-scout.yml';
 const severities = values.severity ?? 'critical,high';
@@ -121,10 +125,19 @@ const buildStep = (name: string, { prefix = '', tags, publish = false, extra = [
 // ---------------------------------------------------------------------------
 // Analyse
 // ---------------------------------------------------------------------------
-const image = `${config.image}:ci`;
+const image = (flags.steps && values['image-ref']) || `${config.image}:ci`;
 const vexDir = config.vex?.dir ?? '.vex';
 const vex: Record<string, string> = config.vex?.author && existsSync(join(root, vexDir)) ? { 'vex-location': vexDir, 'vex-author': config.vex.author } : {};
+// Les seuls fichiers suivis, et les lockfiles pnpm à plusieurs documents réduits au dernier : Scout ne lit que le premier.
+const sourceExport = `- name: Export tracked files
+  run: |
+    mkdir -p "$RUNNER_TEMP/scout-source"
+    git archive HEAD | tar -x -C "$RUNNER_TEMP/scout-source"
+    find "$RUNNER_TEMP/scout-source" -name pnpm-lock.yaml | while read -r lock; do
+      awk '/^---[[:space:]]*$/ { text = ""; next } { text = text $0 "\\n" } END { printf "%s", text }' "$lock" > "$lock.tmp" && mv "$lock.tmp" "$lock"
+    done`.split('\n');
 const isPullRequest = "github.event_name == 'pull_request'";
+if (flags.steps && gate === 'new') fail('--steps ne construit rien : avec --gate new, générer le workflow complet (--stdout) et y reprendre le build de la branche de base.');
 const steps: string[][] = [
   step('Check out', 'actions/checkout', { 'persist-credentials': 'false' }),
   step('Set up Buildx', 'docker/setup-buildx-action'),
@@ -141,7 +154,7 @@ if (flags.sarif) {
     step('Upload to the Security tab', 'github/codeql-action/upload-sarif', { sarif_file: 'scout.sarif.json', category: 'docker-scout' }),
   );
 }
-if (flags.source) steps.push(step('Check lockfiles and actions', 'docker/scout-action', { command: 'cves', image: 'fs://.', 'only-severities': severities, 'only-fixed': 'true', 'write-comment': 'false' }));
+if (flags.source) steps.push(sourceExport, step('Check lockfiles and actions', 'docker/scout-action', { command: 'cves', image: 'fs://${{ runner.temp }}/scout-source', 'only-severities': severities, 'only-fixed': 'true', 'write-comment': 'false' }));
 if (gate === 'new') {
   steps.push(
     step('Check out the base branch', 'actions/checkout', { ref: '${{ github.event.pull_request.base.sha }}', path: 'scout-base', 'persist-credentials': 'false' }, [`if: ${isPullRequest}`]),
@@ -151,9 +164,9 @@ if (gate === 'new') {
     }, [`if: ${isPullRequest}`]),
   );
 }
-if (gate === 'fixable') {
+if (gate === 'fixable' || gate === 'app') {
   steps.push(step('Block fixable vulnerabilities', 'docker/scout-action', {
-    command: 'cves', image: `local://${image}`, 'only-severities': severities, 'only-fixed': 'true', 'exit-code': 'true', ...vex, summary: 'false', 'write-comment': 'false',
+    command: 'cves', image: `local://${image}`, ...(gate === 'app' ? { 'ignore-base': 'true' } : {}), 'only-severities': severities, 'only-fixed': 'true', 'exit-code': 'true', ...vex, summary: 'false', 'write-comment': 'false',
   }));
 }
 if (flags.issue) {
@@ -245,6 +258,12 @@ ${directories.size > 1 ? `    directories:\n${[...directories].map((item) => `  
       minor-and-patch:
         update-types: [minor, patch]`}`).join('\n');
 
+if (flags.steps) {
+  // Sans le checkout, Buildx, les connexions de build ni le build : le job existant les a déjà.
+  const scoutSteps = [hubLogin, ...steps.slice(5)];
+  console.log(`# permissions du job : ${permissionLines(permissions).join(', ')}\n${scoutSteps.map((lines) => lines.join('\n')).join('\n\n')}`);
+  process.exit(0);
+}
 if (flags.stdout) {
   console.log(text);
   process.exit(0);

@@ -18,18 +18,23 @@ Les actions sont épinglées par empreinte de commit (`templates/workflows/versi
 
 | Question | Option |
 |---|---|
-| Bloquer dès maintenant, ou seulement les nouvelles failles ? | `--gate fixable`, `new`, `report` |
+| Bloquer dès maintenant, hors image de base, ou seulement les nouvelles failles ? | `--gate fixable`, `app`, `new`, `report` |
 | Dépôt public, ou Code Security actif sur un dépôt privé ? | `--sarif` (sinon l'envoi échoue) |
 | Le build a-t-il besoin d'un secret (`.npmrc`…) ? Par défaut non | `--secret <id>=<NOM_DU_SECRET>` |
 | L'image de base est-elle sur un registre privé ? Par défaut non | `--login ghcr`, `dhi`, `ecr:<hôte>`, `gar:<hôte>`, `other:<hôte>` |
 | La CI publie-t-elle déjà l'image ? Où ? | `--push <image>`, ou ajouter les étapes d'analyse au workflow existant |
 | Branche principale autre que `main` ? | `--branch` |
 
-Un workflow construit déjà l'image (`detect.mts` le dit) : ne pas construire deux fois. Générer avec `--stdout` et reprendre les étapes Scout dans le workflow existant, après son build.
+Un workflow construit déjà l'image (`detect.mts` le dit) : ne pas construire deux fois. `ci.mts --steps --image-ref '<image du job>'` affiche les seules étapes Scout, à placer après son build (matrice comprise). L'analyse planifiée, elle, demande un workflow à part : `--pull --no-cache`, sans quoi elle relit une vieille image.
+
+## Lockfile
+
+`--source` analyse les fichiers suivis par git, exportés à part : un `fs://.` direct lit aussi les dépendances installées par une étape précédente. Le lockfile de pnpm 11 et plus a deux documents YAML, dont Scout ne lit que le premier (quelques paquets de pnpm lui-même) : l'étape d'export ne garde que le dernier. Un contrôle : le nombre de paquets indexés, qui doit être celui du lockfile.
 
 ## Politique de blocage
 
 - **`fixable`** : `cves --only-severity critical,high --only-fixed --exit-code`. Seules les failles qu'on peut corriger bloquent.
+- **`app`** : la même, avec `--ignore-base`. L'équipe n'est bloquée que par ce qu'elle choisit (dépendances, paquets du Dockerfile). Scout reconnaît l'image de base à ses couches : vérifier en local que la commande écarte bien ses failles.
 - **`new`** : construit aussi la branche de base et compare (`compare --exit-on vulnerability`). Scout échoue dès qu'une faille est **ajoutée**, même si le bilan est meilleur : une montée d'image de base qui retire cinquante failles et en ajoute une sera bloquée. Dans ce cas, corriger la faille ajoutée, l'écarter (VEX), ou fusionner en connaissance de cause. Le second build allonge le job.
 - **`report`** : première semaine, ou dépôt sans équipe pour traiter.
 
@@ -46,6 +51,7 @@ gh secret set DOCKERHUB_TOKEN --app dependabot   # les PR de Dependabot ont leur
 gh secret set NPMRC < ~/.npmrc                   # un .npmrc réduit au registre utile, avec un jeton en lecture
 ```
 
+- Le projet a sa propre règle (Secret Manager, Vault, identités fédérées) : la suivre, en reprenant le modèle d'un workflow qui lit déjà un secret. Masquer la valeur lue (`::add-mask::`) avant de s'en servir.
 - Jeton Docker Hub : un compte de service, en lecture seule. Scout ne fait pas payer l'analyse locale ; l'offre gratuite limite le nombre de dépôts suivis sur scout.docker.com, que ce workflow n'utilise pas.
 - Les secrets de build passent par `secret-envs` : la valeur reste dans l'environnement de l'étape, et un `.npmrc` de plusieurs lignes passe sans échappement.
 - AWS et Google Cloud : identité fédérée (OIDC), sans clé enregistrée.
@@ -57,6 +63,7 @@ Une CI qui bloque sans mise à jour automatique se fait désactiver. `ci.mts` é
 
 - Dependabot ne met pas à jour une image composée par `ARG`. Écrire l'étiquette et le digest dans le `FROM`, ou passer à Renovate.
 - Renovate : `config:recommended` et `docker:pinDigests` ; `ci.mts` n'écrit rien si sa configuration existe.
+- Dependabot trouve les fichiers dont le nom contient « dockerfile » dans le dossier déclaré (`directory: /infra/dockerfiles`).
 - Registre privé : Dependabot a besoin d'un bloc `registries` avec un secret `dependabot`.
 
 ## Vérifier

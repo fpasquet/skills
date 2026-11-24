@@ -10,7 +10,10 @@ Le rapport HTML, publié comme artifact ou ouvert comme un simple fichier, conti
 - les images de base comparées, et l'audit du Dockerfile ;
 - le plan d'action, avec les fichiers à changer et les commandes ;
 - la commande de build de production, le workflow GitHub Actions et les secrets à créer ;
-- le tableau complet des failles, filtrable, et les exceptions acceptées.
+- le tableau complet des failles, filtrable, et les exceptions acceptées ;
+- les dépendances compilées dans l'application (interface web), que l'image ne montre pas, lues dans le lockfile.
+
+Un dépôt qui construit plusieurs images a un rapport par image et une vue d'ensemble, dans un seul artifact.
 
 ## Installation
 
@@ -44,7 +47,7 @@ Par défaut, le skill suppose que tout est public. S'il trouve un registre priv�
 
 ```text
 <app>/
-├── .docker-scout/
+├── .docker-scout/             # ou .docker-scout/<image>/, avec overview.json et site/ communs
 │   ├── scout.json            # image, build, plateforme, URL de l'artifact
 │   ├── SCOUT.md              # mémoire de l'audit
 │   ├── analysis.json         # partie rédigée du rapport
@@ -69,7 +72,8 @@ Les corrections du Dockerfile et des dépendances se font par lots, avec votre a
 | `scripts/list.mts`, `compare.mts`, `bases.mts` | Lecture filtrée, écart entre deux scans, images de base comparées |
 | `scripts/vex.mts` | Exceptions OpenVEX |
 | `scripts/ci.mts` | Workflow GitHub Actions et Dependabot |
-| `scripts/report.mts` | Rapport HTML |
+| `scripts/report.mts`, `overview.mts` | Rapport HTML d'une image, vue d'ensemble de plusieurs |
+| `scripts/lockfile.mts` | Dépendances de production d'un lockfile pnpm ou npm |
 | `references/` | Build et registres, corrections par écosystème, GitHub Actions, rapport |
 | `templates/` | Style et interactions du rapport, mémoire, analyse, versions des actions |
 

@@ -3,24 +3,23 @@
  * Construit le rapport HTML d'un audit à partir des scans et de l'analyse rédigée (analysis.json). Tous les chiffres
  * viennent des scans : dans un texte, on écrit {{current.total}}, jamais le nombre.
  *
- *   node report.mts <dir> [--out <dir>/report.html] [--check]
+ *   node report.mts <dir> [--out <dir>/report.html] [--home <page>] [--check]
  *
+ *   --home    lien de retour vers la vue d'ensemble (overview.mts le passe)
  *   --check   vérifie l'analyse (scans, paquets, champs variables) sans écrire la page ; code de sortie 1 s'il y a une erreur
  *
  * Champs variables : {{<scan>.total}}, .C .H .M .L .U, .fixable.total (ou .C…), .origin.base-os, .size, .packages, .user,
  * .base.total (ou .C…), .digest, .kev.
  */
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, resolve } from 'node:path';
+import { SOURCE_NOTES, SOURCE_USES, chips, clientRow, color, createRenderer, esc, fr, page, plural, sourceUse } from './html.mts';
+import type { Bar, SourceUse } from './html.mts';
 import {
   ORIGINS, SEVERITIES, SEVERITY_LABEL, SEVERITY_LETTER, buildCommand, countBySeverity, diff, fail, flatten, formatSize, loadConfig, loadScans, parseArgs,
   rank, readJson, without, withScheme,
 } from './lib.mts';
-import type {
-  Action, Analysis, BaseCandidate, Code, Config, Counts, Finding, Gain, Issue, Origin, Row, Scan, Scenario, Step, Table,
-} from './types.mts';
+import type { Action, Analysis, BaseCandidate, Config, Counts, Gain, Issue, Origin, Scan, Scenario, Step } from './types.mts';
 
 const options = parseArgs(process.argv.slice(2), { flags: ['check'] });
 const [input] = options.positionals;
@@ -48,70 +47,7 @@ if (!reference) throw fail('aucun scan : lancer scan.mts.');
 const target = scanOf(analysis.target, 'target');
 const source = scanOf(analysis.source, 'source');
 
-// ---------------------------------------------------------------------------
-// Texte : échappement, petit Markdown, champs variables
-// ---------------------------------------------------------------------------
-const esc = (text: unknown) => String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const fr = new Intl.NumberFormat('fr-FR');
-const plural = (count: number, one: string, many = `${one}s`) => `${fr.format(count)} ${count > 1 ? many : one}`;
-
-function variable(path: string): string | null {
-  const [label, ...keys] = path.split('.');
-  const scan = scans[label];
-  if (!scan) return null;
-  const count = (counts: Counts | undefined, key = 'total') => {
-    if (!counts) return null;
-    const severity = SEVERITIES.find((item) => SEVERITY_LETTER[item] === key || item === key);
-    return key === 'total' ? fr.format(counts.total) : severity ? fr.format(counts[severity]) : null;
-  };
-  const [first, second, third] = keys;
-  if (first === 'fixable') return count(scan.fixable, second);
-  if (first === 'base') return count(scan.base?.counts, second);
-  if (first === 'origin') return second in ORIGINS ? count(scan.byOrigin[second as Origin] ?? countBySeverity([]), third) : null;
-  if (first === 'size') return formatSize(scan.image?.size);
-  if (first === 'packages') return fr.format(scan.packageCount);
-  if (first === 'user') return scan.image?.user ?? null;
-  if (first === 'digest') return scan.image?.digest?.slice(7, 19) ?? null;
-  if (first === 'kev') return fr.format(scan.kevCount);
-  return count(scan.counts, first);
-}
-
-const fill = (text: string) => text.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (match, path: string) => {
-  const value = variable(path);
-  if (value === null) errors.push(`champ variable inconnu : ${match}`);
-  return value ?? match;
-});
-const inline = (text: string) => esc(fill(text))
-  .replace(/`([^`]+)`/g, '<code>$1</code>')
-  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-const prose = (text = '') => `<div class="prose">${text.split(/\n{2,}/).filter((block) => block.trim()).map((block) => {
-  const lines = block.split('\n');
-  if (lines.every((line) => /^\s*- /.test(line))) return `<ul>${lines.map((line) => `<li>${inline(line.replace(/^\s*- /, ''))}</li>`).join('')}</ul>`;
-  return `<p>${inline(lines.join(' '))}</p>`;
-}).join('')}</div>`;
-const code = ({ title, lang, text }: Code) => `<div class="code"><div class="code-head"><span>${esc(title ?? lang ?? 'Commande')}</span><button type="button" class="copy">Copier</button></div><pre><code>${esc(fillCode(text))}</code></pre></div>`;
-// Les ${{ … }} de GitHub Actions ne sont pas des champs variables.
-const fillCode = (text: string) => text.replace(/(^|[^$])\{\{\s*([a-z0-9-]+\.[\w.-]+)\s*\}\}/g, (match, before: string, path: string) => (variable(path) === null ? match : before + variable(path)));
-const table = ({ head, rows }: Table) => `<div class="table-box"><table><thead><tr>${head.map((cell) => `<th>${inline(cell)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${inline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-
-// ---------------------------------------------------------------------------
-// Éléments communs
-// ---------------------------------------------------------------------------
-const sections: { id: string; nav: string }[] = [];
-function section(id: string, nav: string, eyebrow: string, title: string, lead: string, body: string): string {
-  if (!body.trim()) return '';
-  sections.push({ id, nav });
-  return `<section class="section" id="${id}"><header><span class="eyebrow">${esc(eyebrow)}</span><h2>${inline(title)}</h2>${lead ? `<p class="lead">${inline(lead)}</p>` : ''}</header>${body}</section>`;
-}
-const color = (severity: string) => `var(--sev-${SEVERITY_LETTER[severity as keyof typeof SEVERITY_LETTER].toLowerCase()})`;
-const chips = (counts: Counts) => `<div class="chips">${SEVERITIES.filter((severity) => counts[severity]).map((severity) => `<span style="color:${color(severity)}" title="${SEVERITY_LABEL[severity]}">${fr.format(counts[severity])} ${SEVERITY_LETTER[severity]}</span>`).join('') || '<span class="yes">aucune</span>'}</div>`;
-const legend = `<div class="legend">${SEVERITIES.map((severity) => `<span><i style="background:${color(severity)}"></i>${SEVERITY_LABEL[severity]}</span>`).join('')}</div>`;
-interface Bar { label: string; note?: string; counts: Counts; mono?: boolean }
-function bars(items: Bar[], caption: string): string {
-  const max = Math.max(1, ...items.map((item) => item.counts.total));
-  return `<div class="card">${legend}<div class="bars" role="img" aria-label="${esc(`${caption} : ${items.map((item) => `${item.label} ${item.counts.total}`).join(', ')}`)}">${items.map(({ label, note, counts, mono }) => `<div class="bar-row"><div class="lab"><span${mono ? ' class="mono"' : ''}>${inline(label)}</span>${note ? `<small>${inline(note)}</small>` : ''}</div><div class="bar-wrap"><div class="bar" style="width:calc((100% - 7.5rem) * ${(counts.total / max).toFixed(4)})">${SEVERITIES.filter((severity) => counts[severity]).map((severity) => `<span style="flex:${counts[severity]} 0 0;background:${color(severity)}" title="${SEVERITY_LABEL[severity]} : ${counts[severity]}"></span>`).join('')}</div><span class="bar-total">${fr.format(counts.total)} <small>${counts.CRITICAL} C · ${counts.HIGH} H</small></span></div></div>`).join('')}</div></div>`;
-}
+const { fill, inline, prose, code, table, finding, bars, section, sections } = createRenderer(scans, errors);
 const scenarioScan = (scenario: Scenario | Gain, where: string): Scan | null => {
   if ('scan' in scenario && scenario.scan) return scanOf(scenario.scan, where);
   const from = scanOf(scenario.from, where);
@@ -149,7 +85,7 @@ function summarySection(): string {
   const serious = counts.CRITICAL + counts.HIGH;
   const seriousFixable = fixable.CRITICAL + fixable.HIGH;
   const title = `${plural(counts.total, 'vulnérabilité')}${counts.CRITICAL ? `, dont ${plural(counts.CRITICAL, 'critique')}` : ''}`;
-  const lead = `Elles touchent ${plural(reference.vulnerablePackages, 'paquet')} sur ${fr.format(reference.packageCount)}.${serious ? ` ${fr.format(seriousFixable)} des ${fr.format(serious)} failles critiques ou hautes ont déjà un correctif publié.` : ''}${target ? ` Après les corrections mesurées, il en reste ${fr.format(target.counts.total)}, dont ${plural(target.counts.CRITICAL, 'critique')} et ${plural(target.counts.HIGH, 'haute')}.` : ''}`;
+  const lead = `Elles touchent ${plural(reference.vulnerablePackages, 'paquet')} sur ${fr.format(reference.packageCount)}.${serious ? ` ${seriousFixable === serious ? `Les ${fr.format(serious)} failles critiques ou hautes ont toutes` : `${fr.format(seriousFixable)} des ${fr.format(serious)} failles critiques ou hautes ont`} déjà un correctif annoncé.` : ''}${target ? ` Après les corrections mesurées, il en reste ${fr.format(target.counts.total)}, dont ${plural(target.counts.CRITICAL, 'critique')} et ${plural(target.counts.HIGH, 'haute')}.` : ''}`;
   const cards = [...SEVERITIES.filter((severity) => severity !== 'UNSPECIFIED' || counts[severity]).map((severity) => `<div class="sev" style="--c:${color(severity)}"><span class="n">${fr.format(counts[severity])}</span><span class="l">${SEVERITY_LABEL[severity]}${counts[severity] > 1 ? 's' : ''}</span></div>`), `<div class="sev"><span class="n">${fr.format(counts.total)}</span><span class="l">Total</span></div>`];
   const facts: [string, string][] = [];
   if (reference.health) facts.push(['Health score', `${reference.health.grade} (${reference.health.percent} %)${target?.health ? ` → ${target.health.grade} (${target.health.percent} %)` : ''}`]);
@@ -164,7 +100,7 @@ function summarySection(): string {
   return section('synthese', 'Synthèse', 'Résultat du scan', title, lead, `<div class="sev-row">${cards.join('')}</div>${reference.blindSpot ? `<article class="card finding error"><h3>Analyse incomplète</h3><p>${esc(reference.blindSpot)}.</p></article>` : ''}<div class="facts">${facts.map(([name, value]) => `<div class="fact"><span>${esc(name)}</span><span>${esc(value)}</span></div>`).join('')}</div>${policies}`);
 }
 
-const findings = (analysis.findings ?? []).map((finding: Finding) => `<article class="card finding ${finding.level ?? 'info'}"><h3>${inline(finding.title)}</h3>${prose(finding.body)}${finding.table ? table(finding.table) : ''}</article>`).join('');
+const findings = (analysis.findings ?? []).map(finding).join('');
 
 // Texte par défaut de chaque origine, remplacé par originNotes.
 const ORIGIN_NOTES: Record<Origin, string> = {
@@ -191,9 +127,13 @@ function originSection(): string {
 
 function sourceCard(scan: Scan): string {
   const inImage = new Set(reference.packages.map((pkg) => `${pkg.name}@${pkg.version}`));
-  const only = scan.packages.filter((pkg) => !inImage.has(`${pkg.name}@${pkg.version}`));
-  const counts = countBySeverity(only.flatMap((pkg) => pkg.vulnerabilities));
-  return `<article class="card"><h3>Code source, hors image</h3><div class="big">${fr.format(counts.total)}</div>${chips(counts)}<p>Lockfiles et actions GitHub du dépôt (${plural(scan.packageCount, 'paquet')}) : ce qui sert au développement et à la CI sans entrer dans l’image.</p></article>`;
+  const manifests = config.package ? [config.package] : [];
+  return (['production', 'unknown', 'development', 'ci'] as SourceUse[]).map((use) => {
+    const packages = scan.packages.filter((pkg) => sourceUse(pkg, inImage, manifests) === use);
+    if (!packages.length) return '';
+    const counts = countBySeverity(packages.flatMap((pkg) => pkg.vulnerabilities));
+    return `<article class="card"><h3>${SOURCE_USES[use]}</h3><div class="big">${fr.format(counts.total)} <small>code source</small></div>${chips(counts)}<p>${SOURCE_NOTES[use]}</p></article>`;
+  }).join('');
 }
 
 function scenarioSection(): string {
@@ -235,7 +175,10 @@ function actionCard(action: Action): string {
   const where = `action « ${action.title} »`;
   const [label, tone] = STATUS[action.status ?? 'todo'] ?? STATUS.todo;
   const rows = (action.packages ?? []).map((item) => {
-    const found = [reference, ...Object.values(scans)].flatMap((scan) => scan.packages).find((pkg) => pkg.name === item.name && (!item.version || pkg.version === item.version));
+    const matches = [reference, ...Object.values(scans)].flatMap((scan) => scan.packages).filter((pkg) => pkg.name === item.name && (!item.version || pkg.version === item.version));
+    const found = matches.find((pkg) => pkg.origin === 'app') ?? matches[0];
+    const versions = new Set(reference.packages.filter((pkg) => pkg.name === item.name).map((pkg) => pkg.version));
+    if (!item.version && versions.size > 1) warnings.push(`${where} : ${item.name} existe en plusieurs versions (${[...versions].join(', ')}), ${found?.version} retenue ; préciser version`);
     if (!found) errors.push(`${where} : paquet ${item.name}${item.version ? ` ${item.version}` : ''} absent des scans`);
     return `<tr><td class="mono">${esc(found ? `${found.name} ${found.version}` : item.name)}</td><td>${found ? chips(countBySeverity(found.vulnerabilities)) : ''}</td><td>${inline(item.by ?? 'direct')}</td><td>${inline(item.fix)}</td></tr>`;
   }).join('');
@@ -263,7 +206,7 @@ function ciSection(): string {
     analysis.ci?.intro ? prose(analysis.ci.intro) : '',
     secrets.length ? `<h3>Secrets et variables du dépôt</h3><div class="table-box"><table><thead><tr><th>Nom</th><th>Type</th><th>Usage</th></tr></thead><tbody>${secrets.map((item) => `<tr><td class="mono">${esc(item.name)}</td><td>${item.kind === 'secret' ? 'Secret' : 'Variable'}</td><td>${inline(item.why)}</td></tr>`).join('')}</tbody></table></div>${code({ title: 'Création avec la CLI GitHub (la valeur est demandée, jamais passée en argument)', text: secrets.map((item) => (item.kind === 'secret' ? `gh secret set ${item.name}\ngh secret set ${item.name} --app dependabot` : `gh variable set ${item.name}`)).join('\n') })}` : '',
     steps(analysis.ci?.steps),
-    existsSync(path) ? code({ title: workflow, lang: 'yaml', text: readFileSync(path, 'utf8') }) : '',
+    workflow && existsSync(path) ? code({ title: workflow, lang: 'yaml', text: readFileSync(path, 'utf8') }) : '',
   ].join('');
   return section('ci', 'CI', 'Intégration continue', 'Analyser chaque build avec GitHub Actions', '', blocks);
 }
@@ -280,10 +223,6 @@ function vexSection(): string {
 }
 
 // Données du tableau : le scan de référence, la cible et le code source.
-const clientRow = (row: Row, gone?: boolean) => ({
-  id: row.id, sev: SEVERITY_LETTER[row.severity], pkg: row.pkg.name, ver: row.pkg.version, fix: row.fix, origin: row.pkg.origin, url: row.url,
-  score: row.score, epss: row.epss, kev: row.kev, sum: row.summary, gone,
-});
 const comparison = target ? diff(reference, target) : null;
 const images = [
   { id: reference.label, label: reference.title ?? 'Image analysée', versus: target ? 'Après corrections' : undefined, rows: flatten(reference).map((row) => clientRow(row, comparison ? !comparison.has(row) : undefined)) },
@@ -312,7 +251,6 @@ function commandsSection(): string {
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-const templates = join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'report');
 const body = [
   scoutSection(), summarySection(),
   section('constats', 'Constats', 'Ce qu’il faut retenir', findings && (analysis.findings ?? []).length > 1 ? 'Constats' : 'Constat principal', '', findings),
@@ -326,36 +264,26 @@ const meta: [string, string][] = [
   ['Paquets', fr.format(reference.packageCount)], ['Docker Scout', reference.scout], ...(analysis.context ?? []),
 ];
 const date = new Date(reference.scannedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-// L'avertissement d'API expérimentale de Node n'apprend rien à la personne qui lance le rapport.
-process.removeAllListeners('warning');
-const script = stripTypeScriptTypes(readFileSync(join(templates, 'client.ts'), 'utf8')).replace(/^\s*[\r\n]/gm, '');
 const payload = { images, severities: Object.fromEntries(SEVERITIES.map((severity) => [SEVERITY_LETTER[severity], SEVERITY_LABEL[severity]])), origins: ORIGINS };
-const html = `<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>${esc(analysis.pageTitle)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-<style>
-${readFileSync(join(templates, 'styles.css'), 'utf8')}</style>
-<div class="wrap">
-<header class="top"><span class="eyebrow">Audit de vulnérabilités · Docker Scout</span><h1>${inline(analysis.title)}</h1><p class="lead">${inline(analysis.lead)}</p><div class="meta">${meta.filter(([, value]) => value).map(([name, value]) => `<span>${esc(name)} <b class="mono">${esc(fill(value))}</b></span>`).join('')}</div></header>
-<nav class="toc" aria-label="Sommaire">${sections.map(({ id, nav }) => `<a href="#${id}">${esc(nav)}</a>`).join('')}</nav>
-${body}
-<footer><p>Analyse du ${date} avec Docker Scout ${esc(reference.scout)}. ${plural(Object.keys(scans).length, 'scan')} : ${Object.values(scans).map((scan) => `<span class="mono">${esc(scan.ref)}</span>`).join(', ')}.</p><p>L’origine d’un paquet vient de la comparaison avec l’image de base${reference.base ? ` (${esc(reference.base.ref)}, ${reference.base.source === 'provenance' ? 'lue dans la provenance du build' : reference.base.source === 'option' ? 'indiquée à l’analyse' : 'reconnue par Scout'})` : ' (inconnue ici : origine déduite des chemins)'}. Les gains « estimés » n’ont pas été mesurés par un nouveau build.</p></footer>
-</div>
-<script type="application/json" id="data">${JSON.stringify(payload).replace(/</g, '\\u003c')}</script>
-<script>
-${script.replace(/<\/script/gi, '<\\/script')}</script>
-`;
+// Vue d'ensemble de plusieurs images (overview.mts) : lien de retour.
+const home = options.values.home ? `<a href="${esc(options.values.home)}">← Toutes les images</a>` : '';
+const html = page({
+  title: analysis.pageTitle,
+  header: `<span class="eyebrow">Audit de vulnérabilités · Docker Scout</span><h1>${inline(analysis.title)}</h1><p class="lead">${inline(analysis.lead)}</p><div class="meta">${meta.filter(([, value]) => value).map(([name, value]) => `<span>${esc(name)} <b class="mono">${esc(fill(value))}</b></span>`).join('')}</div>`,
+  nav: home + sections.map(({ id, nav }) => `<a href="#${id}">${esc(nav)}</a>`).join(''),
+  body,
+  footer: `<p>Analyse du ${date} avec Docker Scout ${esc(reference.scout)}. ${plural(Object.keys(scans).length, 'scan')} : ${Object.values(scans).map((scan) => `<span class="mono">${esc(scan.ref)}</span>`).join(', ')}.</p><p>L’origine d’un paquet vient de la comparaison avec l’image de base${reference.base ? ` (${esc(reference.base.ref)}, ${reference.base.source === 'provenance' ? 'lue dans la provenance du build' : reference.base.source === 'option' ? 'indiquée à l’analyse' : 'reconnue par Scout'})` : ' (inconnue ici : origine déduite des chemins)'}. Les gains « estimés » n’ont pas été mesurés par un nouveau build.</p>`,
+  data: payload,
+});
 
 if (!analysis.findings?.length) warnings.push('aucun constat (findings)');
 if (!analysis.actions?.length) warnings.push('aucune action (actions)');
 if (/\bTODO\b|\{\{[A-Z_]+\}\}/.test(readFileSync(analysisPath, 'utf8'))) warnings.push('analysis.json contient encore des textes à remplir (TODO)');
 const written = [analysis.title, analysis.lead, ...(analysis.findings ?? []).map((item) => item.body), ...(analysis.actions ?? []).map((item) => item.body)].join('\n');
 for (const match of written.matchAll(/(?<![\w.-])\d+\s+(?:vulnérabilités?|failles?|critiques?|hautes?)\b/g)) warnings.push(`chiffre écrit à la main : « ${match[0]} » (utiliser un champ variable)`);
-for (const cve of new Set(written.match(/CVE-\d{4}-\d+/g) ?? [])) if (!Object.values(scans).some((scan) => scan.packages.some((pkg) => pkg.vulnerabilities.some((item) => item.id === cve)))) warnings.push(`${cve} citée mais absente des scans`);
+// Avec plusieurs images, le code source est analysé une fois, dans le dossier parent.
+const known = [...Object.values(scans), ...Object.values(loadScans(join(dir, '..')))];
+for (const cve of new Set(written.match(/CVE-\d{4}-\d+/g) ?? [])) if (!known.some((scan) => scan.packages.some((pkg) => pkg.vulnerabilities.some((item) => item.id === cve)))) warnings.push(`${cve} citée mais absente des scans`);
 const serious = flatten(reference).filter((row) => rank(row.severity) <= 1 && row.fix).length;
 for (const message of warnings) console.log(`Avertissement : ${message}`);
 for (const message of new Set(errors)) console.log(`Erreur : ${message}`);

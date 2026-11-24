@@ -39,6 +39,8 @@ export interface Vulnerability {
 export interface Package {
   purl: string; type: string; name: string; version: string; origin: Origin; origins: Origin[];
   paths: string[]; pathCount: number; layer: number | null; vulnerabilities: Vulnerability[];
+  /** Scan du code source : manifestes qui l'atteignent en production ([] : aucun ; absent : inconnu). */
+  usedBy?: string[];
 }
 /** Une ligne par couple faille × paquet. */
 export type Row = Vulnerability & { pkg: Package };
@@ -60,7 +62,7 @@ export interface Exclusion { origins?: Origin[]; packages?: string[]; cves?: str
 // ---------------------------------------------------------------------------
 
 export interface BuildConfig { context?: string; dockerfile?: string; target?: string; buildArgs?: string[]; secrets?: string[] }
-export interface Config { image: string; root?: string; build?: BuildConfig; platform?: string; vex?: { dir?: string; author?: string }; artifact?: string }
+export interface Config { image: string; root?: string; package?: string; build?: BuildConfig; platform?: string; vex?: { dir?: string; author?: string }; artifact?: string }
 export type IssueLevel = 'error' | 'warning' | 'info';
 export interface Issue { rule: string; level: IssueLevel; message: string; line?: number; file: string }
 export interface Registry { host: string; sources: string[]; details: string[] }

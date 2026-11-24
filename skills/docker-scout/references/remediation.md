@@ -19,6 +19,17 @@ Candidates à mesurer avec `bases.mts`, selon l'application :
 - **Épingler par digest** une fois la base choisie : `FROM node:24-trixie-slim@sha256:…` (le digest est en fin de sortie de `bases.mts`). Sans mise à jour automatique (étape 6), un digest fige aussi les failles.
 - Une version majeure du moteur ou une autre distribution se valide avec la personne, puis par les tests.
 
+### Correctif annoncé mais absent
+
+Scout annonce parfois une version que la distribution de l'image ne propose pas encore (un `musl` publié dans une branche d'Alpine plus récente, par exemple). Vérifier avant de promettre :
+
+```sh
+docker run --rm -u root --entrypoint sh <image> -c 'apk update >/dev/null && apk policy musl'
+docker run --rm -u root --entrypoint sh <image> -c 'apt-get update -qq && apt-cache policy libssl3t64'
+```
+
+Si elle manque, la noter « à suivre », et choisir la politique `app` en CI. Le cas inverse existe aussi : le correctif est dans la distribution, mais l'image officielle n'a pas été reconstruite. `apk upgrade --no-cache` (ou `apt-get upgrade`) dans l'étape finale le prend en attendant.
+
 ### Faux zéro
 
 Scout rapproche les paquets Debian et Ubuntu des avis de sécurité par leur **paquet source** (`glibc`, `openssl`). Dans une image distroless, il n'indexe que les noms binaires (`libc6`, `libssl3t64`) et n'affiche aucune faille, alors que la même version d'OpenSSL en a dans l'image Debian. Les scripts le signalent (« incomplet »). Même effet si le Dockerfile supprime la base dpkg ou apk.
@@ -71,12 +82,22 @@ Pour chaque paquet, dans l'ordre : monter la dépendance **directe** qui le tire
 | .NET | `dotnet nuget why <projet> <paquet>` | `dotnet add package` | référence directe du paquet |
 
 - **Forcer une version majeure** d'une dépendance transitive casse souvent son parent : lire ses changements, lancer les tests, et préférer une exception à une rustine fragile.
+- **Délai de publication** (`minimumReleaseAge` de pnpm, `npmMinimalAgeGate` de Yarn) : ne pas ajouter d'exception pour prendre une version du jour. Demander la dépendance sans version (`pnpm up -r better-auth`) : pnpm prend la plus récente qui a l'âge requis, souvent déjà corrigée. `pnpm up -r --depth 20 <paquet>` met à jour une dépendance indirecte dans le seul lockfile.
 - Chaque version forcée se note dans `SCOUT.md` avec la condition pour l'enlever (« quand express dépendra de qs ≥ 6.15 »).
 - Paquet présent dans l'image mais de développement : l'installation de production est incomplète (`--omit=dev`, `--prod`, `--no-dev`, `uv sync --no-dev`).
 - Binaire Go ou Rust : la bibliothèque standard est dans le binaire, elle se corrige en recompilant avec un compilateur à jour. `govulncheck` dit si le code vulnérable est appelé.
 - Le gestionnaire a aussi son audit (`npm audit`, `pip-audit`…), utile pour la version corrective, mais le chiffre de référence reste celui du scan de l'image.
 
-## 5. Durcissement
+## 5. Dépendances compilées
+
+Un bundler (Next.js, Vite, esbuild, rspack) range les dépendances dans ses fichiers : Scout ne les identifie plus, et le total de l'image est un minimum. Le scan `source` les nomme (« Production, hors de l'image »).
+
+- Confirmer la présence : `docker run --rm --entrypoint sh <image> -c "grep -rlE '<paquet>' /app/apps/web/.next/static | head"`.
+- Une faille de l'interface (XSS d'un éditeur de texte, d'un rendu Markdown) touche les navigateurs : même priorité qu'une faille de l'image.
+- La montée de version se mesure sur le lockfile (second scan `source`), pas sur l'image.
+- En CI, analyser aussi le lockfile (`ci.mts --source`).
+
+## 6. Durcissement
 
 | Règle de `detect.mts` | Correction |
 |---|---|
@@ -119,16 +140,18 @@ EXPOSE 3000
 CMD ["node", "dist/main.js"]
 ```
 
-## 6. Vérifier
+## 7. Vérifier
 
 ```sh
+# Sans base ni environnement : charger le module racine et les extensions natives suffit souvent à prouver l'image
+docker run --rm api:final --input-type=module --eval "await import('./dist/app.module.js'); process.exit(0)"
 docker run --rm -d --name scout-check -p 3000:3000 api:final
 docker logs scout-check && curl -fsS http://localhost:3000/health
 docker rm -f scout-check
 docker history --no-trunc api:final | grep -iE 'token|password|secret'   # rien ne doit sortir
 ```
 
-## 7. Exceptions VEX
+## 8. Exceptions VEX
 
 Une exception dit que l'image n'est **pas affectée**, avec une justification d'OpenVEX :
 

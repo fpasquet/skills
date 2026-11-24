@@ -159,9 +159,27 @@ function checkDockerfile(docker: Docker): Issue[] {
   return issues.sort((a, b) => order[a.level] - order[b.level] || (a.line ?? 0) - (b.line ?? 0));
 }
 
-const dockerfiles = files.filter((path) => /(^|\/)(Dockerfile|Containerfile)(\.[\w-]+)?$|\.Dockerfile$/i.test(path) && !/\.dockerignore$/.test(path))
+const dockerfiles = files.filter((path) => /(^|\/)(Dockerfile|Containerfile)(\.[\w-]+)?$|\.Dockerfile$/i.test(path) && !/\.dockerignore$/.test(path) && /^\s*FROM\s/im.test(read(path)))
   .sort((a, b) => a.split('/').length - b.split('/').length || a.length - b.length);
-const chosen = options.values.dockerfile ? relative(root, resolve(root, options.values.dockerfile)) : dockerfiles.find((path) => /(^|\/)Dockerfile$/.test(path)) ?? dockerfiles[0];
+// Fichiers qui construisent une image (CI, scripts, Makefile) : ils disent quel Dockerfile part en production, même
+// désigné par un motif (`infra/dockerfiles/${app}.Dockerfile`). Compose, qui sert au développement, n'en fait pas partie.
+const BUILD_COMMAND = /docker\s+(buildx\s+)?(build|bake)\b|docker\/(build-push|bake)-action|kaniko|buildah\s+(build|bud)/;
+const builders = files.filter((path) => /\.(sh|bash|ya?ml|mk|toml)$|(^|\/)(Makefile|justfile|Jenkinsfile|package\.json)$/.test(path) && !/compose[\w.-]*\.ya?ml$|-lock\.ya?ml$/.test(path))
+  .flatMap((path) => {
+    const lines = read(path).split('\n');
+    const index = lines.findIndex((text) => BUILD_COMMAND.test(text) && !/^\s*(#|\/\/|echo)/.test(text));
+    return index === -1 ? [] : [{ path, line: index + 1, text: lines.join('\n') }];
+  });
+const referenced = builders.flatMap(({ text }) => [...text.matchAll(/[\w./${}() -]*[Dd]ockerfile[\w.${}-]*/g)].map((match) => match[0].trim().split(/\s+(?![^{]*\}\})/).at(-1) ?? ''))
+  .filter((token) => /[./]/.test(token) || token === 'Dockerfile')
+  .map((token) => new RegExp(`(^|/)${token.replace(/^\.\//, '').split(/\$\{\{[^}]*\}\}|\$\{[^}]*\}|\$\w+/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\w.-]+')}$`));
+const isDevelopment = (path: string) => /(^|[./-])(dev|development|test|tests|e2e|ci|local|debug)([./-]|$)/i.test(path);
+const isBuilt = (path: string) => referenced.some((pattern) => pattern.test(path));
+const production = dockerfiles.filter((path) => !isDevelopment(path));
+const built = production.filter(isBuilt);
+// Les images à auditer : celles qu'un script ou la CI construit, sinon tout ce qui n'est pas réservé au développement.
+const imageFiles = built.length ? built : production.length ? production : dockerfiles;
+const chosen = options.values.dockerfile ? relative(root, resolve(root, options.values.dockerfile)) : imageFiles.find((path) => /(^|\/)Dockerfile$/.test(path)) ?? imageFiles[0];
 if (options.values.dockerfile && !existsSync(join(root, chosen))) fail(`Dockerfile introuvable : ${options.values.dockerfile}`);
 const docker = chosen ? parseDockerfile(chosen) : null;
 const issues = docker ? checkDockerfile(docker) : [];
@@ -224,10 +242,10 @@ const remote = run('git', ['-C', root, 'remote', 'get-url', 'origin']).stdout.tr
 const ci = {
   github: /github\.com/.test(remote) || workflows.length > 0,
   workflows: workflows.length,
-  builds: workflowUses(/docker\/build-push-action|docker (buildx )?build|docker\/bake-action/),
+  builds: builders.map(({ path, line }) => `${path}:${line}`),
   scanners: workflowUses(/scout-action|docker scout|trivy|grype|snyk/i),
   pushes: [...new Set(workflows.flatMap((path) => [...read(path).matchAll(/(ghcr\.io|[\w.-]+\.pkg\.dev|[\w.-]+\.dkr\.ecr\.[\w.-]+|[\w.-]+\.azurecr\.io|docker\.io)/g)].map((match) => match[1])))],
-  other: files.filter((path) => /^(\.gitlab-ci\.yml|bitbucket-pipelines\.yml|Jenkinsfile|azure-pipelines\.yml|\.circleci\/config\.yml|cloudbuild\.ya?ml)$/.test(path)),
+  other: files.filter((path) => /^(\.gitlab-ci\.yml|bitbucket-pipelines\.yml|Jenkinsfile|azure-pipelines\.yml|\.circleci\/config\.yml)$/.test(path) || /cloudbuild[\w./-]*\.ya?ml$/.test(path)),
   dependabot: ['.github/dependabot.yml', '.github/dependabot.yaml'].find((path) => files.includes(path)) ?? null,
   renovate: files.find((path) => /(^|\/)(\.renovaterc(\.json)?|renovate\.json5?)$/.test(path)) ?? null,
 };
@@ -241,32 +259,58 @@ const compose = files.filter((path) => /(^|\/)(docker-)?compose(\.[\w-]+)?\.ya?m
 // Commande de build et questions
 // ---------------------------------------------------------------------------
 const packageName = readJson<{ name?: string }>(join(root, 'package.json'), {}).name?.replace(/^@[^/]+\//, '');
-const image = (packageName ?? basename(root)).toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
+// Plusieurs images dans le dépôt : le nom reprend celui du Dockerfile (api.Dockerfile) ou de son dossier (apps/api/Dockerfile).
+const imageSuffix = (path: string) => (basename(path).match(/^(?:Dockerfile|Containerfile)\.([\w-]+)$/i) ?? basename(path).match(/^([\w-]+)\.Dockerfile$/i))?.[1] ?? basename(dirname(path));
+const imageName = (path: string | undefined) => [packageName ?? basename(root), ...(path && imageFiles.length > 1 && imageSuffix(path) !== '.' ? [imageSuffix(path)] : [])].join('-').toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
+const image = imageName(chosen);
+// Manifeste de l'application dans un monorepo : à côté du Dockerfile, ou dans un dossier du même nom que l'image.
+const manifests = named(/^package\.json$/).map((path) => dirname(path)).filter((path) => path !== '.');
+const manifestOf = (path: string) => (manifests.includes(dirname(path)) ? dirname(path) : manifests.find((item) => basename(item) === imageSuffix(path)) ?? '');
 const SECRET_SOURCES: Record<string, string> = { npmrc: '$HOME/.npmrc', npm: '$HOME/.npmrc', pip: '$HOME/.config/pip/pip.conf', pipconf: '$HOME/.config/pip/pip.conf', netrc: '$HOME/.netrc', composer: '$HOME/.composer/auth.json', composer_auth: '$HOME/.composer/auth.json', auth: '$HOME/.composer/auth.json', maven: '$HOME/.m2/settings.xml', settings: '$HOME/.m2/settings.xml', nuget: '$HOME/.nuget/NuGet/NuGet.Config' };
+// Contexte : celui que Compose déclare pour ce Dockerfile, sinon le dossier (racine ou celui du Dockerfile) où
+// existent le plus de fichiers copiés.
+function contextOf({ path, instructions }: Docker): string {
+  for (const file of compose) {
+    for (const match of read(file.path).matchAll(/context:\s*["']?([^\s"']+)["']?\s*\n(?:\s+[\w-]+:.*\n)*?\s+dockerfile:\s*["']?([^\s"']+)/g)) {
+      const context = join(dirname(file.path), match[1]);
+      if (join(context, match[2]) === path || join(match[2]) === path) return context.replace(/\/$/, '') || '.';
+    }
+  }
+  const sources = instructions.filter((item) => /^(COPY|ADD)$/.test(item.name) && !/--from=/.test(item.value) && !item.value.includes('<<'))
+    .flatMap((item) => item.value.replace(/^(--\S+ )+/, '').split(/\s+/).slice(0, -1)).filter((item) => !/[*?[$]|^\.\/?$|^https?:/.test(item));
+  const score = (context: string) => sources.filter((item) => existsSync(join(root, context, item))).length;
+  return dirname(path) !== '.' && score(dirname(path)) > score('.') ? dirname(path) : '.';
+}
+
 const command = docker ? buildCommand({
   image,
   build: {
-    context: '.', dockerfile: docker.path, target: docker.stages.length > 1 ? docker.target?.name : '',
+    context: contextOf(docker), dockerfile: docker.path, target: docker.stages.length > 1 ? docker.target?.name : '',
     secrets: docker.secretIds.map((id) => (SECRET_SOURCES[id.toLowerCase()] ? `id=${id},src=${SECRET_SOURCES[id.toLowerCase()]}` : /token|key|password/i.test(id) ? `id=${id},env=${id.toUpperCase()}` : `id=${id},src=<fichier>`)),
   },
 }, 'scout', { extra: docker.ssh ? ['--ssh default'] : [] }) : null;
 
 const questions: string[] = [];
 if (!docker) questions.push('Aucun Dockerfile : en écrire un (multi-étapes, non root), ou auditer une image déjà publiée (laquelle ?) ?');
-if (dockerfiles.length > 1 && !options.values.dockerfile) questions.push(`${dockerfiles.length} Dockerfiles (${dockerfiles.slice(0, 6).join(', ')}) : lequel construit l’image de production ?`);
+if (imageFiles.length > 1 && !options.values.dockerfile) {
+  questions.push(built.length
+    ? `${built.length} images construites (${built.map((path) => `${imageName(path)} ← ${path}`).join(', ')}) : les auditer toutes ? Un espace de travail par image, un rapport commun ; relancer avec --dockerfile pour chacune.`
+    : `${imageFiles.length} Dockerfiles (${imageFiles.slice(0, 6).join(', ')}) : lesquels construisent une image de production ?`);
+}
 // Une dernière étape sans nom est l'étape finale par convention : rien à demander.
 if (docker?.target?.name && !PRODUCTION.test(docker.target.name)) questions.push(`Étape de production : « ${docker.target.name} » ?`);
 if (registries.size && !docker?.secretIds.length) questions.push(`Paquets pris sur ${[...registries.keys()].join(', ')} sans secret de build dans le Dockerfile : le registre demande-t-il un jeton ? Si oui, quel fichier le contient sur le poste (.npmrc, pip.conf…), et quel secret en CI ?`);
 if (docker?.secretIds.length) questions.push(`Le build attend le(s) secret(s) ${docker.secretIds.join(', ')} : quel fichier ou quelle variable sur le poste, et quel secret GitHub en CI ?`);
 if (docker?.ssh || gitDependencies.length) questions.push('Dépendances git privées (SSH) : quelle clé sur le poste, et quelle clé de déploiement en CI ?');
 if (privateBases.length) questions.push(`Image de base sur un registre non public (${privateBases.join(', ')}) : comment s’y connecter sur le poste et en CI ? Est-ce un miroir d’une image officielle (laquelle) ?`);
+if (ci.builds.some((path) => !path.startsWith('.github/workflows/'))) questions.push(`L’image est construite hors des workflows GitHub (${ci.builds.filter((path) => !path.startsWith('.github/workflows/')).slice(0, 3).join(', ')}) : lire ces fichiers, et demander où placer le contrôle (CI de la PR, avant publication, ou les deux).`);
 if (docker && mirrorArgs.length) questions.push(`Argument(s) ${mirrorArgs.join(', ')} : quelle valeur en production ? Une valeur différente donne-t-elle l’image officielle, pour comparer ?`);
 if (literalTokens.length) questions.push(`Jeton écrit en clair dans ${[...new Set(literalTokens)].join(', ')} : est-il suivi par git ? À révoquer s’il a été commité.`);
 if (tools.scout === null) questions.push('Docker Scout n’est pas installé : d’accord pour installer le plugin CLI ?');
 if (tools.hub === 'non connecté') questions.push('Pas de connexion à Docker Hub, nécessaire à Docker Scout : lancer docker login (compte gratuit).');
 
 const report = {
-  root, tools, dockerfiles, image, command, questions, issues, ecosystems, gitDependencies, literalTokens: [...new Set(literalTokens)],
+  root, tools, dockerfiles, images: imageFiles.map((path) => ({ name: imageName(path), dockerfile: path, package: manifestOf(path) })), image, command, questions, issues, ecosystems, gitDependencies, literalTokens: [...new Set(literalTokens)],
   docker: docker && {
     path: docker.path, target: docker.target?.name ?? '', base: docker.base, baseExpression: docker.baseExpression, args: docker.args, secretIds: docker.secretIds, ssh: docker.ssh, externalBases: docker.externalBases,
     stages: docker.stages.map(({ name, image: from, line }) => ({ name, from, line })),
@@ -286,12 +330,14 @@ if (docker) {
   line('Dockerfile', `${docker.path}${dockerfiles.length > 1 ? ` (aussi : ${dockerfiles.filter((path) => path !== docker.path).slice(0, 5).join(', ')})` : ''}`);
   line('Étapes', docker.stages.map((stage) => `${stage.name || '(sans nom)'} ← ${stage.image}${stage === docker.target ? ' [cible]' : ''}`).join(' ; '));
   line('Image de base', `${docker.base}${docker.baseExpression !== docker.base ? ` (${docker.baseExpression})` : ''}`);
+  if (manifestOf(docker.path)) line('Paquet', `${manifestOf(docker.path)} (init.mts --package)`);
   if (docker.secretIds.length || docker.ssh) line('Secrets de build', [...docker.secretIds, ...(docker.ssh ? ['ssh'] : [])].join(', '));
 } else line('Dockerfile', 'aucun');
 line('Paquets', ecosystems.map((item) => `${item.id} (${item.files[0]}${item.files.length > 1 ? `, +${item.files.length - 1}` : ''})`).join(', ') || 'aucun lockfile');
 line('Registres', report.registries.map((item) => `${item.host} (${item.sources.slice(0, 2).join(', ')})`).join(', ') || 'publics seulement');
 if (privateBases.length) line('Bases privées', privateBases.join(', '));
-line('CI', `${workflows.length} workflow(s) GitHub${ci.builds.length ? `, build d’image : ${ci.builds.map((path) => basename(path)).join(', ')}` : ''}${ci.scanners.length ? `, analyse : ${ci.scanners.map((path) => basename(path)).join(', ')}` : ', pas d’analyse d’image'}${ci.other.length ? ` ; ${ci.other.join(', ')}` : ''}`);
+if (ci.builds.length) line('Builds d’image', ci.builds.slice(0, 6).join(', '));
+line('CI', `${workflows.length} workflow(s) GitHub${ci.scanners.length ? `, analyse : ${ci.scanners.map((path) => basename(path)).join(', ')}` : ', pas d’analyse d’image'}${ci.other.length ? ` ; ${ci.other.join(', ')}` : ''}`);
 if (ci.pushes.length) line('Registre cible', ci.pushes.join(', '));
 line('Mises à jour', ci.renovate ? `Renovate (${ci.renovate})` : ci.dependabot ? `Dependabot (${dependabotEcosystems.join(', ')})` : 'ni Dependabot ni Renovate');
 if (compose.length) line('Compose', compose.map((item) => `${item.path}${item.targets.length ? ` [${item.targets.join(', ')}]` : ''}`).join(', '));

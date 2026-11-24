@@ -27,7 +27,8 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { scroll-padding-top: 4rem; }
-body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.55; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.55; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
 .wrap { max-width: 72rem; margin: 0 auto; padding-block: 2.5rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 3rem; }
 h1, h2, h3 { text-wrap: balance; line-height: 1.2; margin: 0; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.3rem); font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
@@ -53,7 +54,7 @@ code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; ov
 .top { display: grid; gap: 1rem; }
 .meta { display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem; color: var(--muted); font-size: 0.9rem; }
 .meta b { color: var(--fg); font-weight: 500; }
-.toc { position: sticky; top: 0; z-index: 2; background: var(--bg); border-block: 1px solid var(--line); display: flex; gap: 1.1rem; overflow-x: auto; padding-block: 0.6rem; font-size: 0.88rem; white-space: nowrap; margin-block: -1.5rem; }
+.toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); border-block: 1px solid var(--line); display: flex; gap: 1.1rem; overflow-x: auto; padding-block: 0.6rem; font-size: 0.88rem; white-space: nowrap; margin-block: -1.5rem; }
 .toc a { color: var(--muted); text-decoration: none; }
 .toc a:hover { color: var(--accent); }
 

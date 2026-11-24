@@ -64,6 +64,7 @@
 - `level` d'un constat : `error`, `warning`, `info`, `ok`. `status` d'une action : `todo`, `done`, `accepted`.
 - `gain` avec `to` est **mesuré** (deux scans), avec `without` **estimé** (scan privé d'origines, de paquets ou de `cves`). Une estimation par origine ignore les paquets présents aussi ailleurs dans l'image.
 - Textes : `` `code` ``, `**gras**`, liens `[texte](https://…)`, listes `-`, paragraphes séparés par une ligne vide.
+- `packages` d'une action : préciser `version` quand le paquet existe en plusieurs versions (`--check` le signale).
 - Champs variables : liste en tête de `report.mts`. `--check` refuse un champ, un scan ou un paquet inconnu, et signale un chiffre écrit à la main ou une CVE absente des scans.
 - `ci.mts` remplit `ci.workflow` et `ci.secrets`.
 
@@ -74,6 +75,23 @@
 - Séparer ce qui est **mesuré**, **estimé** et **supposé**.
 - Dire aussi ce qui **reste** et pourquoi : pas de correctif, montée majeure à planifier, analyse incomplète.
 - Ni jeton, ni adresse interne inutile, ni nom de personne.
+
+## Plusieurs images
+
+`overview.mts .docker-scout` construit `site/index.html` (vue d'ensemble) et `site/<image>.html`. Il lit `.docker-scout/overview.json` :
+
+```json
+{
+ "title": "Audit Docker Scout du projet", "pageTitle": "Audit Scout projet", "lead": "…",
+ "artifact": "", "order": ["api", "web"], "source": "source",
+ "findings": [{ "title": "…", "level": "warning", "body": "L’API passe de {{api:current.total}} à {{api:final.total}} failles." }],
+ "steps": [{ "title": "Analyser dans le job existant", "body": "…", "code": [{ "title": ".github/workflows/ci.yml", "text": "…" }] }]
+}
+```
+
+- `source` est un scan de `.docker-scout/scans/`, commun aux images. `package` de chaque `scout.json` (`apps/web`) dit quelles dépendances de production sont celles d'une image.
+- `findings` et `steps` portent ce qui est commun ; ce qui ne concerne qu'une image reste dans son `analysis.json`.
+- Publication : `file_path`, `root` et `files` affichés par le script, toujours vers la même `url`. Si l'outil refuse un dossier hors du répertoire de travail, copier `site/` dans un dossier autorisé.
 
 ## Publier
 

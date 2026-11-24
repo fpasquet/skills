@@ -41,6 +41,7 @@ for (const pkg of packages.slice(0, limit)) {
   console.log(`\n${pkg.name} ${pkg.version} [${pkg.type}, ${origins}] ${formatCounts(countBySeverity(pkg.vulnerabilities), { zero: false })} → ${fixVersion(pkg) ?? 'pas de correctif'}`);
   if (pkg.paths.length && !pkg.origin.endsWith('-os')) console.log(`  ${pkg.paths.slice(0, 2).join(', ')}${pkg.pathCount > 2 ? ` (+${pkg.pathCount - 2})` : ''}`);
   if (pkg.origin === 'app-os' && pkg.layer !== null) console.log(`  ${scan.layers[pkg.layer]?.instruction.slice(0, 140)}`);
+  if (pkg.usedBy) console.log(`  production : ${pkg.usedBy.join(', ') || 'non (développement, tests ou CI)'}`);
   if (options.flags.cves || options.values.cve) {
     for (const item of pkg.vulnerabilities) {
       console.log(`  ${item.severity.padEnd(11)} ${item.id}${item.kev ? ' KEV' : ''} · CVSS ${item.score ?? '?'} · EPSS ${item.epss === null ? '?' : `${(item.epss * 100).toFixed(1)} %`} · ${item.fix ?? 'pas de correctif'} · ${item.summary}`);

@@ -3,12 +3,14 @@
  * Crée l'espace de travail d'un audit, sans écraser un fichier existant.
  *
  *   node init.mts <dir> --image <nom> [--root <app>] [--dockerfile Dockerfile] [--context .] [--target production]
- *                 [--platform linux/amd64] [--build-arg MIRROR=]… [--secret id=npmrc,src=$HOME/.npmrc]…
+ *                 [--platform linux/amd64] [--package apps/api] [--build-arg MIRROR=]… [--secret id=npmrc,src=$HOME/.npmrc]…
  *
+ *   --package   dossier du manifeste de l'application dans un monorepo (ses dépendances de production)
  *   <dir>   .docker-scout, ou .docker-scout/<image> quand le dépôt construit plusieurs images
  *
  * Écrit scout.json (build, artifact, politique), SCOUT.md (mémoire), analysis.json (rapport à remplir) et
- * .gitignore (scans et rapport restent hors du dépôt : ils listent des failles ouvertes).
+ * .gitignore (scans et rapport restent hors du dépôt : ils listent des failles ouvertes). Dans .docker-scout/<image>, il
+ * écrit aussi .docker-scout/overview.json, pour la page commune (overview.mts).
  */
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
@@ -36,6 +38,7 @@ const build = {
 const config: Config = {
   image,
   root: relative(dir, root) || '.',
+  package: options.values.package ?? '',
   build,
   platform: options.values.platform ?? '',
   vex: { dir: '.vex', author: '' },
@@ -59,6 +62,12 @@ put('.gitignore', (path) => writeFileSync(path, 'scans/\nreport.html\ndetect.jso
 put('analysis.json', (path) => copyFileSync(join(templates, 'analysis.json'), path));
 put('SCOUT.md', (path) => writeFileSync(path, readFileSync(join(templates, 'memory.md'), 'utf8')
   .replaceAll('{{IMAGE}}', image).replaceAll('{{BUILD}}', buildCommand(config, 'scout'))));
+
+// Plusieurs images : la vue d'ensemble et l'analyse du code source, communes, vivent dans le dossier parent.
+if (basename(dirname(dir)) === '.docker-scout') {
+  put('../.gitignore', (path) => writeFileSync(path, 'scans/\nsite/\n'));
+  put('../overview.json', (path) => copyFileSync(join(templates, 'overview.json'), path));
+}
 
 // Sans .dockerignore, l'espace de travail partirait dans l'image avec COPY . .
 const ignore = join(root, build.context, '.dockerignore');

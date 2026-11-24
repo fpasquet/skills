@@ -1,5 +1,26 @@
 # Journal des versions
 
+## 1.1.0 · 24/11/2026
+
+Éprouvé sur un monorepo réel (pnpm 12, API NestJS sur Debian, web Next.js sur Alpine, images construites par Cloud
+Build), et l'état des lieux sur quatre autres dépôts.
+
+- **Plusieurs images** : `overview.mts` réunit les rapports en un seul artifact, avec une vue d'ensemble, les corrections
+  de toutes les images et le code source.
+- **Dépendances compilées** : ce qu'un bundler range dans ses fichiers part en production sans être vu dans l'image. Le
+  scan du code source les classe d'après le lockfile (pnpm, npm), par manifeste (`lockfile.mts`, `init.mts --package`).
+- **Code source** (`fs://`) : seuls les fichiers suivis par git sont analysés. Un dossier lu tel quel comptait
+  `node_modules` et `.terraform` (265 failles d'outils du poste), et 15 paquets sur 2139 d'un lockfile pnpm à deux
+  documents YAML. Un lockfile que Scout ne lit pas est signalé.
+- **Politique `app`** (`ci.mts --gate app`) : bloque les failles corrigeables hors de l'image de base. `--steps` affiche
+  les étapes à ajouter à un job qui construit déjà.
+- `detect.mts` : Dockerfile de production déduit des fichiers qui construisent une image (workflows, scripts, Cloud
+  Build, motifs comme `${app}.Dockerfile`), jamais un `Dockerfile.dev` par défaut ; nom d'image et manifeste proposés par
+  Dockerfile ; contexte de build d'un sous-dossier ; Dockerfile vide ignoré.
+- `report.mts` : plus d'arrêt quand `ci.workflow` est vide ; paquet présent en plusieurs versions signalé.
+- Méthode : règles du projet lues d'abord, corrections mesurées sur une copie en audit seul, exploitabilité vérifiée dans
+  le code, correctif annoncé mais absent de la distribution, délai de publication des paquets respecté.
+
 ## 1.0.0 · 24/11/2026
 
 - Première version : audit d'une image Docker avec Docker Scout, corrections mesurées, CI GitHub Actions, rapport HTML
