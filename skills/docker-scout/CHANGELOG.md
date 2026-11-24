@@ -1,5 +1,16 @@
 # Journal des versions
 
+## 1.2.0 · 24/11/2026
+
+- **Avant et après** dans le rapport et la vue d'ensemble : chiffres, politiques, taille et image de base des deux
+  images ; version d'avant et d'après de chaque paquet corrigé, ou « retiré » ; ce qui reste, avec sa raison ; failles
+  apparues ; contrôles passés et à faire ; filtre « Corrigées / Restantes » du détail.
+- `change.mts` relève la branche ou la PR de corrections : commits, diff des Dockerfiles et des manifestes, état et CI.
+- `compare.mts --markdown` : tableaux pour une issue ou une PR.
+- `references/livraison.md` : préparer, vérifier et ouvrir l'issue et la PR, puis republier l'avant et l'après.
+- Un scan garde l'inventaire des paquets. La comparaison apparie d'abord les versions égales : un même paquet en deux
+  exemplaires ne fausse plus le compte (avant = disparues + restantes).
+
 ## 1.1.1 · 24/11/2026
 
 - Méthode : une montée de version n'est donnée comme faisable qu'après toute la chaîne de vérification du projet. Sur le

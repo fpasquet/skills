@@ -5,6 +5,8 @@
  "artifact": "",
  "order": [],
  "source": "",
+ "sourceTarget": "",
+ "checks": [],
  "findings": [],
  "steps": []
 }

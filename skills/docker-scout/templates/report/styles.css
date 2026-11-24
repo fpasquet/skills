@@ -66,6 +66,14 @@ code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; ov
 pre { margin: 0; padding: 0.8rem 0.9rem; overflow: auto; max-height: 34rem; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.6; }
 pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
 
+/* Diff */
+details.code > summary { cursor: pointer; padding: 0.45rem 0.9rem; border-bottom: 0; font-family: var(--font-mono); }
+details.code[open] > summary { border-bottom: 1px solid var(--line); }
+.diff code > span { display: block; padding-inline: 0.3rem; white-space: pre; width: max-content; min-width: 100%; }
+.diff .add { background: var(--ok-soft); color: var(--ok); }
+.diff .del { background: var(--crit-soft); color: var(--sev-c); }
+.diff .hunk { color: var(--accent); }
+
 /* Scout en bref */
 details.card > summary { cursor: pointer; font-weight: 600; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); gap: 1rem; }
@@ -115,7 +123,7 @@ dl.cmds dd { margin: 0; color: var(--muted); }
 .actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; counter-reset: action; }
 .action { counter-increment: action; }
 .action-head { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: center; }
-.action-head h3::before { content: counter(action) ". "; color: var(--muted); }
+.action .action-head h3::before { content: counter(action) ". "; color: var(--muted); }
 .gain { font-size: 0.83rem; font-weight: 600; color: var(--ok); background: var(--ok-soft); padding: 0.1rem 0.6rem; border-radius: 999px; font-variant-numeric: tabular-nums; }
 .gain.est { color: var(--accent); background: var(--accent-soft); }
 
@@ -144,6 +152,8 @@ input[type="search"] { flex: 1 1 12rem; }
 .vulns .sum { display: block; color: var(--muted); font-family: var(--font-ui); font-size: 0.82rem; max-width: 46ch; margin-top: 0.15rem; }
 .sevtag { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; white-space: nowrap; }
 .sevtag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.compare td:first-child { white-space: nowrap; }
+.up { color: var(--sev-c); white-space: nowrap; font-weight: 600; }
 .yes { color: var(--ok); white-space: nowrap; } .no { color: var(--muted); white-space: nowrap; }
 .empty { text-align: center; color: var(--muted); padding: 2rem; }
 footer { border-top: 1px solid var(--line); padding-top: 1.25rem; color: var(--muted); font-size: 0.85rem; display: grid; gap: 0.4rem; }

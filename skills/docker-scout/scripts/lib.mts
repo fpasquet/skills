@@ -288,6 +288,14 @@ export function normalize(raw: RawScan, { label, ref, title, scout, base, rawBas
       })),
     };
   });
+  const inventory = new Map<string, [string, string, string, Origin]>();
+  for (const artifact of raw.artifacts ?? []) {
+    const paths = (artifact.locations ?? []).map((location) => location.path);
+    for (const path of paths.length ? paths : ['']) {
+      const entry: [string, string, string, Origin] = [artifact.type, packageName(artifact), artifact.version, originOf(artifact, path, index, kind)];
+      inventory.set(entry.join(' '), entry);
+    }
+  }
   const scan = {
     label, title, ref, kind, scannedAt: new Date().toISOString(), scout,
     image: image ? {
@@ -296,7 +304,7 @@ export function normalize(raw: RawScan, { label, ref, title, scout, base, rawBas
       created: image.config?.created, env: image.config?.config?.Env?.filter((entry) => /_VERSION=/.test(entry)),
     } : null,
     base: base ? { ...base, counts: rawBase ? countBySeverity(flattenRaw(rawBase)) : undefined, packages: rawBase?.artifacts?.length, size: rawBase?.source?.image?.size } : null,
-    packageCount: raw.artifacts?.length ?? 0, blindSpot: kind === 'image' ? blindSpot(raw) : undefined, layers, health: policies?.health ?? null, policies: policies?.policies ?? null, packages,
+    packageCount: raw.artifacts?.length ?? 0, blindSpot: kind === 'image' ? blindSpot(raw) : undefined, layers, health: policies?.health ?? null, policies: policies?.policies ?? null, packages, inventory: [...inventory.values()],
   };
   return { ...scan, ...summary(scan) };
 }
@@ -341,21 +349,65 @@ export function without(scan: Scan, { origins = [], packages = [], cves = [] }: 
   return { ...derived, ...summary(derived) };
 }
 
+/**
+ * Failles disparues, restantes et apparues. Chaque ligne s'apparie d'abord à version égale, puis par nom de paquet (une
+ * montée qui n'a pas tout corrigé) : avant = disparues + restantes, après = restantes + apparues.
+ */
 export function diff(before: Scan, after: Scan) {
-  const rows = flatten(after);
-  const old = new Set(flatten(before).map(identity));
-  const current = new Set(rows.map(identity));
-  return {
-    removed: flatten(before).filter((row) => !current.has(identity(row))),
-    added: rows.filter((row) => !old.has(identity(row))),
-    remaining: rows.filter((row) => old.has(identity(row))),
-    has: (row: Row) => current.has(identity(row)),
-  };
+  const exact = (row: Row) => `${identity(row)}@${row.pkg.version}`;
+  let left = flatten(before);
+  let added = flatten(after);
+  const remaining: Row[] = [];
+  const kept = new Set<Row>();
+  for (const key of [exact, identity]) {
+    const pool = new Map<string, Row[]>();
+    for (const row of left) pool.set(key(row), [...(pool.get(key(row)) ?? []), row]);
+    added = added.filter((row) => {
+      const match = pool.get(key(row))?.shift();
+      if (!match) return true;
+      kept.add(match);
+      remaining.push(row);
+      return false;
+    });
+    left = left.filter((row) => !kept.has(row));
+  }
+  const removedKeys = new Set(left.map(exact));
+  return { removed: left, added, remaining, has: (row: Row) => !removedKeys.has(exact(row)) };
+}
+
+/** Versions d'un paquet dans un scan ; null si le scan n'a pas d'inventaire (fait avant la version 1.2). */
+export function versionsIn(scan: Scan, pkg: Pick<Package, 'type' | 'name'>): string[] | null {
+  if (!scan.inventory) return null;
+  return [...new Set(scan.inventory.filter(([type, name]) => type === pkg.type && name === pkg.name).map(([, , version]) => version))];
+}
+
+/** Versions apparues (`after`) et versions qui existaient déjà et restent (`kept`) ; null : scan sans inventaire. */
+export interface PackageChange { name: string; type: string; origin: Origin; before: string; after: string[] | null; kept: string[]; removed: Row[] }
+/** Failles disparues, regroupées par paquet, avec la version d'après (liste vide : paquet retiré). */
+export function fixedPackages(before: Scan, after: Scan): PackageChange[] {
+  const groups = new Map<string, PackageChange>();
+  for (const row of diff(before, after).removed) {
+    const key = `${row.pkg.type} ${row.pkg.name} ${row.pkg.version}`;
+    const old = versionsIn(before, row.pkg);
+    const now = versionsIn(after, row.pkg);
+    const group = groups.get(key) ?? {
+      name: row.pkg.name, type: row.pkg.type, origin: row.pkg.origin, before: row.pkg.version, removed: [],
+      // Un autre exemplaire déjà présent avant n'est pas la version d'après : celui-ci a été retiré.
+      after: old && now ? now.filter((version) => !old.includes(version)) : null,
+      kept: old && now ? now.filter((version) => old.includes(version) && version !== row.pkg.version) : [],
+    };
+    group.removed.push(row);
+    groups.set(key, group);
+  }
+  return [...groups.values()].sort((a, b) => rank(worst(a.removed)) - rank(worst(b.removed)) || b.removed.length - a.removed.length);
 }
 
 // ---------------------------------------------------------------------------
 // Affichage
 // ---------------------------------------------------------------------------
+
+/** Version d'après d'un paquet corrigé, en un mot. */
+export const afterText = (change: PackageChange | undefined): string | undefined => (!change || change.after === null ? undefined : change.after.length ? change.after.join(', ') : 'retiré');
 
 export const formatCounts = (counts: Counts, { zero = true } = {}) => SEVERITIES
   .filter((severity) => zero ? severity !== 'UNSPECIFIED' || counts[severity] : counts[severity])

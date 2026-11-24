@@ -13,13 +13,13 @@
  */
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { SOURCE_NOTES, SOURCE_USES, chips, clientRow, color, createRenderer, esc, fr, page, plural, sourceUse } from './html.mts';
+import { SOURCE_NOTES, SOURCE_USES, changeCard, changeDetails, chips, clientRow, color, comparisonTable, createRenderer, esc, fixedTable, fr, page, plural, remainingTable, sourceUse } from './html.mts';
 import type { Bar, SourceUse } from './html.mts';
 import {
-  ORIGINS, SEVERITIES, SEVERITY_LABEL, SEVERITY_LETTER, buildCommand, countBySeverity, diff, fail, flatten, formatSize, loadConfig, loadScans, parseArgs,
+  ORIGINS, SEVERITIES, SEVERITY_LABEL, SEVERITY_LETTER, afterText, buildCommand, countBySeverity, diff, fail, fixedPackages, flatten, formatSize, loadConfig, loadScans, parseArgs,
   rank, readJson, without, withScheme,
 } from './lib.mts';
-import type { Action, Analysis, BaseCandidate, Config, Counts, Gain, Issue, Origin, Scan, Scenario, Step } from './types.mts';
+import type { Action, Analysis, BaseCandidate, Change, ChangeFile, Config, Counts, Gain, Issue, Origin, Scan, Scenario, Step } from './types.mts';
 
 const options = parseArgs(process.argv.slice(2), { flags: ['check'] });
 const [input] = options.positionals;
@@ -46,6 +46,7 @@ const reference = scanOf(analysis.reference, 'reference') ?? Object.values(scans
 if (!reference) throw fail('aucun scan : lancer scan.mts.');
 const target = scanOf(analysis.target, 'target');
 const source = scanOf(analysis.source, 'source');
+const comparison = target ? diff(reference, target) : null;
 
 const { fill, inline, prose, code, table, finding, bars, section, sections } = createRenderer(scans, errors);
 const scenarioScan = (scenario: Scenario | Gain, where: string): Scan | null => {
@@ -136,6 +137,27 @@ function sourceCard(scan: Scan): string {
   }).join('');
 }
 
+// La PR peut corriger plusieurs images : son relevé vit alors dans le dossier parent, et chaque rapport n'en montre que
+// son Dockerfile, son manifeste et les fichiers de la racine.
+const ownChange = readJson<Change | null>(join(dir, 'change.json'), null);
+const change = ownChange ?? readJson<Change | null>(join(dir, '..', 'change.json'), null);
+const concerns = ({ path }: ChangeFile) => Boolean(ownChange) || path === config.build?.dockerfile || !path.includes('/') || Boolean(config.package && path.startsWith(`${config.package}/`));
+function beforeAfterSection(): string {
+  if (!target) return '';
+  if (!target.inventory) warnings.push(`scan ${target.label} sans inventaire : versions d'après inconnues, relancer scan.mts`);
+  const added = comparison?.added ?? [];
+  const fixed = fixedTable(reference, target);
+  const remaining = remainingTable(reference, target, analysis.remaining ?? {}, inline);
+  const name = change?.pr ? `PR #${change.pr.number}` : change ? `branche ${change.head}` : 'corrections';
+  return section('avant-apres', 'Avant / après', 'Effet mesuré', `Avant et après : ${name}`, `${plural(comparison?.removed.length ?? 0, 'faille disparue', 'failles disparues')}, ${plural(target.counts.total, 'restante')}, ${added.length ? plural(added.length, 'apparue') : 'aucune apparue'}. Deux images construites et analysées de la même façon.`, [
+    change ? changeCard(change) : '',
+    comparisonTable(reference, target),
+    fixed ? `<h3>Failles corrigées, par paquet</h3>${fixed}` : '',
+    remaining ? `<h3>Ce qui reste</h3>${remaining}` : '<p class="lead">Il ne reste aucune faille.</p>',
+    changeDetails(change, analysis.checks ?? [], concerns, inline),
+  ].join(''));
+}
+
 function scenarioSection(): string {
   const items = (analysis.scenarios ?? []).flatMap((scenario): Bar[] => {
     const scan = scenarioScan(scenario, `scenarios « ${scenario.label} »`);
@@ -223,9 +245,9 @@ function vexSection(): string {
 }
 
 // Données du tableau : le scan de référence, la cible et le code source.
-const comparison = target ? diff(reference, target) : null;
+const afterOf = new Map(target ? fixedPackages(reference, target).map((item) => [`${item.type} ${item.name} ${item.before}`, afterText(item)]) : []);
 const images = [
-  { id: reference.label, label: reference.title ?? 'Image analysée', versus: target ? 'Après corrections' : undefined, rows: flatten(reference).map((row) => clientRow(row, comparison ? !comparison.has(row) : undefined)) },
+  { id: reference.label, label: reference.title ?? 'Image analysée', versus: target ? 'Après corrections' : undefined, rows: flatten(reference).map((row) => clientRow(row, comparison ? !comparison.has(row) : undefined, afterOf.get(`${row.pkg.type} ${row.pkg.name} ${row.pkg.version}`))) },
   ...(target ? [{ id: target.label, label: target.title ?? 'Après corrections', rows: flatten(target).map((row) => clientRow(row)) }] : []),
   ...(source ? [{ id: source.label, label: source.title ?? 'Code source', rows: flatten(source).map((row) => clientRow(row)) }] : []),
 ];
@@ -233,7 +255,7 @@ function detailSection(): string {
   const usedOrigins = [...new Set(images.flatMap((image) => image.rows.map((row) => row.origin)))];
   return section('detail', 'Détail', 'Détail', 'Toutes les vulnérabilités', 'Triées par sévérité, puis failles exploitées et probabilité d’exploitation (EPSS). Chaque identifiant ouvre la fiche Docker Scout.', `
 <div class="controls"><div class="seg" id="images" role="group" aria-label="Scan affiché">${images.map((image, index) => `<button type="button" data-index="${index}" aria-pressed="${index === 0}">${esc(image.label)}</button>`).join('')}</div><div class="filters" id="sev-filters" role="group" aria-label="Sévérités affichées"></div></div>
-<div class="controls"><select id="origin-filter" aria-label="Origine"><option value="">Toutes les origines</option>${usedOrigins.map((origin) => `<option value="${origin}">${esc(ORIGINS[origin])}</option>`).join('')}</select><select id="fix-filter" aria-label="Correctif"><option value="">Avec ou sans correctif</option><option value="fixed">Corrigeables</option><option value="unfixed">Sans correctif</option><option value="kev">Exploitées (KEV)</option></select><input type="search" id="search" placeholder="Filtrer par CVE ou paquet" aria-label="Filtrer par CVE ou paquet"><span class="count" id="count" aria-live="polite"></span></div>
+<div class="controls"><select id="origin-filter" aria-label="Origine"><option value="">Toutes les origines</option>${usedOrigins.map((origin) => `<option value="${origin}">${esc(ORIGINS[origin])}</option>`).join('')}</select><select id="fix-filter" aria-label="Correctif"><option value="">Avec ou sans correctif</option><option value="fixed">Corrigeables</option><option value="unfixed">Sans correctif</option><option value="kev">Exploitées (KEV)</option></select>${comparison ? '<select id="state-filter" aria-label="Après corrections"><option value="">Corrigées ou non</option><option value="gone">Corrigées</option><option value="left">Restantes</option></select>' : ''}<input type="search" id="search" placeholder="Filtrer par CVE ou paquet" aria-label="Filtrer par CVE ou paquet"><span class="count" id="count" aria-live="polite"></span></div>
 <div class="table-box tall" tabindex="0" role="region" aria-label="Vulnérabilités"><table class="vulns"><thead><tr><th>Sévérité</th><th>Identifiant</th><th>Paquet</th><th>Corrigé en</th><th>CVSS</th><th>EPSS</th><th>Origine</th><th id="versus-head"></th></tr></thead><tbody id="vuln-rows"></tbody></table></div>`);
 }
 
@@ -252,7 +274,7 @@ function commandsSection(): string {
 // Page
 // ---------------------------------------------------------------------------
 const body = [
-  scoutSection(), summarySection(),
+  scoutSection(), summarySection(), beforeAfterSection(),
   section('constats', 'Constats', 'Ce qu’il faut retenir', findings && (analysis.findings ?? []).length > 1 ? 'Constats' : 'Constat principal', '', findings),
   originSection(), scenarioSection(), basesSection(), dockerfileSection(),
   section('actions', 'Plan d’action', 'Plan d’action', 'Corrections, par ordre d’impact', '', analysis.actions?.length ? `<div class="actions">${analysis.actions.map(actionCard).join('')}</div>` : ''),

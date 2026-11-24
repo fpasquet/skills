@@ -12,12 +12,12 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SOURCE_NOTES, SOURCE_USES, chips, createRenderer, esc, fr, page, plural, sourceUse } from './html.mts';
+import { SOURCE_NOTES, SOURCE_USES, changeCard, changeDetails, chips, createRenderer, esc, fr, page, plural, sourceUse } from './html.mts';
 import type { Bar, SourceUse } from './html.mts';
-import { CONFIG_FILE, countBySeverity, fail, fixVersion, formatSize, loadConfig, loadScans, parseArgs, rank, run, without, worst } from './lib.mts';
-import type { Analysis, Finding, Scan, Step } from './types.mts';
+import { CONFIG_FILE, SEVERITIES, SEVERITY_LETTER, afterText, countBySeverity, diff, fail, fixVersion, fixedPackages, formatSize, loadConfig, loadScans, parseArgs, rank, readJson, run, without, worst } from './lib.mts';
+import type { Analysis, Change, Check, Finding, Scan, Step } from './types.mts';
 
-interface Overview { title: string; pageTitle: string; lead: string; artifact?: string; order?: string[]; source?: string; findings?: Finding[]; steps?: Step[] }
+interface Overview { title: string; pageTitle: string; lead: string; artifact?: string; order?: string[]; source?: string; sourceTarget?: string; checks?: Check[]; findings?: Finding[]; steps?: Step[] }
 
 const options = parseArgs(process.argv.slice(2), { flags: ['check'] });
 const [input] = options.positionals;
@@ -90,8 +90,32 @@ function sourceBody(scan: Scan): string {
   return `<div class="grid">${groups.map(({ use, counts }) => `<article class="card"><h3>${SOURCE_USES[use]}</h3><div class="big">${fr.format(counts.total)}</div>${chips(counts)}<p>${SOURCE_NOTES[use]}</p></article>`).join('')}</div>${rows ? `<div class="table-box"><table><thead><tr><th>Paquet hors des images</th><th>Failles</th><th>Corrigé en</th><th>Usage</th></tr></thead><tbody>${rows}</tbody></table></div>${outside.length > shown.length ? `<p class="lead">${plural(outside.length - shown.length, 'autre paquet', 'autres paquets')}, hors production ou de sévérité moindre.</p>` : ''}` : ''}`;
 }
 
+// Avant et après : la PR, puis chaque image et le lockfile, côte à côte.
+const change = readJson<Change | null>(join(parent, 'change.json'), null);
+const sourceTarget = overview.sourceTarget ? shared[overview.sourceTarget] : undefined;
+if (overview.sourceTarget && !sourceTarget) errors.push(`scan « ${overview.sourceTarget} » absent de ${parent}/scans`);
+function beforeAfterBody(): string {
+  const pairs: { name: string; link?: string; before: Scan; after: Scan }[] = images.flatMap(({ name, reference, target, config }) => (target ? [{ name: config.image ?? name, link: `${name}.html#avant-apres`, before: reference, after: target }] : []));
+  // Du lockfile, on ne compare que la production : le reste ne part ni dans une image ni dans un navigateur.
+  const manifests = images.flatMap(({ config }) => config.package || []);
+  const production = (scan: Scan): Scan => ({ ...scan, packages: scan.packages.filter((pkg) => !pkg.usedBy || pkg.usedBy.some((path) => !manifests.length || manifests.includes(path))) });
+  if (source && sourceTarget) pairs.push({ name: 'lockfile (production)', before: production(source), after: production(sourceTarget) });
+  if (!pairs.length) return '';
+  const cell = (scan: Scan) => {
+    const counts = countBySeverity(scan.packages.flatMap((pkg) => pkg.vulnerabilities));
+    return `<strong class="tnum">${fr.format(counts.total)}</strong> <span class="no">${SEVERITIES.slice(0, 2).map((severity) => `${counts[severity]} ${SEVERITY_LETTER[severity]}`).join(' · ')}</span>`;
+  };
+  const rows = pairs.map(({ name, link, before, after }) => {
+    const result = diff(before, after);
+    const fixed = fixedPackages(before, after).slice(0, 5).map((item) => `<span class="mono">${esc(item.name)}</span> ${esc(item.before)} → ${esc(afterText(item) ?? '?')}`).join('<br>');
+    return `<tr><td class="mono">${esc(name)}</td><td>${cell(before)}</td><td>${cell(after)}</td><td class="tnum"><span class="yes">−${fr.format(result.removed.length)}</span>${result.added.length ? ` <span class="up">+${fr.format(result.added.length)}</span>` : ''}</td><td>${fixed}${link ? `<br><a href="${esc(link)}">Tout voir</a>` : ''}</td></tr>`;
+  }).join('');
+  return `${change ? changeCard(change) : ''}<div class="table-box"><table><thead><tr><th></th><th>Avant</th><th>Après</th><th>Écart</th><th>Principaux paquets</th></tr></thead><tbody>${rows}</tbody></table></div>${changeDetails(change, overview.checks ?? [], () => true, inline)}`;
+}
+
 const body = [
   section('images', 'Images', 'Vue d’ensemble', `${plural(total.total, 'vulnérabilité')} sur ${plural(images.length, 'image')}, dont ${plural(total.CRITICAL, 'critique')}`, 'Chaque image a son rapport complet : origine des failles, plan d’action, build, CI et tableau détaillé.', `<div class="grid">${cards}</div>${chart}`),
+  section('avant-apres', 'Avant / après', 'Effet mesuré', change?.pr ? `Avant et après : PR #${change.pr.number}` : 'Avant et après les corrections', '', beforeAfterBody()),
   section('constats', 'Constats', 'Ce qu’il faut retenir', 'Constats communs', '', (overview.findings ?? []).map(finding).join('')),
   section('actions', 'Corrections', 'Plan d’action', 'Corrections par image', '', actions ? `<div class="table-box"><table><thead><tr><th>Image</th><th>Correction</th><th>Failles</th><th>Statut</th><th></th></tr></thead><tbody>${actions}</tbody></table></div>` : ''),
   section('source', 'Code source', 'Dépendances et CI', 'Le code source, au-delà des images', source ? `${plural(source.counts.total, 'faille')} dans les lockfiles et les workflows, sur ${plural(source.packageCount, 'paquet')}.` : '', source ? sourceBody(source) : ''),

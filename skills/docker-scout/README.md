@@ -6,7 +6,8 @@ Le rapport HTML, publié comme artifact ou ouvert comme un simple fichier, conti
 
 - la synthèse : failles par sévérité, corrigeables, exploitées (catalogue CISA KEV), politiques et health score ;
 - l'origine de chaque faille : image de base, outils qu'elle embarque, paquets ajoutés par le Dockerfile, dépendances de l'application, et l'instruction du Dockerfile en cause ;
-- les scénarios avant et après, mesurés par de nouveaux builds ou estimés ;
+- l'avant et l'après de la PR de corrections : chiffres, version de chaque paquet avant et après, failles corrigées, ce qui reste et pourquoi, diff des Dockerfiles et des manifestes, état de la PR et contrôles passés ;
+- les scénarios intermédiaires, mesurés par de nouveaux builds ou estimés ;
 - les images de base comparées, et l'audit du Dockerfile ;
 - le plan d'action, avec les fichiers à changer et les commandes ;
 - la commande de build de production, le workflow GitHub Actions et les secrets à créer ;
@@ -33,6 +34,7 @@ Il faut Docker avec Buildx, le plugin Docker Scout, un compte Docker Hub gratuit
 
 - « Audite l'image de production de ce projet avec Docker Scout et fais-moi un rapport. »
 - « Corrige les CVE critiques et hautes de mon image, en vérifiant qu'elle démarre toujours. »
+- « Ouvre une issue et une PR avec les corrections, et montre l'avant et l'après dans le rapport. »
 - « Quelle image de base choisir pour réduire les failles ? »
 - « Mets Docker Scout dans la CI GitHub Actions et bloque les nouvelles failles. »
 - « Nos paquets viennent d'un registre npm privé : adapte le build et la CI. »
@@ -70,11 +72,12 @@ Les corrections du Dockerfile et des dépendances se font par lots, avec votre a
 | `scripts/init.mts` | Espace de travail de l'audit |
 | `scripts/scan.mts` | Analyse d'une image ou du code source, avec l'origine de chaque paquet |
 | `scripts/list.mts`, `compare.mts`, `bases.mts` | Lecture filtrée, écart entre deux scans, images de base comparées |
+| `scripts/change.mts` | Relevé de la branche ou de la PR de corrections, pour l'avant et l'après |
 | `scripts/vex.mts` | Exceptions OpenVEX |
 | `scripts/ci.mts` | Workflow GitHub Actions et Dependabot |
 | `scripts/report.mts`, `overview.mts` | Rapport HTML d'une image, vue d'ensemble de plusieurs |
 | `scripts/lockfile.mts` | Dépendances de production d'un lockfile pnpm ou npm |
-| `references/` | Build et registres, corrections par écosystème, GitHub Actions, rapport |
+| `references/` | Build et registres, corrections par écosystème, livraison (issue, PR), GitHub Actions, rapport |
 | `templates/` | Style et interactions du rapport, mémoire, analyse, versions des actions |
 
 Les scripts sont en TypeScript, sans compilation ni dépendance : Node retire les types à l'exécution.

@@ -10,6 +10,8 @@
  "originNotes": {},
  "findings": [],
  "actions": [],
+ "checks": [],
+ "remaining": {},
  "dockerfile": { "intro": "", "fixed": [], "notes": {} },
  "build": [],
  "ci": { "intro": "", "workflow": ".github/workflows/docker-scout.yml", "steps": [], "secrets": [] }

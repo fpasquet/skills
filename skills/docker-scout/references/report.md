@@ -5,6 +5,7 @@
 | Section | Vient de |
 |---|---|
 | Synthèse, politiques, origine, instructions, paquets | scan `reference`, et `target` pour l'après |
+| Avant / après | `target`, `change.json` (`change.mts`), `checks`, `remaining` |
 | Constats | `findings` |
 | Scénarios | `scenarios` |
 | Images de base | `bases.json` |
@@ -61,6 +62,8 @@
 }
 ```
 
+- `checks` : `[{ "name": "Tests unitaires", "status": "pass", "note": "424 passés" }]`, `status` parmi `pass`, `todo`, `fail`. `remaining` : `{ "musl": "Correctif absent d’Alpine 3.24" }`, par nom de paquet ; sans raison écrite, le rapport donne le correctif connu ou son absence.
+- La partie « Avant / après » compare `reference` et `target` : chiffres, versions d'avant et d'après de chaque paquet corrigé (ou « retiré »), ce qui reste, failles apparues, diff. Il faut deux scans faits avec la même version du skill (inventaire des paquets) ; les refaire sinon.
 - `level` d'un constat : `error`, `warning`, `info`, `ok`. `status` d'une action : `todo`, `done`, `accepted`.
 - `gain` avec `to` est **mesuré** (deux scans), avec `without` **estimé** (scan privé d'origines, de paquets ou de `cves`). Une estimation par origine ignore les paquets présents aussi ailleurs dans l'image.
 - Textes : `` `code` ``, `**gras**`, liens `[texte](https://…)`, listes `-`, paragraphes séparés par une ligne vide.
@@ -83,7 +86,8 @@
 ```json
 {
  "title": "Audit Docker Scout du projet", "pageTitle": "Audit Scout projet", "lead": "…",
- "artifact": "", "order": ["api", "web"], "source": "source",
+ "artifact": "", "order": ["api", "web"], "source": "source", "sourceTarget": "source-pr-154",
+ "checks": [{ "name": "Scénarios de bout en bout", "status": "todo", "note": "CI" }],
  "findings": [{ "title": "…", "level": "warning", "body": "L’API passe de {{api:current.total}} à {{api:final.total}} failles." }],
  "steps": [{ "title": "Analyser dans le job existant", "body": "…", "code": [{ "title": ".github/workflows/ci.yml", "text": "…" }] }]
 }

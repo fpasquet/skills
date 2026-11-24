@@ -4,7 +4,7 @@
  */
 interface ClientRow {
   id: string; sev: 'C' | 'H' | 'M' | 'L' | 'U'; pkg: string; ver: string; fix: string | null; origin: string; url?: string; score: number | null;
-  epss: number | null; kev?: boolean; sum: string; gone?: boolean;
+  epss: number | null; kev?: boolean; sum: string; gone?: boolean; after?: string;
 }
 interface ClientData {
   images: { id: string; label: string; rows: ClientRow[]; versus?: string }[];
@@ -38,7 +38,7 @@ interface ClientData {
   const source = document.getElementById('data');
   if (!source) return;
   const data = JSON.parse(source.textContent ?? '{}') as ClientData;
-  const state = { image: 0, hidden: [] as string[], origin: '', fix: '', query: '' };
+  const state = { image: 0, hidden: [] as string[], origin: '', fix: '', query: '', outcome: '' };
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(STORE) ?? '[]');
     if (Array.isArray(saved)) state.hidden = saved.filter((key): key is string => ORDER.includes(String(key)));
@@ -50,6 +50,7 @@ interface ClientData {
     const rows = image.rows.filter((row) => !state.hidden.includes(row.sev)
       && (!state.origin || row.origin === state.origin)
       && (!state.fix || (state.fix === 'kev' ? row.kev : state.fix === 'fixed' ? row.fix : !row.fix))
+      && (!state.outcome || !image.versus || row.gone === (state.outcome === 'gone'))
       && (!query || `${row.id} ${row.pkg} ${row.sum}`.toLowerCase().includes(query)))
       .sort((a, b) => ORDER.indexOf(a.sev) - ORDER.indexOf(b.sev) || Number(Boolean(b.kev)) - Number(Boolean(a.kev)) || (b.epss ?? 0) - (a.epss ?? 0) || a.pkg.localeCompare(b.pkg));
     const head = byId('versus-head');
@@ -75,7 +76,7 @@ interface ClientData {
       const score = el('td', 'tnum', row.score === null ? '–' : row.score.toFixed(1));
       const epss = el('td', 'tnum', row.epss === null ? '–' : `${(row.epss * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`);
       tr.append(severity, id, el('td', 'mono', `${row.pkg} ${row.ver}`), el('td', 'mono', row.fix ?? 'pas de correctif'), score, epss, el('td', '', data.origins[row.origin] ?? row.origin));
-      if (image.versus) tr.append(el('td', row.gone ? 'yes' : 'no', row.gone ? '✓ corrigée' : 'reste'));
+      if (image.versus) tr.append(el('td', row.gone ? 'yes' : 'no', row.gone ? `✓ ${row.after === 'retiré' ? 'retiré' : row.after ? `corrigée (${row.after})` : 'corrigée'}` : 'reste'));
       body.append(tr);
     }
     if (!rows.length) {
@@ -112,6 +113,7 @@ interface ClientData {
   }
   byId<HTMLSelectElement>('origin-filter').addEventListener('change', (event) => { state.origin = (event.target as HTMLSelectElement).value; render(); });
   byId<HTMLSelectElement>('fix-filter').addEventListener('change', (event) => { state.fix = (event.target as HTMLSelectElement).value; render(); });
+  document.getElementById('state-filter')?.addEventListener('change', (event) => { state.outcome = (event.target as HTMLSelectElement).value; render(); });
   byId<HTMLInputElement>('search').addEventListener('input', (event) => { state.query = (event.target as HTMLInputElement).value; render(); });
   render();
 })();

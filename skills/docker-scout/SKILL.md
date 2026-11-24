@@ -14,7 +14,7 @@ compatibility: >
   exécutés sans compilation). Accès réseau aux registres.
 metadata:
   author: fpasquet
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 # Audit d'image avec Docker Scout : failles, corrections, CI
@@ -24,8 +24,9 @@ Ce skill mène l'audit de sécurité d'une image Docker, de la première analyse
 1. **construire** l'image de production telle qu'elle part en production ;
 2. **analyser** l'image, le code source et des images de base candidates avec Docker Scout ;
 3. **corriger** les failles, lot par lot, en mesurant chaque gain par un nouveau build ;
-4. **empêcher le retour** des failles par un workflow GitHub Actions et des mises à jour automatiques ;
-5. **restituer** le tout dans un rapport HTML publié comme artifact.
+4. **livrer** les corrections dans une issue et une PR, avec l'avant et l'après mesurés ;
+5. **empêcher le retour** des failles par un workflow GitHub Actions et des mises à jour automatiques ;
+6. **restituer** le tout dans un rapport HTML publié comme artifact.
 
 Trois demandes possibles, à reconnaître à l'étape 0 : **audit seul** (rapport, sans toucher au code du projet ; les corrections se mesurent quand même, sur une copie), **audit et corrections** (défaut si la personne veut corriger), **CI seule** (étapes 0, 1 et 6).
 
@@ -54,6 +55,7 @@ Un scan compte des centaines de failles, et un SBOM plusieurs mégaoctets. Règl
 |---|---|
 | Build, secrets, registres privés, miroirs (étape 1) | `references/build.md` |
 | Corrections et exceptions (étapes 4 et 5) | `references/remediation.md` |
+| Issue, PR, avant et après (étape 4) | `references/livraison.md` |
 | GitHub Actions, Dependabot, politique de blocage (étape 6) | `references/ci-github.md` |
 | Rapport et publication (étape 7) | `references/report.md` |
 
@@ -153,7 +155,14 @@ Pour chaque lot :
    Une faille **apparue** se regarde toujours : régression, ou paquet nouveau de la base.
 5. noter le lot dans `SCOUT.md` et dans `analysis.json` (`status: "done"`, `gain` mesuré).
 
-Le dernier scan s'appelle `final` : c'est la cible du rapport. Relancer `detect.mts --out` après les modifications du Dockerfile, et lister dans `analysis.json` → `dockerfile.fixed` les règles corrigées si on veut les garder visibles.
+Le dernier scan est la cible du rapport (`target`) : `final`, ou `pr-<numéro>` construit **depuis le commit de la PR**. Relancer `detect.mts --out` après les modifications du Dockerfile, et lister dans `analysis.json` → `dockerfile.fixed` les règles corrigées si on veut les garder visibles.
+
+**Livrer**, quand la personne le demande (issue, PR) : `references/livraison.md`. Le relevé de la PR alimente la partie « Avant / après » du rapport, à relancer quand la PR avance :
+
+```sh
+node <skill>/scripts/change.mts <dir> --base origin/main --head <branche> --pr 154    # <dir> : .docker-scout si la PR corrige plusieurs images
+node <skill>/scripts/compare.mts <dir>:current <dir>:pr-154 --markdown                 # tableaux pour l'issue et la PR
+```
 
 ## Étape 5 · Exceptions
 
@@ -187,7 +196,7 @@ Recommander `app` en général, `fixable` si l'équipe maîtrise aussi sa base, 
 
 ## Étape 7 · Rapport et publication
 
-1. Remplir `<dir>/analysis.json` (format et conseils : `references/report.md`) : constats, scénarios, plan d'action, secrets, étapes de mise en place de la CI.
+1. Remplir `<dir>/analysis.json` (format et conseils : `references/report.md`) : constats, scénarios, plan d'action, contrôles passés ou à faire (`checks`), raison de ce qui reste (`remaining`), secrets, étapes de mise en place de la CI. **Après des corrections, `target` est toujours renseigné** : c'est lui qui donne l'avant et l'après.
 2. `node <skill>/scripts/report.mts <dir> --check`, corriger erreurs et avertissements, puis `node <skill>/scripts/report.mts <dir>`. **Plusieurs images** : remplir aussi `.docker-scout/overview.json` (constats et mise en place communs), puis `overview.mts .docker-scout --check` et `overview.mts .docker-scout`, qui construit toutes les pages.
 3. Contrôler la page (navigateur ou capture) : sommaire, graphiques, tableau filtrable, mobile.
 4. Publier `<dir>/report.html` avec l'outil Artifact (`url` si `scout.json` → `artifact` en a une), noter l'URL dans `scout.json` et `SCOUT.md`. Plusieurs images : `site/index.html`, avec le `root` et les `files` affichés par `overview.mts`, et l'URL dans `overview.json`. Sans outil Artifact, le fichier est autonome : il s'ouvre et s'envoie tel quel.
@@ -196,6 +205,7 @@ Recommander `app` en général, `fixable` si l'équipe maîtrise aussi sa base, 
 ## Reprise
 
 - **Nouvel audit périodique** : `--pull`, nouveau scan `current-AAAAMM`, `compare.mts` avec le `final` précédent, relecture des exceptions (`vex.mts <dir> list`), mise à jour du même artifact.
+- **PR fusionnée** : reconstruire depuis la branche principale (`merged`), vérifier que le total est celui de la PR, relancer `change.mts` (état « Fusionnée ») et republier. Ce scan devient la référence du prochain audit.
 - **Alerte de la CI** : reproduire en local avec la même étiquette, `list.mts --fixable`, corriger par l'étape 4.
 - **Scans absents** (ils ne sont pas dans git) : refaire `current` et `final` avant de toucher au rapport.
 
@@ -206,5 +216,6 @@ Recommander `app` en général, `fixable` si l'équipe maîtrise aussi sa base, 
 - [ ] `compare.mts current final` lu, failles apparues expliquées ;
 - [ ] aucune valeur de secret dans les fichiers ni dans l'historique de l'image (`docker history --no-trunc`) ;
 - [ ] `scans/` et `report.html` hors de git, `.docker-scout` dans `.dockerignore` ;
+- [ ] rapport avec l'avant et l'après, état de la PR et contrôles à jour ;
 - [ ] workflow validé par actionlint, secrets listés à la personne ;
 - [ ] `report.mts --check` sans erreur, artifact à jour, `SCOUT.md` à jour.

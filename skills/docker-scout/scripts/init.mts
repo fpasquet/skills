@@ -58,14 +58,14 @@ const put = (name: string, write: (path: string) => void) => {
   console.log(`écrit   ${relative(process.cwd(), path)}`);
 };
 put(CONFIG_FILE, (path) => writeJson(path, config));
-put('.gitignore', (path) => writeFileSync(path, 'scans/\nreport.html\ndetect.json\nbases.json\n'));
+put('.gitignore', (path) => writeFileSync(path, 'scans/\nreport.html\ndetect.json\nbases.json\nchange.json\n'));
 put('analysis.json', (path) => copyFileSync(join(templates, 'analysis.json'), path));
 put('SCOUT.md', (path) => writeFileSync(path, readFileSync(join(templates, 'memory.md'), 'utf8')
   .replaceAll('{{IMAGE}}', image).replaceAll('{{BUILD}}', buildCommand(config, 'scout'))));
 
 // Plusieurs images : la vue d'ensemble et l'analyse du code source, communes, vivent dans le dossier parent.
 if (basename(dirname(dir)) === '.docker-scout') {
-  put('../.gitignore', (path) => writeFileSync(path, 'scans/\nsite/\n'));
+  put('../.gitignore', (path) => writeFileSync(path, 'scans/\nsite/\nchange.json\n'));
   put('../overview.json', (path) => copyFileSync(join(templates, 'overview.json'), path));
 }
 

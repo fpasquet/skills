@@ -53,6 +53,8 @@ export interface ScanImage { digest?: string; platform: string; size?: number; d
 export interface Scan extends Summary {
   label: string; title?: string; ref: string; kind: 'image' | 'fs'; scannedAt: string; scout: string; vex?: string; blindSpot?: string;
   image: ScanImage | null; base: Base | null; packageCount: number; layers: Layer[]; health: Health | null; policies: Policy[] | null; packages: Package[];
+  /** Tous les paquets, sains compris : [type, nom, version, origine]. Donne la version d'après d'un paquet corrigé. */
+  inventory?: [string, string, string, Origin][];
 }
 /** Ce qu'une estimation retire d'un scan. */
 export interface Exclusion { origins?: Origin[]; packages?: string[]; cves?: string[] }
@@ -80,11 +82,19 @@ export interface Gain { from: string; to?: string; without?: Exclusion }
 export interface ActionPackage { name: string; version?: string; by?: string; fix: string }
 export interface Finding { title: string; level?: IssueLevel | 'ok'; body: string; table?: Table }
 export interface Action { title: string; status?: 'todo' | 'done' | 'accepted'; body: string; gain?: Gain; packages?: ActionPackage[]; table?: Table; code?: Code[] }
+/** Ce qui a été contrôlé sur les corrections, avant de les dire livrables. */
+export interface Check { name: string; status: 'pass' | 'todo' | 'fail'; note?: string }
+/** change.json, écrit par change.mts : la branche ou la PR qui porte les corrections. */
+export interface ChangeFile { path: string; added: number; removed: number; patch?: string }
+export interface PullRequest { number: number; title: string; url: string; state: 'OPEN' | 'CLOSED' | 'MERGED'; isDraft: boolean; checks: { name: string; status: string }[] }
+export interface Change { base: string; head: string; headCommit: string; collectedAt: string; commits: { hash: string; subject: string }[]; files: ChangeFile[]; pr: PullRequest | null }
 export interface Step { title: string; body?: string; code?: Code[] }
 export interface SecretNote { name: string; kind: 'secret' | 'variable'; why: string }
 export interface Analysis {
   title: string; pageTitle: string; lead: string; context?: [string, string][]; reference: string; target?: string; source?: string;
   scenarios?: Scenario[]; originNotes?: Partial<Record<Origin, string>>; findings?: Finding[]; actions?: Action[];
+  /** Contrôles passés sur les corrections, et raisons de ce qui reste (nom de paquet → raison). */
+  checks?: Check[]; remaining?: Record<string, string>;
   dockerfile?: { intro?: string; fixed?: string[]; notes?: Record<string, string> };
   build?: Step[]; ci?: { intro?: string; workflow?: string; steps?: Step[]; secrets?: SecretNote[] };
 }
