@@ -1,5 +1,14 @@
 # Journal des versions
 
+## 1.3.0 · 24/11/2026
+
+- `ci.mts` : `--hub-login` et `--hub-input` (connexion à Docker Hub par une action du dépôt, quand le jeton vit hors des
+  secrets GitHub), `--when` (analyse éteinte jusqu'au dépôt du jeton), `--no-comment`.
+- `change.mts` garde aussi le diff des actions composites (`.github/actions/`).
+- Méthode : jouer la commande de blocage sur l'image avant d'écrire la CI ; blocage du lockfile limité aux dépendances de
+  production des applications ; migration de données exigée par une montée, en deux temps.
+- Éprouvé en CI réelle : étapes ajoutées à un job existant, tous les contrôles de la PR au vert.
+
 ## 1.2.0 · 24/11/2026
 
 - **Avant et après** dans le rapport et la vue d'ensemble : chiffres, politiques, taille et image de base des deux

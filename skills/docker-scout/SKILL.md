@@ -14,7 +14,7 @@ compatibility: >
   exécutés sans compilation). Accès réseau aux registres.
 metadata:
   author: fpasquet
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Audit d'image avec Docker Scout : failles, corrections, CI
@@ -177,7 +177,7 @@ La justification se **prouve** (code lu, module absent, entrée non contrôlable
 
 ## Étape 6 · GitHub Actions
 
-Lire `references/ci-github.md`, choisir la politique avec **AskUserQuestion**, puis :
+Lire `references/ci-github.md`. **Jouer d'abord la commande de blocage sur l'image qui sera fusionnée** : si elle échoue, le dire avant d'écrire la CI (corriger, exception, ou rapport seul). Choisir avec **AskUserQuestion** la politique, le seuil (`critical`, ou `critical,high`), l'emplacement du jeton et le périmètre (PR, analyse planifiée), puis :
 
 ```sh
 node <skill>/scripts/ci.mts <dir> --gate app [--sarif] [--source] [--secret npmrc=NPMRC] [--login ghcr] [--push ghcr.io/acme/api]

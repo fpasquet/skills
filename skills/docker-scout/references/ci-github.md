@@ -31,12 +31,16 @@ Un workflow construit déjà l'image (`detect.mts` le dit) : ne pas construire d
 
 `--source` analyse les fichiers suivis par git, exportés à part : un `fs://.` direct lit aussi les dépendances installées par une étape précédente. Le lockfile de pnpm 11 et plus a deux documents YAML, dont Scout ne lit que le premier (quelques paquets de pnpm lui-même) : l'étape d'export ne garde que le dernier. Un contrôle : le nombre de paquets indexés, qui doit être celui du lockfile.
 
+Pour **bloquer** sur le lockfile, Scout convient mal : il ne distingue pas la production de l'outillage, qui a toujours quelques critiques. `pnpm audit --prod --json` (ou `npm audit --omit=dev --json`) donne le chemin de chaque dépendance : garder les avis `critical` et `high`, corrigés (`patched_versions`), dont un chemin part d'une application (`apps__web>…` chez pnpm). L'audit sort en erreur à la moindre faille : ignorer son code, vérifier qu'il a rendu un rapport, et laisser le filtre décider.
+
 ## Politique de blocage
 
 - **`fixable`** : `cves --only-severity critical,high --only-fixed --exit-code`. Seules les failles qu'on peut corriger bloquent.
 - **`app`** : la même, avec `--ignore-base`. L'équipe n'est bloquée que par ce qu'elle choisit (dépendances, paquets du Dockerfile). Scout reconnaît l'image de base à ses couches : vérifier en local que la commande écarte bien ses failles.
 - **`new`** : construit aussi la branche de base et compare (`compare --exit-on vulnerability`). Scout échoue dès qu'une faille est **ajoutée**, même si le bilan est meilleur : une montée d'image de base qui retire cinquante failles et en ajoute une sera bloquée. Dans ce cas, corriger la faille ajoutée, l'écarter (VEX), ou fusionner en connaissance de cause. Le second build allonge le job.
 - **`report`** : première semaine, ou dépôt sans équipe pour traiter.
+
+Le seuil se choisit aussi : `--severity critical` pour commencer, `critical,high` ensuite. Dans les deux cas, jouer la commande sur l'image actuelle avant de l'écrire.
 
 Passer de `report` à `new`, puis à `fixable` quand la dette est soldée. Rendre le job obligatoire dans la protection de branche est une décision de la personne.
 
@@ -51,7 +55,10 @@ gh secret set DOCKERHUB_TOKEN --app dependabot   # les PR de Dependabot ont leur
 gh secret set NPMRC < ~/.npmrc                   # un .npmrc réduit au registre utile, avec un jeton en lecture
 ```
 
-- Le projet a sa propre règle (Secret Manager, Vault, identités fédérées) : la suivre, en reprenant le modèle d'un workflow qui lit déjà un secret. Masquer la valeur lue (`::add-mask::`) avant de s'en servir.
+- Le projet a sa propre règle (Secret Manager, Vault, identités fédérées) : la suivre, en reprenant le modèle d'un workflow qui lit déjà un secret. La connexion va dans une action composite du dépôt, appelée par tous les workflows (`--hub-login ./.github/actions/docker-hub-login --hub-input cle=valeur`). Elle masque la valeur (`::add-mask::`) avant de s'en servir, et échoue avec un message qui nomme le secret.
+- **Activation** : un secret déclaré en Terraform n'existe qu'après la fusion, et une PR ne peut pas s'analyser avec un jeton absent. `--when "vars.DOCKER_SCOUT_ENABLED == 'true'"` laisse l'analyse éteinte jusqu'à ce que la personne dépose le jeton et pose la variable ; ensuite, un jeton illisible fait échouer le job. Ne pas rendre l'analyse « tolérante » : elle se tairait le jour où le jeton expire.
+- **Dependabot** n'a pas les secrets du dépôt : exclure ses PR de l'analyse (`github.event.pull_request.user.login != 'dependabot[bot]'`), ou lui donner ses propres secrets. Les analyser à l'intégration et chaque semaine.
+- `--no-comment` : pas de commentaire de PR, donc pas de `pull-requests: write` ; le détail reste dans le résumé du job.
 - Jeton Docker Hub : un compte de service, en lecture seule. Scout ne fait pas payer l'analyse locale ; l'offre gratuite limite le nombre de dépôts suivis sur scout.docker.com, que ce workflow n'utilise pas.
 - Les secrets de build passent par `secret-envs` : la valeur reste dans l'environnement de l'étape, et un `.npmrc` de plusieurs lignes passe sans échappement.
 - AWS et Google Cloud : identité fédérée (OIDC), sans clé enregistrée.

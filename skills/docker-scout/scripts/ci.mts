@@ -17,6 +17,10 @@
  *   --secret npmrc=NPMRC        secret de build → secret GitHub (répétable)
  *   --build-arg MIRROR=         argument de build (répétable ; défaut : ceux de scout.json)
  *   --login <registre>          connexion supplémentaire : ghcr, dhi, ecr:<hôte>, gar:<hôte>, other:<hôte> (répétable)
+ *   --hub-login <action>        connexion à Docker Hub par une action du dépôt (./.github/actions/…), quand le jeton vit hors des
+ *                               secrets GitHub ; --hub-input clé=valeur (répétable)
+ *   --when <expression>         condition des étapes Scout, ex. "vars.DOCKER_SCOUT_ENABLED == 'true'" (jeton pas encore en place)
+ *   --no-comment                pas de commentaire de PR, donc sans pull-requests: write
  *   --push <image>              publie l'image après l'analyse, sur la branche principale, avec SBOM et provenance
  *   --branch main --cron "17 5 * * 1" --runner ubuntu-24.04 --workflow .github/workflows/docker-scout.yml
  *   --no-dependabot             ne pas proposer Dependabot
@@ -32,7 +36,7 @@ import { fail, loadConfig, parseArgs, readJson, writeJson } from './lib.mts';
 import type { Analysis, SecretNote } from './types.mts';
 
 const options = parseArgs(process.argv.slice(2), {
-  flags: ['sarif', 'source', 'issue', 'stdout', 'steps', 'force', 'no-dependabot'], multi: ['secret', 'build-arg', 'login'],
+  flags: ['sarif', 'source', 'issue', 'stdout', 'steps', 'force', 'no-dependabot', 'no-comment'], multi: ['secret', 'build-arg', 'login', 'hub-input'],
 });
 const [dir] = options.positionals;
 const config = dir ? loadConfig(dir) : {};
@@ -52,7 +56,8 @@ const notes: SecretNote[] = [
   { name: 'DOCKERHUB_USERNAME', kind: 'variable', why: 'Compte Docker Hub utilisé par Docker Scout.' },
   { name: 'DOCKERHUB_TOKEN', kind: 'secret', why: 'Jeton d’accès personnel Docker Hub (hub.docker.com → Account settings → Personal access tokens), droits de lecture.' },
 ];
-const permissions = new Map<string, string>([['contents', 'read'], ['pull-requests', 'write']]);
+const permissions = new Map<string, string>([['contents', 'read']]);
+if (!flags['no-comment']) permissions.set('pull-requests', 'write');
 if (flags.sarif) permissions.set('security-events', 'write');
 if (flags.issue) permissions.set('issues', 'write');
 
@@ -69,7 +74,11 @@ const step = (name: string, action: string, inputs: Record<string, string | stri
   `- name: ${name}`, ...extra.map((line) => `  ${line}`), `  uses: ${uses(action)}`,
   ...(Object.keys(inputs).length ? ['  with:', ...Object.entries(inputs).flatMap(([key, value]) => (Array.isArray(value) ? [`    ${key}: |`, ...value.map((line) => `      ${line}`)] : [`    ${key}: ${value}`]))] : []),
 ];
-const hubLogin = step('Log in to Docker Hub (Docker Scout)', 'docker/login-action', { username: '${{ vars.DOCKERHUB_USERNAME }}', password: '${{ secrets.DOCKERHUB_TOKEN }}' });
+if (values['hub-login']) notes.splice(0, notes.length);
+const hubLogin = values['hub-login'] ? [
+  '- name: Log in to Docker Hub (Docker Scout)', `  uses: ${values['hub-login']}`,
+  ...(lists['hub-input']?.length ? ['  with:', ...lists['hub-input'].map((item) => `    ${item.split('=')[0]}: ${item.split('=').slice(1).join('=')}`)] : []),
+] : step('Log in to Docker Hub (Docker Scout)', 'docker/login-action', { username: '${{ vars.DOCKERHUB_USERNAME }}', password: '${{ secrets.DOCKERHUB_TOKEN }}' });
 const loginSteps = logins.flatMap((login) => {
   const [kind, host = ''] = [login.split(':')[0], login.split(':').slice(1).join(':')];
   if (kind === 'ghcr') {
@@ -143,7 +152,7 @@ const steps: string[][] = [
   step('Set up Buildx', 'docker/setup-buildx-action'),
   hubLogin, loginSteps,
   buildStep('Build the production image', { tags: image }),
-  step('Overview', 'docker/scout-action', { command: 'quickview', image: `local://${image}`, 'github-token': '${{ github.token }}', 'write-comment': `\${{ ${isPullRequest} }}` }),
+  step('Overview', 'docker/scout-action', { command: 'quickview', image: `local://${image}`, ...(flags['no-comment'] ? { 'write-comment': 'false' } : { 'github-token': '${{ github.token }}', 'write-comment': `\${{ ${isPullRequest} }}` }) }),
   step('List fixable vulnerabilities', 'docker/scout-action', {
     command: 'cves', image: `local://${image}`, 'only-severities': severities, 'only-fixed': 'true', ...vex, 'write-comment': 'false',
   }),
@@ -182,6 +191,15 @@ if (flags.issue) {
       gh issue create --label docker-scout --title "Docker Scout: fixable vulnerabilities in ${config.image}" --body "Scheduled scan failed: $RUN_URL"
     fi`.split('\n'));
 }
+
+// Condition d'activation : elle porte sur la connexion et sur toutes les étapes Scout, pas sur le build.
+const guard = (lines: string[]): string[] => {
+  if (!values.when || !lines.length) return lines;
+  const index = lines.findIndex((line) => /^ {2}if: /.test(line));
+  if (index === -1) return [lines[0], `  if: ${values.when}`, ...lines.slice(1)];
+  return lines.map((line, position) => (position === index ? `  if: ${values.when} && (${line.slice(6)})` : line));
+};
+for (const [index, lines] of steps.entries()) if (lines === hubLogin || index > 4) steps[index] = guard(lines);
 
 const publishPermissions = new Map(permissions);
 publishPermissions.delete('pull-requests');
@@ -260,7 +278,7 @@ ${directories.size > 1 ? `    directories:\n${[...directories].map((item) => `  
 
 if (flags.steps) {
   // Sans le checkout, Buildx, les connexions de build ni le build : le job existant les a déjà.
-  const scoutSteps = [hubLogin, ...steps.slice(5)];
+  const scoutSteps = [steps[2], ...steps.slice(5)];
   console.log(`# permissions du job : ${permissionLines(permissions).join(', ')}\n${scoutSteps.map((lines) => lines.join('\n')).join('\n\n')}`);
   process.exit(0);
 }
@@ -293,5 +311,5 @@ if (existsSync(analysisPath)) {
 }
 console.log('\nÀ créer dans le dépôt GitHub (demander à la personne, ne jamais saisir une valeur à sa place) :');
 for (const note of unique) console.log(`  ${note.kind === 'secret' ? 'secret  ' : 'variable'} ${note.name} : ${note.why}`);
-console.log(`  Les PR de Dependabot lisent d’autres secrets : gh secret set <NOM> --app dependabot pour ${unique.filter((note) => note.kind === 'secret').map((note) => note.name).join(', ')}.`);
+if (unique.some((note) => note.kind === 'secret')) console.log(`  Les PR de Dependabot lisent d’autres secrets : gh secret set <NOM> --app dependabot pour ${unique.filter((note) => note.kind === 'secret').map((note) => note.name).join(', ')}.`);
 console.log(`Vérifier le workflow : docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest ${relative(root, join(root, workflow))}`);

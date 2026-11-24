@@ -29,7 +29,7 @@ const git = (...args: string[]) => {
 const headCommit = git('rev-parse', '--short', head).trim();
 const range = `${base}...${head}`;
 
-const RELEVANT = /(^|\/)((Dockerfile|Containerfile)(\.[\w-]+)?|[\w-]+\.Dockerfile|\.dockerignore|package\.json|pnpm-workspace\.yaml|\.npmrc|\.yarnrc\.yml|requirements[\w.-]*\.txt|constraints[\w.-]*\.txt|pyproject\.toml|go\.mod|Cargo\.toml|composer\.json|Gemfile|pom\.xml|build\.gradle(\.kts)?|[\w.]+\.csproj|dependabot\.ya?ml)$|^\.github\/workflows\/|^\.vex\//i;
+const RELEVANT = /(^|\/)((Dockerfile|Containerfile)(\.[\w-]+)?|[\w-]+\.Dockerfile|\.dockerignore|package\.json|pnpm-workspace\.yaml|\.npmrc|\.yarnrc\.yml|requirements[\w.-]*\.txt|constraints[\w.-]*\.txt|pyproject\.toml|go\.mod|Cargo\.toml|composer\.json|Gemfile|pom\.xml|build\.gradle(\.kts)?|[\w.]+\.csproj|dependabot\.ya?ml)$|^\.github\/(workflows|actions)\/|^\.vex\//i;
 const MAX_LINES = 160;
 const files = git('diff', '--numstat', range).split('\n').filter(Boolean).flatMap((line): ChangeFile[] => {
   const [added, removed, path] = line.split('\t');
