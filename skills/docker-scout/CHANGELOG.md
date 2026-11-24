@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.1.1 · 24/11/2026
+
+- Méthode : une montée de version n'est donnée comme faisable qu'après toute la chaîne de vérification du projet. Sur le
+  monorepo de test, l'image corrigée démarrait, mais une montée cassait la connexion (migration de schéma dans un
+  correctif), une autre l'éditeur de texte, une troisième les histoires Storybook.
+- Version corrigée minimale pour les paquets sensibles, et conduite à tenir quand les tests échouent.
+
 ## 1.1.0 · 24/11/2026
 
 Éprouvé sur un monorepo réel (pnpm 12, API NestJS sur Debian, web Next.js sur Alpine, images construites par Cloud

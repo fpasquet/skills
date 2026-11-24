@@ -14,7 +14,7 @@ compatibility: >
   exécutés sans compilation). Accès réseau aux registres.
 metadata:
   author: fpasquet
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Audit d'image avec Docker Scout : failles, corrections, CI
@@ -142,7 +142,7 @@ Pour chaque lot :
 
 1. faire valider avec **AskUserQuestion** ce qui change le comportement : version majeure, changement de distribution, version forcée d'une dépendance transitive ;
 2. modifier, reconstruire avec `--pull` et une étiquette propre (`api:base-updated`) ;
-3. **vérifier que l'image marche** : tests du projet, démarrage du conteneur et appel de son point de santé. Une image sûre qui ne démarre pas n'est pas une correction ;
+3. **vérifier que l'application marche** : d'abord toute la chaîne de vérification du projet (types, tests unitaires, scénarios de bout en bout, histoires Storybook), puis le démarrage du conteneur et son point de santé. Une image qui démarre ne prouve rien d'une connexion ou d'un éditeur ; une montée n'entre dans le plan d'action du rapport comme **faisable** qu'une fois ces tests passés, sinon écrire « tests à passer » ;
 4. mesurer :
 
    ```sh
