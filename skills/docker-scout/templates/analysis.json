@@ -1,0 +1,16 @@
+{
+ "title": "Audit Docker Scout de l’image TODO",
+ "pageTitle": "Audit Scout TODO",
+ "lead": "TODO : image analysée, branche, cible du Dockerfile, date.",
+ "context": [],
+ "reference": "current",
+ "target": "",
+ "source": "",
+ "scenarios": [],
+ "originNotes": {},
+ "findings": [],
+ "actions": [],
+ "dockerfile": { "intro": "", "fixed": [], "notes": {} },
+ "build": [],
+ "ci": { "intro": "", "workflow": ".github/workflows/docker-scout.yml", "steps": [], "secrets": [] }
+}
