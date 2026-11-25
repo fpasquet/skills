@@ -72,6 +72,9 @@ if (basename(dirname(dir)) === '.docker-scout') {
 // Sans .dockerignore, l'espace de travail partirait dans l'image avec COPY . .
 const ignore = join(root, build.context, '.dockerignore');
 const entry = relative(resolve(root, build.context), dir).split('/')[0] ?? '';
-if (!existsSync(ignore)) console.log(`\nAttention : pas de .dockerignore. Le créer, avec au moins : ${entry}, .git, node_modules, .env*`);
+// Espace de travail hors du contexte (image d'un autre dépôt) : il ne peut pas entrer dans l'image.
+const outside = entry === '..';
+if (outside) console.log('\nEspace de travail hors du contexte de build : rien à ajouter au .dockerignore.');
+else if (!existsSync(ignore)) console.log(`\nAttention : pas de .dockerignore. Le créer, avec au moins : ${entry}, .git, node_modules, .env*`);
 else if (!readFileSync(ignore, 'utf8').split('\n').some((line) => line.trim().replace(/^\/|\/$/g, '') === entry)) console.log(`\nÀ ajouter à ${basename(ignore)} : ${entry}`);
 console.log(`\nBuild à analyser :\n  ${buildCommand(config, 'scout')}`);

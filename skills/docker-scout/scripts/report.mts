@@ -17,7 +17,7 @@ import { SOURCE_NOTES, SOURCE_USES, changeCard, changeDetails, chips, clientRow,
 import type { Bar, SourceUse } from './html.mts';
 import {
   ORIGINS, SEVERITIES, SEVERITY_LABEL, SEVERITY_LETTER, afterText, buildCommand, countBySeverity, diff, fail, fixedPackages, flatten, formatSize, loadConfig, loadScans, parseArgs,
-  rank, readJson, without, withScheme,
+  rank, hasRegistry, readJson, shortRef, without, withScheme,
 } from './lib.mts';
 import type { Action, Analysis, BaseCandidate, Change, ChangeFile, Config, Counts, Gain, Issue, Origin, Scan, Scenario, Step } from './types.mts';
 
@@ -216,7 +216,7 @@ function buildSection(): string {
   const command = buildCommand(config as Config, 'scout');
   const body = `${code({ title: 'Build de l’image de production, depuis la racine du projet', text: command })}${code({
     title: 'Publication, avec SBOM et provenance attachés à l’image',
-    text: `${buildCommand(config as Config, '<version>').replace('docker build', 'docker buildx build --sbom=true --provenance=mode=max --push').replace(`--tag ${config.image}:`, `--tag <registre>/${config.image}:`)}`,
+    text: `${buildCommand(config as Config, '<version>').replace('docker build', 'docker buildx build --sbom=true --provenance=mode=max --push').replace(`--tag ${config.image}:`, `--tag ${hasRegistry(config.image) ? '' : '<registre>/'}${config.image}:`)}`,
   })}${steps(analysis.build)}`;
   return section('build', 'Build', 'Image de production', 'Construire l’image de production', '', body);
 }
@@ -283,7 +283,7 @@ const body = [
 ].join('\n');
 
 const meta: [string, string][] = [
-  ['Image', reference.ref], ['Digest', reference.image?.digest?.slice(7, 19) ?? ''], ['Plateforme', reference.image?.platform ?? ''], ['Taille', reference.image?.size ? formatSize(reference.image.size) : ''],
+  ['Image', shortRef(reference.ref)], ['Digest', reference.image?.digest?.slice(7, 19) ?? ''], ['Plateforme', reference.image?.platform ?? ''], ['Taille', reference.image?.size ? formatSize(reference.image.size) : ''],
   ['Paquets', fr.format(reference.packageCount)], ['Docker Scout', reference.scout], ...(analysis.context ?? []),
 ];
 const date = new Date(reference.scannedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });

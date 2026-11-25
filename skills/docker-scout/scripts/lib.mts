@@ -142,13 +142,36 @@ function scoutFile(args: string[], ref: string, { allowFailure = false } = {}): 
 const platformArgs = (platform?: string) => (platform ? ['--platform', platform] : []);
 
 export function scoutCves(ref: string, { platform, extra = [] }: { platform?: string; extra?: string[] } = {}): RawScan {
-  return JSON.parse(scoutFile(['cves', '--format', 'sbom', ...platformArgs(platform), ...extra], ref) ?? '{}') as RawScan;
+  const raw = JSON.parse(scoutFile(['cves', '--format', 'sbom', ...platformArgs(platform), ...extra], ref) ?? '{}') as RawScan;
+  return reindexed(raw, ref, extra);
+}
+
+/** Attestation SBOM posée par un autre outil que Scout (`--sbom=true` de BuildKit : Syft), que Scout lit telle quelle. */
+export function foreignSbom(raw: RawScan): boolean {
+  return (raw.attestations ?? []).some((attestation) => {
+    try {
+      const statement = JSON.parse(Buffer.from(attestation.payload ?? '', 'base64').toString('utf8')) as { predicateType?: string; predicate?: { creationInfo?: { creators?: string[] } } };
+      return /spdx/.test(statement.predicateType ?? '') && (statement.predicate?.creationInfo?.creators ?? []).some((creator) => /^Tool: syft/.test(creator));
+    } catch {
+      return false;
+    }
+  });
+}
+
+// Syft nomme les paquets Debian par leur nom binaire : une faille de glibc compte pour libc6 et pour libc-bin, une
+// d'util-linux pour neuf paquets. Le manifeste de la plateforme ne porte pas d'attestation : Scout l'indexe lui-même,
+// comme les autres images. La provenance, elle, ne se lit que dans l'index : elle est gardée.
+function reindexed(raw: RawScan, ref: string, extra: string[]): RawScan {
+  const digest = raw.source?.image?.digest;
+  if (!ref.startsWith('registry://') || !digest || !foreignSbom(raw)) return raw;
+  const content = scoutFile(['cves', '--format', 'sbom', ...extra], `${ref.replace(/@sha256:.*$/, '').replace(/:[^:/]+$/, '')}@${digest}`, { allowFailure: true });
+  return content ? { ...JSON.parse(content) as RawScan, attestations: raw.attestations, reindexed: true } : raw;
 }
 
 // Comme scoutCves, sans s'arrêter sur une image inaccessible.
 export function tryScoutCves(ref: string, platform?: string): RawScan | null {
   const content = scoutFile(['cves', '--format', 'sbom', ...platformArgs(platform)], ref, { allowFailure: true });
-  return content ? JSON.parse(content) as RawScan : null;
+  return content ? reindexed(JSON.parse(content) as RawScan, ref, []) : null;
 }
 
 export function scoutPolicies(ref: string, { platform }: { platform?: string } = {}): { health: Health | null; policies: Policy[] } | null {
@@ -325,6 +348,7 @@ export function normalize(raw: RawScan, { label, ref, title, scout, base, rawBas
 // paquets binaires (libc6, libssl3t64 : distroless, fiches dpkg retirées) affiche zéro faille à tort.
 export function blindSpot(raw: RawScan): string | undefined {
   const names = new Set((raw.artifacts ?? []).filter((artifact) => artifact.type === 'deb').map((artifact) => artifact.name));
+  if (names.has('libc6') && !names.has('glibc') && foreignSbom(raw) && !raw.reindexed) return 'inventaire lu dans une attestation SBOM de Syft (paquets système sous leur nom binaire) : une même faille compte plusieurs fois. Analyser l’image par le registre (registry://…)';
   if (names.has('libc6') && !names.has('glibc')) return 'paquets système indexés sous leur nom binaire (libc6 et non glibc) : leurs failles ne sont pas détectées, le résultat est incomplet';
   // Un binaire Go sans informations de build (esbuild 0.28 et plus) échappe à Scout : ses failles disparaissent du total
   // sans être corrigées.
@@ -338,6 +362,13 @@ export function blindSpot(raw: RawScan): string | undefined {
   if (known && !hasOs) return 'aucun paquet système trouvé (base de paquets retirée de l’image ?) : leurs failles ne sont pas détectées';
   return undefined;
 }
+
+/** Nom court d'une image publiée (`europe-docker.pkg.dev/p/docker/api` → `api`). */
+export const shortImage = (image: string) => image.split('/').at(-1) ?? image;
+/** Référence lisible : sans schéma, empreinte abrégée. */
+export const shortRef = (ref: string) => ref.replace(/^(registry|local|image):\/\//, '').replace(/@sha256:([0-9a-f]{12})[0-9a-f]+/, '@sha256:$1…');
+/** Image dont le nom porte déjà un registre. */
+export const hasRegistry = (image: string) => /^[^/]*[.:][^/]*\//.test(image);
 
 export const flattenRaw = (raw: RawScan) => (raw.vulnerabilities ?? []).flatMap((entry) => entry.vulnerabilities.map((item) => ({ severity: severityOf(item), fix: item.fixed_by && item.fixed_by !== 'not fixed' })));
 

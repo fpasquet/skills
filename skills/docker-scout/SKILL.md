@@ -14,7 +14,7 @@ compatibility: >
   exécutés sans compilation). Accès réseau aux registres.
 metadata:
   author: fpasquet
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # Audit d'image avec Docker Scout : failles, corrections, CI
@@ -138,7 +138,7 @@ node <skill>/scripts/bases.mts node:24-slim node:24-trixie-slim node:24-alpine -
 
 ## Étape 4 · Corriger et mesurer
 
-En audit seul, mesurer sur une **copie** du dépôt, dans un dossier temporaire (`git archive HEAD | tar -x -C <copie>`), avec la même commande de build et des étiquettes propres : le code de la personne ne bouge pas, et les gains sont mesurés au lieu d'être estimés. Sinon, un lot par commit, dans cet ordre : **image de base** (souvent plus de la moitié des failles), **outils embarqués**, **paquets système du Dockerfile**, **dépendances**, puis **durcissement** (USER, multi-étapes, `.dockerignore`, digest). Recettes par écosystème : `references/remediation.md`.
+En audit seul, mesurer sur une **copie** du dépôt, dans un dossier temporaire (`git archive <sha> | tar -x -C <copie>`, le commit relevé au départ : HEAD bouge si une autre session travaille dans le dossier, et les images déployées changent avec la PR qu'elle fusionne ; alors refaire `current` sur la nouvelle image), avec la même commande de build et des étiquettes propres : le code de la personne ne bouge pas, et les gains sont mesurés au lieu d'être estimés. Sinon, un lot par commit, dans cet ordre : **image de base** (souvent plus de la moitié des failles), **outils embarqués**, **paquets système du Dockerfile**, **dépendances**, puis **durcissement** (USER, multi-étapes, `.dockerignore`, digest). Recettes par écosystème : `references/remediation.md`.
 
 Pour chaque lot :
 
@@ -154,6 +154,8 @@ Pour chaque lot :
 
    Une faille **apparue** se regarde toujours : régression, ou paquet nouveau de la base.
 5. noter le lot dans `SCOUT.md` et dans `analysis.json` (`status: "done"`, `gain` mesuré).
+
+**La base d'avis de Scout bouge en cours de journée** : le même digest peut changer de total en une heure, sans que rien n'ait changé dans l'image. Avant le rapport, refaire tous les scans d'un seul tenant ; deux totaux pris à des heures différentes ne se comparent pas.
 
 Le dernier scan est la cible du rapport (`target`) : `final`, ou `pr-<numéro>` construit **depuis le commit de la PR**. Relancer `detect.mts --out` après les modifications du Dockerfile, et lister dans `analysis.json` → `dockerfile.fixed` les règles corrigées si on veut les garder visibles.
 

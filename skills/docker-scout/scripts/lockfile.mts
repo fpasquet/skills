@@ -16,6 +16,8 @@ const bare = (key: string) => key.replace(/\(.*$/, '');
 /** Lecture ligne à ligne du YAML très régulier de pnpm : sections, entrées à deux espaces, dépendances en dessous. */
 function readPnpm(text: string) {
   const importers = new Map<string, Map<string, string>>();
+  // Paquets du monorepo dont un manifeste ne se sert qu'en développement.
+  const devLinks = new Map<string, string[]>();
   const snapshots = new Map<string, string[]>();
   let section = '';
   let entry = '';
@@ -37,15 +39,22 @@ function readPnpm(text: string) {
     } else if (indent.length === 4) group = key;
     else if (section === 'importers' && indent.length === 6) name = key;
     else if (section === 'importers' && indent.length === 8 && key === 'version' && (group === 'dependencies' || group === 'optionalDependencies')) importers.get(entry)?.set(name, value);
+    else if (section === 'importers' && indent.length === 8 && key === 'version' && group === 'devDependencies' && value.startsWith('link:')) devLinks.set(entry, [...(devLinks.get(entry) ?? []), value]);
     else if (section === 'snapshots' && indent.length === 6 && (group === 'dependencies' || group === 'optionalDependencies')) snapshots.get(entry)?.push(`${key}@${value}`);
   }
-  return { importers, snapshots };
+  return { importers, devLinks, snapshots };
 }
 
 function pnpmProduction(text: string): Production {
-  const { importers, snapshots } = readPnpm(text);
+  const { importers, devLinks, snapshots } = readPnpm(text);
   const result: Production = new Map();
+  // Un paquet du monorepo relié seulement par des devDependencies (configuration ESLint, règles de tests) est de
+  // l'outillage : ses « dependencies » ne partent pas en production.
+  const target = (path: string, link: string) => posix.normalize(posix.join(path, link.slice(5)));
+  const linked = new Set([...importers].flatMap(([path, deps]) => [...deps.values()].filter((version) => version.startsWith('link:')).map((link) => target(path, link))));
+  const tools = new Set([...devLinks].flatMap(([path, links]) => links.map((link) => target(path, link))).filter((path) => !linked.has(path)));
   for (const importer of importers.keys()) {
+    if (tools.has(importer)) continue;
     const seen = new Set<string>();
     const visited = new Set<string>();
     const queue: string[] = [];
@@ -54,7 +63,7 @@ function pnpmProduction(text: string): Production {
       visited.add(path);
       for (const [name, version] of importers.get(path) ?? []) {
         // Paquet du monorepo : ses dépendances de production comptent aussi.
-        if (version.startsWith('link:')) visitImporter(posix.normalize(posix.join(path, version.slice(5))));
+        if (version.startsWith('link:')) visitImporter(target(path, version));
         else queue.push(`${name}@${version}`);
       }
     };

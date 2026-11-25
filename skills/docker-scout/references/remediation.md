@@ -32,6 +32,14 @@ Si elle manque, la noter « à suivre », et choisir la politique `app` en CI. L
 
 ### Faux zéro
 
+Une image publiée avec un SBOM Syft (`buildx --sbom=true`) est lue par Scout dans cette attestation, sous des noms de
+paquets binaires : le total est **gonflé**, pas faux par défaut. `scan.mts` l'indexe de nouveau pour un `registry://`, et
+le signale.
+
+OpenSSL est embarqué dans l'exécutable de Node (`process.versions.openssl`, `ldd` sans libssl) : Scout ne compte pas
+cette copie. Une image Debian 13 montre `libssl3t64`, que Node ne charge pas, et une image Debian 12 n'en montre pas ;
+le risque réel suit la version de Node dans les deux cas.
+
 Scout rapproche les paquets Debian et Ubuntu des avis de sécurité par leur **paquet source** (`glibc`, `openssl`). Dans une image distroless, il n'indexe que les noms binaires (`libc6`, `libssl3t64`) et n'affiche aucune faille, alors que la même version d'OpenSSL en a dans l'image Debian. Les scripts le signalent (« incomplet »). Même effet si le Dockerfile supprime la base dpkg ou apk.
 
 Autre faux zéro : un **binaire Go sans informations de build**. `esbuild` 0.28.2 les retire, Scout n'y voit plus `stdlib`, et une montée de version semble régler soixante failles. `scan.mts` le signale (« incomplet »). Lire la version de Go dans le binaire (`strings bin/esbuild | grep -oE 'go1\.[0-9]+\.[0-9]+' | sort -u`), et compter les avis dont le correctif est plus récent. Un total qui tombe à zéro sur un seul paquet se vérifie toujours ainsi.
@@ -86,6 +94,11 @@ Pour chaque paquet, dans l'ordre : monter la dépendance **directe** qui le tire
 - **Version corrigée minimale** pour ce qui est sensible (authentification, paiement, éditeur, ORM) : la dernière version d'une plage `^` peut porter vingt correctifs de plus, avec des changements de comportement ou de schéma. Lire les notes de version entre l'actuelle et la cible, chercher les migrations, et préférer une version corrigée proche. Une plage `^` qui laisse passer une version cassante se signale.
 - **Échec des tests après une montée** : isoler le paquet en cause (une montée à la fois), comparer avec un passage sur la branche de départ (test instable ou vraie régression), chercher le correctif dans l'écosystème (outil de test, mocks), sinon tenir le paquet sur la branche corrigée précédente par une version forcée, avec le motif et un ticket. Une montée qui demande une migration sort du lot et devient une action à part.
 - **Migration de données exigée par une montée** (colonne que la dépendance n'écrit plus, index qu'elle attend) : une PR à part, en deux temps. D'abord relâcher (colonne facultative, nouvel index), en gardant ce que l'ancienne version lit et écrit pendant le déploiement ; retirer ensuite. Vérifier quatre choses : la suite complète, la migration dans les deux sens sur une base jetable avec des lignes anciennes et récentes, **l'ancienne version sur le nouveau schéma**, et les doublons que le nouvel index refuserait en production.
+- **Dépendance paire optionnelle** de pnpm : un paquet de production qui déclare `vitest`, `prisma` ou `next` en
+  dépendance paire optionnelle les embarque dès que le manifeste les a en `devDependencies` (outil de test dans l'image
+  de production). L'override `'<parent>>vitest': '-'` ne suffit pas : pnpm garde la résolution. Retirer la paire dans un
+  `.pnpmfile.cjs` (`hooks.readPackage`, `peerDependencies` et `peerDependenciesMeta`), et copier ce fichier dans l'étape
+  d'installation (le lockfile en garde la somme). Vérifier dans l'image (`ls node_modules/.pnpm | grep vitest`).
 - **Forcer une version majeure** d'une dépendance transitive casse souvent son parent : lire ses changements, lancer les tests, et préférer une exception à une rustine fragile.
 - **Délai de publication** (`minimumReleaseAge` de pnpm, `npmMinimalAgeGate` de Yarn) : ne pas ajouter d'exception pour prendre une version du jour. Demander la dépendance sans version (`pnpm up -r <paquet>`) : pnpm prend la plus récente qui a l'âge requis, souvent déjà corrigée. `pnpm up -r --depth 20 <paquet>` met à jour une dépendance indirecte dans le seul lockfile.
 - Chaque version forcée se note dans `SCOUT.md` avec la condition pour l'enlever (« quand express dépendra de qs ≥ 6.15 »).

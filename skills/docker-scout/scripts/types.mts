@@ -24,6 +24,8 @@ export interface RawImage {
 export interface RawScan {
   source?: { type?: string; image?: RawImage; base_image?: { name?: string; tag?: string; digest?: string } };
   attestations?: { payload?: string }[];
+  /** Image portant un SBOM d'un autre outil, indexée de nouveau par Scout (lib.mts). */
+  reindexed?: boolean;
   artifacts?: RawArtifact[];
   vulnerabilities?: { purl: string; vulnerabilities: RawVulnerability[] }[];
 }

@@ -14,7 +14,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SOURCE_NOTES, SOURCE_USES, changeCard, changeDetails, chips, createRenderer, esc, fr, page, plural, sourceUse } from './html.mts';
 import type { Bar, SourceUse } from './html.mts';
-import { CONFIG_FILE, SEVERITIES, SEVERITY_LETTER, afterText, countBySeverity, diff, fail, fixVersion, fixedPackages, formatSize, loadConfig, loadScans, parseArgs, rank, readJson, run, without, worst } from './lib.mts';
+import { CONFIG_FILE, SEVERITIES, SEVERITY_LETTER, afterText, countBySeverity, diff, fail, fixVersion, fixedPackages, formatSize, loadConfig, loadScans, parseArgs, rank, readJson, run, shortImage, without, worst } from './lib.mts';
 import type { Analysis, Change, Check, Finding, Scan, Step } from './types.mts';
 
 interface Overview { title: string; pageTitle: string; lead: string; artifact?: string; order?: string[]; source?: string; sourceTarget?: string; checks?: Check[]; findings?: Finding[]; steps?: Step[] }
@@ -58,11 +58,11 @@ for (const image of images) {
 }
 
 const { inline, prose, code, finding, bars, section, sections } = createRenderer(all, errors);
-const cards = images.map(({ name, reference, target, config }) => `<article class="card"><h3>${esc(config.image ?? name)}</h3><div class="big">${fr.format(reference.counts.total)}${target ? ` <small>→ ${fr.format(target.counts.total)} après corrections</small>` : ''}</div>${chips(reference.counts)}${target ? `<p>Après corrections :</p>${chips(target.counts)}` : ''}<p>${esc(reference.base?.ref ?? 'base inconnue')} · ${formatSize(reference.image?.size)} · ${plural(reference.packageCount, 'paquet')}${reference.health ? ` · health score ${reference.health.grade}${target?.health ? ` → ${target.health.grade}` : ''}` : ''}</p><p><a href="${esc(name)}.html">Ouvrir le rapport de ${esc(config.image ?? name)} →</a></p></article>`).join('');
+const cards = images.map(({ name, reference, target, config }) => `<article class="card"><h3>${esc(shortImage(config.image ?? name))}</h3><div class="big">${fr.format(reference.counts.total)}${target ? ` <small>→ ${fr.format(target.counts.total)} après corrections</small>` : ''}</div>${chips(reference.counts)}${target ? `<p>Après corrections :</p>${chips(target.counts)}` : ''}<p>${esc(reference.base?.ref ?? 'base inconnue')} · ${formatSize(reference.image?.size)} · ${plural(reference.packageCount, 'paquet')}${reference.health ? ` · health score ${reference.health.grade}${target?.health ? ` → ${target.health.grade}` : ''}` : ''}</p><p><a href="${esc(name)}.html">Ouvrir le rapport de ${esc(shortImage(config.image ?? name))} →</a></p></article>`).join('');
 const total = countBySeverity(images.flatMap(({ reference }) => reference.packages.flatMap((pkg) => pkg.vulnerabilities)));
 const chart = bars(images.flatMap(({ name, reference, target, config }): Bar[] => [
-  { label: config.image ?? name, note: 'image actuelle', counts: reference.counts },
-  ...(target ? [{ label: config.image ?? name, note: 'après corrections, mesuré', counts: target.counts }] : []),
+  { label: shortImage(config.image ?? name), note: 'image actuelle', counts: reference.counts },
+  ...(target ? [{ label: shortImage(config.image ?? name), note: 'après corrections, mesuré', counts: target.counts }] : []),
 ]), 'Failles par image');
 
 // Actions de toutes les images, avec leur gain.
@@ -71,7 +71,7 @@ const actions = images.flatMap(({ name, analysis, scans, config }) => (analysis.
   const after = action.gain?.to ? scans[action.gain.to] : before && action.gain?.without ? without(before, action.gain.without) : undefined;
   const gain = before && after ? `−${fr.format(before.counts.total - after.counts.total)} (${action.gain?.to ? 'mesuré' : 'estimé'})` : '';
   const status = { todo: ['À faire', 'info'], done: ['Fait', 'ok'], accepted: ['Risque accepté', 'warning'] }[action.status ?? 'todo'];
-  return `<tr><td class="mono">${esc(config.image ?? name)}</td><td>${inline(action.title)}</td><td class="tnum">${gain}</td><td><span class="pill ${status[1]}">${status[0]}</span></td><td><a href="${esc(name)}.html#actions">Détail</a></td></tr>`;
+  return `<tr><td class="mono">${esc(shortImage(config.image ?? name))}</td><td>${inline(action.title)}</td><td class="tnum">${gain}</td><td><span class="pill ${status[1]}">${status[0]}</span></td><td><a href="${esc(name)}.html#actions">Détail</a></td></tr>`;
 })).join('');
 
 // Code source : ce que les lockfiles et les actions contiennent sans entrer dans aucune image.
@@ -95,7 +95,7 @@ const change = readJson<Change | null>(join(parent, 'change.json'), null);
 const sourceTarget = overview.sourceTarget ? shared[overview.sourceTarget] : undefined;
 if (overview.sourceTarget && !sourceTarget) errors.push(`scan « ${overview.sourceTarget} » absent de ${parent}/scans`);
 function beforeAfterBody(): string {
-  const pairs: { name: string; link?: string; before: Scan; after: Scan }[] = images.flatMap(({ name, reference, target, config }) => (target ? [{ name: config.image ?? name, link: `${name}.html#avant-apres`, before: reference, after: target }] : []));
+  const pairs: { name: string; link?: string; before: Scan; after: Scan }[] = images.flatMap(({ name, reference, target, config }) => (target ? [{ name: shortImage(config.image ?? name), link: `${name}.html#avant-apres`, before: reference, after: target }] : []));
   // Du lockfile, on ne compare que la production : le reste ne part ni dans une image ni dans un navigateur.
   const manifests = images.flatMap(({ config }) => config.package || []);
   const production = (scan: Scan): Scan => ({ ...scan, packages: scan.packages.filter((pkg) => !pkg.usedBy || pkg.usedBy.some((path) => !manifests.length || manifests.includes(path))) });
@@ -125,7 +125,7 @@ const date = new Date(Math.max(...images.map(({ reference }) => Date.parse(refer
 const html = page({
   title: overview.pageTitle,
   header: `<span class="eyebrow">Audit de vulnérabilités · Docker Scout</span><h1>${inline(overview.title)}</h1><p class="lead">${inline(overview.lead)}</p>`,
-  nav: `${images.map(({ name, config }) => `<a href="${esc(name)}.html">${esc(config.image ?? name)}</a>`).join('')}${sections.map(({ id, nav }) => `<a href="#${id}">${esc(nav)}</a>`).join('')}`,
+  nav: `${images.map(({ name, config }) => `<a href="${esc(name)}.html">${esc(shortImage(config.image ?? name))}</a>`).join('')}${sections.map(({ id, nav }) => `<a href="#${id}">${esc(nav)}</a>`).join('')}`,
   body,
   footer: `<p>Analyse du ${date} avec Docker Scout ${esc(images[0]?.reference.scout)}.</p>`,
 });

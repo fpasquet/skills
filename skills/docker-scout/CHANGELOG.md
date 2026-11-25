@@ -1,5 +1,22 @@
 # Journal des versions
 
+## 1.5.0 · 25/11/2026
+
+Éprouvé sur un autre monorepo (trois images), pendant qu'une autre session fusionnait une PR.
+
+- **SBOM Syft** : une image publiée avec `--sbom=true` porte une attestation Syft que Scout lit à la place de l'image.
+  Les paquets Debian y sont sous leur nom binaire, et une même faille compte une fois par paquet binaire. L'image est
+  indexée de nouveau par son manifeste de plateforme, la provenance restant celle de l'index. Le message « failles non
+  détectées » ne vaut plus pour cet inventaire.
+- **Outils du monorepo** : un paquet relié seulement en `devDependencies` (configuration ESLint, règles de tests) ne
+  compte plus en production : ses dépendances étaient données comme livrées.
+- Rapport : nom court des images publiées (`api` plutôt que le chemin complet du registre), empreinte abrégée, et plus de
+  `<registre>/` devant une image qui a déjà le sien.
+- `init.mts` : un espace de travail hors du contexte de build (image d'un autre dépôt) ne demande plus un `.dockerignore`.
+- Méthode : refaire tous les scans d'un seul tenant avant le rapport (la base d'avis de Scout change en cours de
+  journée) ; copie figée sur un commit, pas sur HEAD ; dépendances paires optionnelles de pnpm ; OpenSSL embarqué dans
+  Node ; sur un dépôt public, rien qui désigne une faille dans une issue, une PR, un commit ou un CHANGELOG.
+
 ## 1.4.0 · 25/11/2026
 
 Éprouvé sur les images de production d'un monorepo (neuf images publiées par Cloud Build, trois fonctions Cloud Run).

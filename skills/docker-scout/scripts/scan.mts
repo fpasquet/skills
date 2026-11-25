@@ -77,6 +77,7 @@ const scanned = exported ? `fs://${exported}` : ref;
 
 console.error(`Analyse de ${ref}${exported ? ' (fichiers suivis par git)' : ''}…`);
 const raw = scoutCves(scanned, { platform, extra: vex });
+if (raw.reindexed) notes.push('l’image porte une attestation SBOM de Syft, que Scout lirait à la place de l’image (paquets binaires, failles comptées plusieurs fois) : elle a été indexée de nouveau.');
 const kevRaw = scoutCves(scanned, { platform, extra: ['--only-cisa-kev', ...vex] });
 if (exported) {
   // Un lockfile que Scout ne sait pas lire donne zéro faille : le dire.

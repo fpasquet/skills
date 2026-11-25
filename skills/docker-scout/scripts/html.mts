@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ORIGINS, SEVERITIES, SEVERITY_LABEL, SEVERITY_LETTER, afterText, countBySeverity, diff, fixVersion, fixedPackages, formatSize, rank, worst } from './lib.mts';
+import { ORIGINS, SEVERITIES, SEVERITY_LABEL, SEVERITY_LETTER, afterText, countBySeverity, diff, fixVersion, fixedPackages, formatSize, rank, worst, shortRef } from './lib.mts';
 import type { PackageChange } from './lib.mts';
 import type { Change, ChangeFile, Check, Code, Counts, Finding, Origin, Package, Row, Scan, Severity, Table } from './types.mts';
 
@@ -120,7 +120,7 @@ export function comparisonTable(before: Scan, after: Scan): string {
     ...(before.image?.size && after.image?.size ? [row('Taille', formatSize(before.image.size), formatSize(after.image.size), delta(Math.round(before.image.size / 1e6), Math.round(after.image.size / 1e6), { neutral: true, unit: ' Mo' }))] : []),
     ...(before.image && after.image ? [row('Utilisateur', esc(before.image.user), esc(after.image.user))] : []),
     ...(before.base && after.base ? [row('Image de base', `${esc(before.base.ref)}<br><span class="mono">${esc(before.base.digest?.slice(7, 19))}</span>`, `${esc(after.base.ref)}<br><span class="mono">${esc(after.base.digest?.slice(7, 19))}</span>`)] : []),
-    row('Image', `<span class="mono">${esc(before.ref)}</span>`, `<span class="mono">${esc(after.ref)}</span>`),
+    row('Image', `<span class="mono">${esc(shortRef(before.ref))}</span>`, `<span class="mono">${esc(shortRef(after.ref))}</span>`),
   ];
   return `<div class="table-box"><table class="compare"><thead><tr><th></th><th>Avant</th><th>Après</th><th>Écart</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
 }

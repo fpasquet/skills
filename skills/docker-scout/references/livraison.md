@@ -5,7 +5,7 @@ Une issue et une PR sont des écritures distantes : seulement à la demande de l
 ## Préparer
 
 1. **Règles du dépôt** : `AGENTS.md`, `CONTRIBUTING.md`, modèles d'issue et de PR, convention de commit et de branche, étiquettes, PR et issues ouvertes sur le même sujet (Dependabot compris). Elles l'emportent sur ce qui suit.
-2. **Visibilité** : sur un dépôt public, ni liste de failles ouvertes ni tableau détaillé dans l'issue ou la PR. Décrire la montée, et garder le détail dans l'artifact privé (ou un avis de sécurité privé du dépôt).
+2. **Visibilité** (`gh repo view --json visibility`) : sur un dépôt public, ne jamais dire quelles failles l'image porte, ni combien. Ni identifiant, ni paquet vulnérable, ni total, ni tableau avant/après, ni lien vers le rapport ou vers un dépôt privé ; la règle vaut pour l'issue, la PR, le nom de branche, les commits, les commentaires du code, le changeset et le CHANGELOG. Décrire la montée et le durcissement pour eux-mêmes (distribution maintenue, image plus petite, moins d'outils embarqués), et garder le détail dans l'artifact privé ou un avis de sécurité privé du dépôt.
 3. **Compte** : `gh api repos/<depot> --jq .permissions` avec le bon compte (`GH_TOKEN=$(gh auth token --user <compte>)`).
 4. **Worktree** : travailler à côté, pour ne pas toucher aux fichiers ni au `node_modules` de la personne.
 
