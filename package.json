@@ -3,15 +3,18 @@
   "private": true,
   "description": "Outillage de validation du catalogue de skills. Aucun code n'est publié : les skills s'installent avec npx skills.",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.18"
   },
   "scripts": {
     "validate": "node scripts/validate-skills.mjs",
+    "typecheck": "tsc --project tsconfig.json",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
-    "check": "npm run validate && npm run lint:md"
+    "check": "npm run validate && npm run typecheck && npm run lint:md"
   },
   "devDependencies": {
-    "markdownlint-cli2": "0.23.2"
+    "@types/node": "24.19.2",
+    "markdownlint-cli2": "0.23.2",
+    "typescript": "7.0.2"
   }
 }

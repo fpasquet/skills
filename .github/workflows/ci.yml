@@ -24,6 +24,24 @@ jobs:
       - name: Validate skills structure
         run: node scripts/validate-skills.mjs
 
+  # Types des scripts TypeScript. Rien n'est compilé : Node les exécute en retirant les types.
+  typecheck:
+    name: Types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: tsc
+        run: npm run typecheck
+
   # Le seul contrôle qui prouve que le dépôt est réellement consommable par un agent.
   # Le CLI ignore SILENCIEUSEMENT un skill dont le frontmatter ne parse pas : sans cette
   # comparaison de comptes, un skill peut disparaître sans que rien n'échoue.

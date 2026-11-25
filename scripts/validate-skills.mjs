@@ -2,7 +2,7 @@
 /**
  * Valide la structure du catalogue de skills.
  * Boucle sur les SKILL.md découverts : aucun nom de skill n'est codé en dur ici.
- * Aucune dépendance : Node 18+ suffit, comme pour les scripts des skills.
+ * Aucune dépendance. Node 22.18+ : les scripts TypeScript (.mts) se contrôlent sans compilation.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -184,10 +184,11 @@ for (const file of skillFiles) {
 // ---------------------------------------------------------------------------
 // 3. Syntaxe des scripts livrés par les skills
 // ---------------------------------------------------------------------------
-title('🧪 Syntaxe des scripts JavaScript');
+title('🧪 Syntaxe des scripts');
 
 const scripts = existsSync(join(ROOT, SKILLS_DIR))
-  ? walk(join(ROOT, SKILLS_DIR)).filter((path) => /\.(mjs|cjs|js)$/.test(path) && statSync(path).isFile())
+  // Les .mts sont exécutés tels quels par Node, qui en retire les types (22.18 ou plus) ; `npm run typecheck` contrôle les types.
+  ? walk(join(ROOT, SKILLS_DIR)).filter((path) => /\.(mjs|cjs|js|mts)$/.test(path) && statSync(path).isFile())
   : [];
 let broken = 0;
 for (const script of scripts) {

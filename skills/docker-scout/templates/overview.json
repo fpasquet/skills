@@ -1,0 +1,12 @@
+{
+ "title": "Audit Docker Scout TODO",
+ "pageTitle": "Audit Scout TODO",
+ "lead": "TODO : dépôt, branche, commit, date, images analysées.",
+ "artifact": "",
+ "order": [],
+ "source": "",
+ "sourceTarget": "",
+ "checks": [],
+ "findings": [],
+ "steps": []
+}

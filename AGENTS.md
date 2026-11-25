@@ -6,7 +6,7 @@ Instructions pour les agents qui modifient ce dépôt. La documentation destiné
 
 Catalogue de skills d'agents, installés avec le CLI [`skills`](https://github.com/vercel-labs/skills) (`npx skills add`). Les skills suivent la [spécification Agent Skills](https://agentskills.io/specification) et ne dépendent d'aucun agent en particulier.
 
-Les trois skills forment une chaîne : `specs-ui` (specs maquettées) → `prototype-ui` (prototype cliquable) → `requirements-doc` (cahier des charges, document pour l'équipe de développement). Les deux derniers lisent le projet produit par le premier. Leurs livrables vivent dans un **dépôt de specs**, séparé du code de l'application (`skills/specs-ui/references/depot-specs.md`). `design-system` travaille dans le code de l'application (tokens, classes sémantiques, shadcn/ui, Storybook) ; il copie les tokens des specs quand elles existent, et marche aussi sans elles. L'application reçoit aussi l'export du cahier des charges (`export.mjs` de `requirements-doc`).
+Les trois skills forment une chaîne : `specs-ui` (specs maquettées) → `prototype-ui` (prototype cliquable) → `requirements-doc` (cahier des charges, document pour l'équipe de développement). Les deux derniers lisent le projet produit par le premier. Leurs livrables vivent dans un **dépôt de specs**, séparé du code de l'application (`skills/specs-ui/references/depot-specs.md`). `design-system` travaille dans le code de l'application (tokens, classes sémantiques, shadcn/ui, Storybook) ; il copie les tokens des specs quand elles existent, et marche aussi sans elles. L'application reçoit aussi l'export du cahier des charges (`export.mjs` de `requirements-doc`). `docker-scout` est indépendant de la chaîne : il audite et corrige l'image Docker d'une application.
 
 ## Invariants
 
@@ -23,8 +23,8 @@ Les trois skills forment une chaîne : `specs-ui` (specs maquettées) → `proto
 6. **Langue** :
    - documentation, instructions, gabarits et textes produits en français, avec guillemets « » ;
    - code des scripts en anglais (identifiants, options, noms de fichiers générés), commentaires en français.
-7. **Aucune dépendance pour les scripts des skills** : Node 18+ suffit. Les dépendances éventuelles (Tailwind, Alpine…) s'installent dans le projet de la personne, jamais dans ce dépôt.
-8. **Économie de tokens** : chaque skill commence par sa section « Économiser… », garde une mémoire de projet courte (`CONTEXTE.md`, `PROTOTYPE.md`, `CDC.md`), fournit des résumés avant lecture et publie de façon incrémentale. Tout ajout doit respecter ces règles.
+7. **Aucune dépendance pour les scripts des skills**, ni étape de compilation. Deux formes : JavaScript (`.mjs`, Node 18+), ou TypeScript (`.mts`, Node 22.18+, qui retire les types à l'exécution) ; la même dans tout un skill, et un skill en TypeScript annonce sa version de Node dans `compatibility`. En TypeScript : syntaxe effaçable seulement (ni `enum`, ni `namespace`, ni propriété de constructeur), imports avec l'extension `.mts`. Les dépendances éventuelles (Tailwind, Alpine…) s'installent dans le projet de la personne, jamais dans ce dépôt.
+8. **Économie de tokens** : chaque skill commence par sa section « Économiser… », garde une mémoire de projet courte (`CONTEXTE.md`, `PROTOTYPE.md`, `CDC.md`, `SCOUT.md`), fournit des résumés avant lecture et publie de façon incrémentale. Tout ajout doit respecter ces règles.
 
 ## Piège YAML
 
@@ -49,7 +49,8 @@ Ne jamais supprimer ni déplacer un espace de travail existant sans accord : ses
 ```bash
 npm run validate          # structure, frontmatter, nommage, versions, syntaxe des scripts
 npx skills add . --list   # découverte réelle par le CLI
-npm ci && npm run lint:md # lint Markdown, version figée par le lockfile
+npm ci && npm run typecheck # types des scripts .mts (tsc, sans rien écrire)
+npm run lint:md           # lint Markdown, version figée par le lockfile
 ```
 
 Après toute modification d'une règle du validateur, la vérifier par un échec provoqué.

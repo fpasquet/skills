@@ -1,6 +1,6 @@
 # skills
 
-> Skills d'agents pour concevoir une application **avant les développements** : specs UI maquettées, prototype cliquable, puis cahier des charges pour l'équipe de développement. **Pendant les développements**, un design system React (tokens, classes sémantiques, shadcn/ui, Storybook) reprend l'identité des specs dans le code.
+> Skills d'agents pour concevoir une application **avant les développements** : specs UI maquettées, prototype cliquable, puis cahier des charges pour l'équipe de développement. **Pendant les développements**, un design system React (tokens, classes sémantiques, shadcn/ui, Storybook) reprend l'identité des specs dans le code, et un audit Docker Scout sécurise l'image de production.
 
 Un _skill_ est un ensemble d'instructions réutilisables qui étend les capacités d'un agent : un dossier, un fichier `SKILL.md`, et au besoin des références, des gabarits et des scripts. Ce dépôt s'installe avec le CLI [`skills`](https://github.com/vercel-labs/skills), qui suit la [spécification Agent Skills](https://agentskills.io) et sait installer vers la plupart des agents de code (Claude Code, Cursor, Codex, opencode…).
 
@@ -15,6 +15,9 @@ npx skills add <source> --skill specs-ui prototype-ui requirements-doc
 
 # Dans le dépôt de l'application : design system, et traçabilité des critères en CI
 npx skills add <source> --skill design-system requirements-doc
+
+# Audit de sécurité de l'image Docker d'une application
+npx skills add <source> --skill docker-scout
 
 # Installer pour un agent précis, ou globalement pour tous vos projets
 npx skills add <source> --skill specs-ui -a claude-code
@@ -83,8 +86,9 @@ Une nouvelle version d'un skill se réimporte de la même façon. Claude Code su
 | [`prototype-ui`](skills/prototype-ui/README.md)             | 2.6.0   | Prototype cliquable en HTML + Tailwind + Alpine.js, avec scénarios de test guidés et mode démo  |
 | [`requirements-doc`](skills/requirements-doc/README.md) | 2.4.0   | Cahier des charges en Markdown et en page HTML : fonctionnel, architecture, stack, lots chiffrés ; export vers l'application |
 | [`design-system`](skills/design-system/README.md)       | 1.2.0   | Design system React : tokens, classes sémantiques (du projet ou de daisyUI), shadcn/ui sur Radix, Storybook ; création, maintenance, migration |
+| [`docker-scout`](skills/docker-scout/README.md)         | 1.5.0   | Audit d'une image Docker avec Docker Scout : failles CVE et leur origine, corrections mesurées, build de production, CI GitHub Actions, rapport HTML |
 
-Les trois skills de conception publient leur résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et gardent une copie locale. `design-system` travaille dans le code de l'application : il s'utilise depuis Claude Code ou un autre agent de code, pas depuis le chat.
+Les trois skills de conception publient leur résultat comme un artifact claude.ai partageable (dans le chat claude.ai, un fichier HTML autonome), et gardent une copie locale. `design-system` et `docker-scout` travaillent dans le code de l'application : ils s'utilisent depuis Claude Code ou un autre agent de code, pas depuis le chat. `docker-scout` publie aussi son rapport comme un artifact.
 
 ## 🔗 La chaîne de travail
 
@@ -136,7 +140,8 @@ skills/
 ├── .github/workflows/ci.yml   # validation, découverte par le CLI, lint
 ├── scripts/
 │   └── validate-skills.mjs    # validation locale, sans dépendance
-├── package.json               # outillage de lint uniquement
+├── package.json               # outillage de validation uniquement
+├── tsconfig.json              # contrôle de types des scripts TypeScript
 └── skills/
     └── specs-ui/
         ├── SKILL.md           # instructions lues par l'agent
@@ -144,7 +149,7 @@ skills/
         ├── CHANGELOG.md       # historique des versions
         ├── references/        # détails lus à la demande par l'agent
         ├── templates/         # gabarits copiés dans le projet
-        └── scripts/           # scripts Node lancés par l'agent (aucune dépendance)
+        └── scripts/           # scripts Node lancés par l'agent (.mjs ou .mts, aucune dépendance)
 ```
 
 Chaque skill porte trois documents, chacun pour un public :
@@ -201,10 +206,11 @@ Documentation, instructions et textes produits sont en français. Le code des sc
 ```bash
 npm run validate           # structure, frontmatter, nommage, versions, syntaxe des scripts
 npx skills add . --list    # découverte réelle par le CLI
-npm ci && npm run lint:md  # lint Markdown (npm run lint:md:fix corrige)
+npm ci && npm run typecheck # types des scripts TypeScript (.mts)
+npm run lint:md            # lint Markdown (npm run lint:md:fix corrige)
 ```
 
-La CI rejoue les trois sur chaque push et chaque PR. `--list` est le contrôle qui compte : lui seul prouve qu'un agent verra le skill.
+La CI rejoue ces contrôles sur chaque push et chaque PR. `--list` est le contrôle qui compte : lui seul prouve qu'un agent verra le skill.
 
 ## 🤝 Contribution
 
