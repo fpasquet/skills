@@ -1,5 +1,24 @@
 # Journal des versions
 
+## 1.4.0 · 25/11/2026
+
+Éprouvé sur les images de production d'un monorepo (neuf images publiées par Cloud Build, trois fonctions Cloud Run).
+
+- **Image republiée** : quand une release reprend l'image de préproduction sans couche de plus (`FROM …:staging` puis
+  `ENV`), la provenance la déclare comme image de base et toute l'application passait en `base-os`. `scan.mts` remonte à
+  la vraie base. Une image de la provenance devenue inaccessible est signalée au lieu d'arrêter l'analyse.
+- **Dockerfile à plusieurs cibles** : `detect.mts --target`. La cible par défaut est une étape finale (que personne ne
+  réutilise, ou qui a son `CMD`), plus un socle `runtime` partagé, qui donnait un faux « tourne en root ».
+- `detect.mts` : un dossier illisible (données d'une base montées par Compose) est ignoré et signalé ; `Dockerfile.x.prod`
+  est reconnu ; une image `unprivileged` n'est plus donnée comme root.
+- **Espace de travail de Scout sur disque** (`~/.cache/docker-scout-skill`, ou `XDG_CACHE_HOME`) : l'indexation d'une
+  grosse image échouait dans un `/tmp` en tmpfs sous quota, et y laissait ses dossiers d'extraction. Ils sont supprimés
+  après chaque appel. L'erreur de Scout s'affiche, avec la cause quand c'est la place.
+- Faux zéro : un binaire Go sans informations de build (`esbuild` 0.28) est signalé incomplet.
+- Rapport : le nombre de failles « restantes » de l'avant et après comptait aussi les failles apparues ; pas de commande
+  de build pour une image sans Dockerfile.
+- Image de buildpack (Cloud Run functions) : son système vient de la plateforme, le total est signalé incomplet.
+
 ## 1.3.0 · 24/11/2026
 
 - `ci.mts` : `--hub-login` et `--hub-input` (connexion à Docker Hub par une action du dépôt, quand le jeton vit hors des

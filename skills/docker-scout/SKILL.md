@@ -14,7 +14,7 @@ compatibility: >
   exécutés sans compilation). Accès réseau aux registres.
 metadata:
   author: fpasquet
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Audit d'image avec Docker Scout : failles, corrections, CI
@@ -73,7 +73,7 @@ Un scan compte des centaines de failles, et un SBOM plusieurs mégaoctets. Règl
 3. État des lieux, en lecture seule :
 
    ```sh
-   node <skill>/scripts/detect.mts <app>      # --dockerfile <chemin> s'il y en a plusieurs
+   node <skill>/scripts/detect.mts <app>      # --dockerfile <chemin> s'il y en a plusieurs, --target <étape> si l'un produit plusieurs images
    ```
 
    Il donne les outils présents, les étapes et la cible du Dockerfile, l'image de base, les secrets de build, les registres privés (lus dans les fichiers de configuration et les lockfiles), les fichiers qui construisent une image (workflow, script, Cloud Build), la CI, les écarts du Dockerfile, la commande de build proposée et **les questions à poser**. Un `Dockerfile.dev` n'est jamais retenu si un autre part en production.
@@ -82,7 +82,7 @@ Un scan compte des centaines de failles, et un SBOM plusieurs mégaoctets. Règl
 
    ```sh
    node <skill>/scripts/init.mts .docker-scout --image api --target production [--dockerfile …] [--package apps/api] [--build-arg MIRROR=] [--secret 'id=npmrc,src=$HOME/.npmrc']
-   node <skill>/scripts/detect.mts <app> [--dockerfile …] --out .docker-scout/detect.json
+   node <skill>/scripts/detect.mts <app> [--dockerfile …] [--target …] --out .docker-scout/detect.json
    ```
 
    `init.mts` signale un `.dockerignore` à compléter. `detect.json` alimente la partie Dockerfile du rapport.

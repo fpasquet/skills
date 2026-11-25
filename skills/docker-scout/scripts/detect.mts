@@ -4,7 +4,9 @@
  * secrets de build), écarts aux bonnes pratiques, registres privés, gestionnaires de paquets, CI. Propose la
  * commande de build et les questions à poser. Aucune valeur de secret n'est lue ni affichée.
  *
- *   node detect.mts <app> [--dockerfile <chemin>] [--out <dir>/detect.json] [--json]
+ *   node detect.mts <app> [--dockerfile <chemin>] [--target <étape>] [--out <dir>/detect.json] [--json]
+ *
+ *   --target   étape à examiner, quand un Dockerfile produit plusieurs images (une étape par service)
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -17,9 +19,20 @@ const root = resolve(options.positionals[0] ?? '.');
 if (!existsSync(root)) fail(`dossier introuvable : ${root}`);
 const IGNORED = new Set(['node_modules', '.git', 'vendor', 'dist', 'build', '.next', '.venv', 'venv', 'target', '.docker-scout', '.claude', '.agents']);
 const files: string[] = [];
+// Dossiers que le compte ne peut pas lire (données d'une base montées par Compose) : ignorés, mais dits.
+const unreadable: string[] = [];
+const entriesOf = (dir: string) => {
+  try {
+    return readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    if (dir === root || !['EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
+    unreadable.push(relative(root, dir));
+    return [];
+  }
+};
 (function walk(dir: string, depth: number) {
   if (depth > 5) return;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  for (const entry of entriesOf(dir)) {
     if (entry.isDirectory()) {
       if (!IGNORED.has(entry.name)) walk(join(dir, entry.name), depth + 1);
     } else files.push(relative(root, join(dir, entry.name)).split('\\').join('/'));
@@ -93,10 +106,18 @@ function parseDockerfile(path: string) {
     const parent = byName(stage.image);
     return parent && parent !== stage ? [...chain(parent), stage] : [stage];
   };
-  const target = stages.filter((stage) => PRODUCTION.test(stage.name)).at(-1) ?? stages.at(-1);
+  // Une image sort d'une étape finale : personne n'en part (FROM, COPY --from), ou elle a son propre démarrage.
+  // Une étape « runtime » qui sert seulement de socle à d'autres n'en est pas une.
+  const reused = new Set([...stages.map((stage) => stage.image), ...instructions.flatMap((item) => [...item.value.matchAll(/--from=([\w.-]+)|\bfrom=([\w.-]+)/g)].map((found) => found[1] ?? found[2]))].map((name) => name.toLowerCase()));
+  const starts = (stage: Stage) => stage.instructions.some((item) => item.name === 'CMD' || item.name === 'ENTRYPOINT');
+  const targets = stages.filter((stage) => !stage.name || !reused.has(stage.name.toLowerCase()) || starts(stage))
+    .filter((stage) => !/^(dev|development|test|tests|e2e|debug|ci|lint|base|build|builder|deps|dependencies|install|installer|pruner)([-_.]|$)/i.test(stage.name));
+  const wanted = options.values.target;
+  if (wanted && !byName(wanted)) fail(`étape introuvable dans ${path} : ${wanted} (étapes : ${stages.map((stage) => stage.name).filter(Boolean).join(', ')})`);
+  const target = wanted ? byName(wanted) : targets.filter((stage) => PRODUCTION.test(stage.name)).at(-1) ?? targets.at(-1) ?? stages.at(-1);
   const final = target ? chain(target) : [];
   return {
-    path, args: globals, stages, target, final, instructions,
+    path, args: globals, stages, target, targets, final, instructions,
     base: final[0]?.image ?? '', baseExpression: final[0]?.from ?? '',
     externalBases: [...new Set(stages.filter((stage) => !byName(stage.image)).map((stage) => stage.image))],
     secretIds: [...new Set(instructions.filter((item) => item.name === 'RUN').flatMap((item) => [...item.value.matchAll(/--mount=type=secret[^ ]*?(?:,|=secret,)id=([\w.-]+)/g)].map((found) => found[1])))],
@@ -123,7 +144,7 @@ function checkDockerfile(docker: Docker): Issue[] {
   const composed = docker.stages.find((stage) => docker.externalBases.includes(stage.image) && /\$/.test(stage.from));
   if (composed) add('base-arg', 'info', `${composed.from} : image composée par ARG, que Dependabot ne sait pas mettre à jour (Renovate oui, avec une annotation)`, composed.line);
   const user = finalInstructions.filter((item) => item.name === 'USER').at(-1);
-  const rootless = /nonroot|rootless/.test(docker.base);
+  const rootless = /nonroot|rootless|unprivileged/.test(docker.base);
   if (!rootless && (!user || /^(root|0)(:|$)/.test(user.value))) add('root-user', 'error', 'l’image finale tourne en root : ajouter USER avec un compte non privilégié', user?.line ?? docker.target?.line);
   if (docker.stages.length === 1 && /\b(npm|pnpm|yarn|pip|uv|poetry|composer|mvn|gradle|go build|cargo|dotnet)\b/.test(docker.instructions.map((item) => item.value).join(' '))) add('single-stage', 'warning', 'une seule étape : outils de build et dépendances de développement restent dans l’image finale', docker.target?.line);
   for (const { name, value, line } of docker.instructions) {
@@ -159,7 +180,7 @@ function checkDockerfile(docker: Docker): Issue[] {
   return issues.sort((a, b) => order[a.level] - order[b.level] || (a.line ?? 0) - (b.line ?? 0));
 }
 
-const dockerfiles = files.filter((path) => /(^|\/)(Dockerfile|Containerfile)(\.[\w-]+)?$|\.Dockerfile$/i.test(path) && !/\.dockerignore$/.test(path) && /^\s*FROM\s/im.test(read(path)))
+const dockerfiles = files.filter((path) => /(^|\/)(Dockerfile|Containerfile)(\.[\w-]+)*$|\.Dockerfile$/i.test(path) && !/\.dockerignore$/.test(path) && /^\s*FROM\s/im.test(read(path)))
   .sort((a, b) => a.split('/').length - b.split('/').length || a.length - b.length);
 // Fichiers qui construisent une image (CI, scripts, Makefile) : ils disent quel Dockerfile part en production, même
 // désigné par un motif (`infra/dockerfiles/${app}.Dockerfile`). Compose, qui sert au développement, n'en fait pas partie.
@@ -260,7 +281,11 @@ const compose = files.filter((path) => /(^|\/)(docker-)?compose(\.[\w-]+)?\.ya?m
 // ---------------------------------------------------------------------------
 const packageName = readJson<{ name?: string }>(join(root, 'package.json'), {}).name?.replace(/^@[^/]+\//, '');
 // Plusieurs images dans le dépôt : le nom reprend celui du Dockerfile (api.Dockerfile) ou de son dossier (apps/api/Dockerfile).
-const imageSuffix = (path: string) => (basename(path).match(/^(?:Dockerfile|Containerfile)\.([\w-]+)$/i) ?? basename(path).match(/^([\w-]+)\.Dockerfile$/i))?.[1] ?? basename(dirname(path));
+// Un suffixe d'environnement ne nomme pas l'image : Dockerfile.nestjs.prod → nestjs.
+const imageSuffix = (path: string) => {
+  const parts = basename(path).split('.').filter((part) => !/^(dockerfile|containerfile|prod|production)$/i.test(part));
+  return parts.length ? parts.join('-') : basename(dirname(path));
+};
 const imageName = (path: string | undefined) => [packageName ?? basename(root), ...(path && imageFiles.length > 1 && imageSuffix(path) !== '.' ? [imageSuffix(path)] : [])].join('-').toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
 const image = imageName(chosen);
 // Manifeste de l'application dans un monorepo : à côté du Dockerfile, ou dans un dossier du même nom que l'image.
@@ -297,8 +322,10 @@ if (imageFiles.length > 1 && !options.values.dockerfile) {
     ? `${built.length} images construites (${built.map((path) => `${imageName(path)} ← ${path}`).join(', ')}) : les auditer toutes ? Un espace de travail par image, un rapport commun ; relancer avec --dockerfile pour chacune.`
     : `${imageFiles.length} Dockerfiles (${imageFiles.slice(0, 6).join(', ')}) : lesquels construisent une image de production ?`);
 }
+const targetNames = (docker?.targets ?? []).map((stage) => stage.name).filter(Boolean);
+if (targetNames.length > 1 && !options.values.target) questions.push(`${docker?.path} produit ${targetNames.length} images (${targetNames.join(', ')}) : lesquelles partent en production ? Un espace de travail par image ; relancer avec --target pour chacune.`);
 // Une dernière étape sans nom est l'étape finale par convention : rien à demander.
-if (docker?.target?.name && !PRODUCTION.test(docker.target.name)) questions.push(`Étape de production : « ${docker.target.name} » ?`);
+else if (docker?.target?.name && !options.values.target && !PRODUCTION.test(docker.target.name)) questions.push(`Étape de production : « ${docker.target.name} » ?`);
 if (registries.size && !docker?.secretIds.length) questions.push(`Paquets pris sur ${[...registries.keys()].join(', ')} sans secret de build dans le Dockerfile : le registre demande-t-il un jeton ? Si oui, quel fichier le contient sur le poste (.npmrc, pip.conf…), et quel secret en CI ?`);
 if (docker?.secretIds.length) questions.push(`Le build attend le(s) secret(s) ${docker.secretIds.join(', ')} : quel fichier ou quelle variable sur le poste, et quel secret GitHub en CI ?`);
 if (docker?.ssh || gitDependencies.length) questions.push('Dépendances git privées (SSH) : quelle clé sur le poste, et quelle clé de déploiement en CI ?');
@@ -312,7 +339,7 @@ if (tools.hub === 'non connecté') questions.push('Pas de connexion à Docker Hu
 const report = {
   root, tools, dockerfiles, images: imageFiles.map((path) => ({ name: imageName(path), dockerfile: path, package: manifestOf(path) })), image, command, questions, issues, ecosystems, gitDependencies, literalTokens: [...new Set(literalTokens)],
   docker: docker && {
-    path: docker.path, target: docker.target?.name ?? '', base: docker.base, baseExpression: docker.baseExpression, args: docker.args, secretIds: docker.secretIds, ssh: docker.ssh, externalBases: docker.externalBases,
+    path: docker.path, target: docker.target?.name ?? '', targets: targetNames, base: docker.base, baseExpression: docker.baseExpression, args: docker.args, secretIds: docker.secretIds, ssh: docker.ssh, externalBases: docker.externalBases,
     stages: docker.stages.map(({ name, image: from, line }) => ({ name, from, line })),
   },
   registries: [...registries.values()].map(({ host, sources, details }): Registry => ({ host, sources: [...sources], details: [...details] })),
@@ -325,6 +352,7 @@ if (options.flags.json) {
 }
 
 const line = (name: string, value: string) => console.log(`${name.padEnd(18)}${value}`);
+if (unreadable.length) line('Illisibles', `${unreadable.slice(0, 5).join(', ')} (dossiers ignorés)`);
 line('Outils', `docker ${tools.docker ?? 'absent'} · buildx ${tools.buildx ?? 'absent'} · scout ${tools.scout ?? 'absent'} · Docker Hub ${tools.hub}`);
 if (docker) {
   line('Dockerfile', `${docker.path}${dockerfiles.length > 1 ? ` (aussi : ${dockerfiles.filter((path) => path !== docker.path).slice(0, 5).join(', ')})` : ''}`);

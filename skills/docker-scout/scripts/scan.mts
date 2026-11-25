@@ -26,7 +26,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
   ORIGINS, fail, fixVersion, formatCounts, formatSize, isFileSystem, loadConfig, normalize, parseArgs, provenanceBases,
-  rank, run, scoutCves, scoutPolicies, scoutVersion, withScheme, worst, writeJson,
+  rank, run, scoutCves, scoutPolicies, scoutVersion, tryScoutCves, withScheme, worst, writeJson,
 } from './lib.mts';
 import { productionOf } from './lockfile.mts';
 import type { Base, Origin, RawScan } from './types.mts';
@@ -91,20 +91,34 @@ const kev = new Set((kevRaw.vulnerabilities ?? []).flatMap((entry) => entry.vuln
 let base: Base | null = null;
 let rawBase: RawScan | null = null;
 if (!isFileSystem(ref) && options.values.base !== 'none') {
-  const found = provenanceBases(raw);
-  if (options.values.base) base = { ref: options.values.base, source: 'option' };
-  else if (found.length) {
+  const layers = raw.source?.image?.config?.rootfs?.diff_ids ?? [];
+  const shortName = (name: string) => name.split('@')[0].replace(/:[^:/]+$/, '').split('/').at(-1) ?? '';
+  const fromProvenance = (source: RawScan, depth = 0): void => {
+    const found = provenanceBases(source);
     // Plusieurs images dans un build multi-étapes : celle de l'étape finale est la dernière dont les couches ouvrent l'image.
-    const layers = raw.source?.image?.config?.rootfs?.diff_ids ?? [];
     for (const candidate of found) {
       const candidateRef = `${candidate.name}@${candidate.digest}`;
-      const candidateRaw = found.length === 1 ? null : scoutCves(withScheme(candidateRef, 'image'), { platform });
-      const ids = candidateRaw?.source?.image?.config?.rootfs?.diff_ids ?? [];
-      if (found.length > 1 && !(ids.length && ids.every((id, index) => layers[index] === id))) continue;
+      const candidateRaw = tryScoutCves(withScheme(candidateRef, 'image'), platform);
+      if (!candidateRaw) {
+        notes.push(`image de la provenance inaccessible : ${candidateRef}. Supprimée du registre ? Passer --base <ref> si l'origine des paquets est approximative.`);
+        continue;
+      }
+      const ids = candidateRaw.source?.image?.config?.rootfs?.diff_ids ?? [];
+      const opens = ids.length > 0 && ids.every((id, index) => layers[index] === id);
+      if (found.length > 1 && !opens) continue;
+      // Même image republiée sous une autre étiquette (staging → release), sans couche de plus : sa vraie base est celle
+      // de son propre build.
+      if (opens && ids.length === layers.length && shortName(candidate.name) === shortName(ref) && depth < 3) {
+        notes.push(`image republiée depuis ${candidate.name}:${candidate.tag || candidate.digest.slice(0, 19)} (mêmes couches) : l'image de base est lue dans la provenance de celle-ci.`);
+        fromProvenance(candidateRaw, depth + 1);
+        continue;
+      }
       base = { ref: candidate.tag ? `${candidate.name}:${candidate.tag}` : candidate.name, digest: candidate.digest, source: 'provenance' };
       rawBase = candidateRaw;
     }
-  }
+  };
+  if (options.values.base) base = { ref: options.values.base, source: 'option' };
+  else fromProvenance(raw);
   if (!base && raw.source?.base_image?.name) {
     const scoutBase = raw.source.base_image;
     base = { ref: scoutBase.tag ? `${scoutBase.name}:${scoutBase.tag}` : scoutBase.name ?? '', digest: scoutBase.digest, source: 'scout' };

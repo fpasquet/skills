@@ -3,8 +3,8 @@
  * scan (origine de chaque paquet, sévérités, correctifs), comparaison de scans. Aucune dépendance.
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type {
   Base, Config, Counts, Exclusion, Health, Layer, Origin, Package, Policy, RawArtifact, RawLocation, RawScan, RawVulnerability, Row, Scan, Severity, Summary,
@@ -61,8 +61,8 @@ export function fail(message: string, code = 2): never {
   process.exit(code);
 }
 
-export function run(command: string, args: string[]) {
-  const result = spawnSync(command, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+export function run(command: string, args: string[], env?: Record<string, string>) {
+  const result = spawnSync(command, args, { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, ...(env ? { env: { ...process.env, ...env } } : {}) });
   return { status: result.status ?? 1, stdout: result.stdout ?? '', stderr: result.stderr ?? String(result.error ?? '') };
 }
 
@@ -107,18 +107,30 @@ export function scoutVersion(): string {
   return stdout.match(/version:\s*v?([\w.-]+)/)?.[1] ?? 'inconnue';
 }
 
-const scoutError = (stderr: string) => stderr.split('\n').map((line) => line.trim())
+const scoutError = (stderr: string) => stderr.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '').split(/[\r\n]+/).map((line) => line.trim())
   .filter((line) => line && !/^[✓!]|^\.\.\.|^What's next|^View |^Learn|^Compare /.test(line)).slice(-4).join(' | ');
+
+// Espace de travail de Scout : sur disque plutôt que dans /tmp, souvent un tmpfs sous quota trop petit pour les couches
+// d'une grosse image, et où ses dossiers d'extraction (trivy-*, stereoscope-*) restent après chaque analyse. Ceux d'un
+// appel sont supprimés à la fin ; le cache des inventaires, réutilisé d'un appel à l'autre, est gardé.
+const scoutHome = () => join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'docker-scout-skill');
+function scoutTemp(): { dir: string; env: Record<string, string> } {
+  const home = scoutHome();
+  mkdirSync(join(home, 'sbom'), { recursive: true });
+  const dir = mkdtempSync(join(home, 'run-'));
+  return { dir, env: { TMPDIR: dir, DOCKER_SCOUT_CACHE_DIR: process.env.DOCKER_SCOUT_CACHE_DIR || join(home, 'sbom') } };
+}
 
 // Lance une commande Scout qui écrit un fichier, et en rend le contenu (null si elle échoue).
 function scoutFile(args: string[], ref: string, { allowFailure = false } = {}): string | null {
-  const dir = mkdtempSync(join(tmpdir(), 'docker-scout-'));
+  const { dir, env } = scoutTemp();
   const output = join(dir, 'out');
   try {
-    const { status, stderr } = run('docker', ['scout', ...args, '--output', output, ref]);
+    const { status, stdout, stderr: errors } = run('docker', ['scout', ...args, '--output', output, ref], env);
+    const stderr = `${errors}\n${stdout}`;
     if (!existsSync(output)) {
       if (allowFailure) return null;
-      const hint = /unauthorized|log in|login|denied|pull failed/i.test(stderr) ? ' → docker login (compte Docker Hub), et docker login <registre> pour un registre privé.' : '';
+      const hint = /disk quota|no space left/i.test(stderr) ? ` → plus de place dans ${scoutHome()} : en libérer, ou désigner un autre disque par XDG_CACHE_HOME.` : /unauthorized|log in|login|denied|pull failed/i.test(stderr) ? ' → docker login (compte Docker Hub), et docker login <registre> pour un registre privé.' : '';
       fail(`docker scout ${args[0]} ${ref} (code ${status}) : ${scoutError(stderr) || stderr.trim().slice(-400)}${hint}`, 1);
     }
     return readFileSync(output, 'utf8');
@@ -140,7 +152,7 @@ export function tryScoutCves(ref: string, platform?: string): RawScan | null {
 }
 
 export function scoutPolicies(ref: string, { platform }: { platform?: string } = {}): { health: Health | null; policies: Policy[] } | null {
-  const dir = mkdtempSync(join(tmpdir(), 'docker-scout-'));
+  const { dir } = scoutTemp();
   const resultFile = join(dir, 'policies.json');
   try {
     const text = scoutFile(['policy', ...platformArgs(platform), '--result-file', resultFile], ref, { allowFailure: true });
@@ -314,9 +326,16 @@ export function normalize(raw: RawScan, { label, ref, title, scout, base, rawBas
 export function blindSpot(raw: RawScan): string | undefined {
   const names = new Set((raw.artifacts ?? []).filter((artifact) => artifact.type === 'deb').map((artifact) => artifact.name));
   if (names.has('libc6') && !names.has('glibc')) return 'paquets système indexés sous leur nom binaire (libc6 et non glibc) : leurs failles ne sont pas détectées, le résultat est incomplet';
+  // Un binaire Go sans informations de build (esbuild 0.28 et plus) échappe à Scout : ses failles disparaissent du total
+  // sans être corrigées.
+  const goTool = (raw.artifacts ?? []).find((artifact) => artifact.type === 'npm' && artifact.namespace === '@esbuild');
+  if (goTool && !(raw.artifacts ?? []).some((artifact) => artifact.type === 'golang' && artifact.name === 'stdlib')) return `binaire Go sans informations de build (@esbuild/${goTool.name} ${goTool.version}) : les failles de sa bibliothèque standard ne sont pas détectées. Comparer sa version de Go (strings <binaire> | grep -o 'go1[.][0-9.]*') à celles des correctifs`;
   const image = raw.source?.image;
+  const hasOs = (raw.artifacts ?? []).some((artifact) => OS_TYPES.has(artifact.type));
+  // Image de buildpack (Cloud Run functions…) : le système est ajouté à l'exécution par la plateforme, Scout ne le voit pas.
+  if (!hasOs && (raw.artifacts ?? []).some((artifact) => (artifact.locations ?? []).some((location) => /^\/(cnb\/lifecycle|layers\/google\.)/.test(location.path)))) return 'image de buildpack sans système : celui-ci vient de la plateforme à l’exécution et n’est pas analysé';
   const known = image?.distro?.os_name && !/scratch|wolfi|chainguard/i.test(image.distro.os_name);
-  if (known && ![...(raw.artifacts ?? [])].some((artifact) => OS_TYPES.has(artifact.type))) return 'aucun paquet système trouvé (base de paquets retirée de l’image ?) : leurs failles ne sont pas détectées';
+  if (known && !hasOs) return 'aucun paquet système trouvé (base de paquets retirée de l’image ?) : leurs failles ne sont pas détectées';
   return undefined;
 }
 

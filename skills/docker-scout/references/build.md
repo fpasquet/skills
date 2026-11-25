@@ -31,7 +31,19 @@ docker build --pull --target production --tag api:scout .
 - `--platform linux/amd64` : si la production n'a pas l'architecture du poste (Mac ARM).
 - `docker build --check .` : contrôles de BuildKit sur le Dockerfile, en complément de `detect.mts`.
 
-L'analyse d'une image déjà publiée se passe de build : `scan.mts <dir> current registry://ghcr.io/acme/api:1.4.0`. C'est utile pour savoir ce qui tourne vraiment en production.
+L'analyse d'une image déjà publiée se passe de build : `scan.mts <dir> current registry://ghcr.io/acme/api:1.4.0`. C'est utile pour savoir ce qui tourne vraiment en production. Dans ce cas :
+
+- relever les images en service (`gcloud run services list`, `kubectl get pods`…), et les désigner par digest ;
+- préférer le digest de l'**index** (`docker buildx imagetools inspect <image>:<étiquette> --format '{{.Manifest.Digest}}'`) à
+  celui de la plateforme que donne l'orchestrateur : l'index porte l'attestation de provenance, donc l'image de base ;
+- une image republiée (préproduction → release) a pour provenance l'image d'origine : `scan.mts` remonte à sa base, tant
+  que celle-ci est encore dans le registre. Sinon, `--base`.
+
+## Place disque
+
+Scout extrait les couches dans `~/.cache/docker-scout-skill` (`XDG_CACHE_HOME` pour un autre disque), pas dans `/tmp`, souvent un
+tmpfs sous quota : « disk quota exceeded » pendant l'indexation. Les dossiers d'un appel sont supprimés ; le cache des
+inventaires (`sbom/`) reste, et se vide sans risque.
 
 ## Registre de paquets privé
 

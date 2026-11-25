@@ -34,6 +34,8 @@ Si elle manque, la noter « à suivre », et choisir la politique `app` en CI. L
 
 Scout rapproche les paquets Debian et Ubuntu des avis de sécurité par leur **paquet source** (`glibc`, `openssl`). Dans une image distroless, il n'indexe que les noms binaires (`libc6`, `libssl3t64`) et n'affiche aucune faille, alors que la même version d'OpenSSL en a dans l'image Debian. Les scripts le signalent (« incomplet »). Même effet si le Dockerfile supprime la base dpkg ou apk.
 
+Autre faux zéro : un **binaire Go sans informations de build**. `esbuild` 0.28.2 les retire, Scout n'y voit plus `stdlib`, et une montée de version semble régler soixante failles. `scan.mts` le signale (« incomplet »). Lire la version de Go dans le binaire (`strings bin/esbuild | grep -oE 'go1\.[0-9]+\.[0-9]+' | sort -u`), et compter les avis dont le correctif est plus récent. Un total qui tombe à zéro sur un seul paquet se vérifie toujours ainsi.
+
 Dans ce cas, ne pas présenter zéro comme un résultat : comparer la version des paquets système à celle d'une image `-slim` de la même distribution, et s'appuyer sur la date de reconstruction. L'intérêt d'une image minimale reste réel (moins de code exposé), mais il ne se lit pas dans ce total.
 
 ## 2. Outils embarqués (`base-tools`)

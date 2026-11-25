@@ -149,7 +149,7 @@ function beforeAfterSection(): string {
   const fixed = fixedTable(reference, target);
   const remaining = remainingTable(reference, target, analysis.remaining ?? {}, inline);
   const name = change?.pr ? `PR #${change.pr.number}` : change ? `branche ${change.head}` : 'corrections';
-  return section('avant-apres', 'Avant / après', 'Effet mesuré', `Avant et après : ${name}`, `${plural(comparison?.removed.length ?? 0, 'faille disparue', 'failles disparues')}, ${plural(target.counts.total, 'restante')}, ${added.length ? plural(added.length, 'apparue') : 'aucune apparue'}. Deux images construites et analysées de la même façon.`, [
+  return section('avant-apres', 'Avant / après', 'Effet mesuré', `Avant et après : ${name}`, `${plural(comparison?.removed.length ?? 0, 'faille disparue', 'failles disparues')}, ${plural(comparison?.remaining.length ?? 0, 'restante')}, ${added.length ? plural(added.length, 'apparue') : 'aucune apparue'}. Deux images analysées de la même façon.`, [
     change ? changeCard(change) : '',
     comparisonTable(reference, target),
     fixed ? `<h3>Failles corrigées, par paquet</h3>${fixed}` : '',
@@ -211,7 +211,8 @@ function actionCard(action: Action): string {
 const steps = (items: Step[] = []) => items.map((item) => `<article class="card"><h3>${inline(item.title)}</h3>${item.body ? prose(item.body) : ''}${(item.code ?? []).map(code).join('')}</article>`).join('');
 
 function buildSection(): string {
-  if (!config.image) return '';
+  // Image sans Dockerfile dans le projet (fonction construite par la plateforme) : pas de commande à proposer.
+  if (!config.image || !existsSync(join(root, config.build?.dockerfile ?? 'Dockerfile'))) return '';
   const command = buildCommand(config as Config, 'scout');
   const body = `${code({ title: 'Build de l’image de production, depuis la racine du projet', text: command })}${code({
     title: 'Publication, avec SBOM et provenance attachés à l’image',
