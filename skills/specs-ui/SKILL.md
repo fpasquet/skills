@@ -125,6 +125,7 @@ Les captures de vérification vont dans un dossier temporaire (le scratchpad de 
 | `scripts/migrate-layout.mjs` | Range un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) dans un dossier `specs/` |
 | `scripts/extract-identity.mjs` | Identité d'un site (URL) ou d'un code (dossier), captures |
 | `scripts/recover.mjs` | Reconstitue les sources (`sources/`, `tokens.css`, `lot.json`) d'un projet dont seul le site publié subsiste |
+| `scripts/regroup.mjs` | Regroupe les écrans dans de nouveaux groupes (lots → fonctionnalités) sans changer aucun identifiant : fichiers, règles, points ouverts, journal, statuts, liens |
 | `scripts/upgrade.mjs` | Met un document ancien (sans sources) au niveau des templates, sans toucher aux maquettes |
 | `scripts/typography.mjs` | Typographie française (appliquée automatiquement par `build.mjs`) |
 | `scripts/export-design-system.mjs` | (Facultatif) Prépare un dossier Design System Claude Design : tokens, fondations, composants, README |
@@ -176,7 +177,14 @@ Suivre `references/redaction-specs.md` §1. Avant toute maquette, présenter le 
 - **par lots** (défaut, recommandé pour un produit à construire) : un lot par étape de livraison, numéroté (« Lot 2 · Projets ») ; commencer par celui qui fixe la coquille ;
 - **par fonctionnalités** (recommandé pour un produit existant ou livré, où des lots n'ont plus de sens) : un groupe par espace ou fonctionnalité du produit (« Conversation », « Atelier de prompts »), sans numéro ni ordre de livraison ; déclarer `"grouping": "features"` dans `sources/site.json`, qui fait afficher « Fonctionnalités » et « Écrans de la fonctionnalité » au lieu de « Lots » et « Écrans du lot ».
 
-Les dossiers et `lot.json` gardent leur nom technique dans les deux cas. Changer de découpage en cours de route (lots d'un produit désormais livré) : regrouper les écrans dans les nouveaux dossiers en gardant leurs identifiants, les ancres et les numéros de règles, puis corriger les liens entre groupes (`ancien.html#…`) signalés par `build.mjs`. Le mobile est maquetté pour chaque écran, sauf portée réduite acceptée par la personne.
+Les dossiers et `lot.json` gardent leur nom technique dans les deux cas. Le mobile est maquetté pour chaque écran, sauf portée réduite acceptée par la personne.
+
+**Changer de découpage** en cours de route (lots d'un produit désormais livré, groupes à réorganiser), projet commité :
+
+1. `node <skill>/scripts/regroup.mjs <projet>/ui --plan` écrit `<projet>/ui/regroup.json`, un groupe par lot actuel. Proposer les nouveaux groupes (nom de dossier, libellé, écrans dans l'ordre), les faire valider, puis les écrire dans ce fichier.
+2. `regroup.mjs <projet>/ui --dry-run`, puis sans option. Les écrans, leurs états, les ancres et les statuts ne changent pas. Chaque règle garde son identifiant dans `data-rf` (identifiant RF du cahier des charges) : ne jamais le retirer ni le copier sur une autre règle. Lire les avertissements : un en-tête de lot fusionné (introduction, parcours) est à reprendre à la main.
+3. `build.mjs`, contrôle avec `capture.mjs`, puis mettre à jour `CONTEXTE.md` (tableau des groupes, inventaire, découpage) et supprimer `regroup.json`. La publication suivante retire de l'artifact les pages des anciens lots.
+4. Avec un cahier des charges : `regroup.mjs` du skill `requirements-doc`. Avec un prototype : `drift.mjs`, puis `--mark` une fois vérifié.
 
 ## Étape 3 · Écrire les specs (sources par écran)
 

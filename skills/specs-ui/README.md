@@ -65,6 +65,7 @@ specs-ui/
     ├── migrate-layout.mjs           range specs-ui/, prototype-ui/, cdc/ (versions 1.x, 2.x) dans specs/
     ├── extract-identity.mjs         identité d'un site ou d'un code, captures
     ├── recover.mjs                  reconstitue les sources depuis le site publié (sources perdues)
+    ├── regroup.mjs                  regroupe les écrans (lots → fonctionnalités), identifiants inchangés
     ├── upgrade.mjs                  mise à niveau d'un document ancien sans sources
     ├── typography.mjs               typographie française
     ├── export-design-system.mjs     (facultatif) dossier Design System pour Claude Design
