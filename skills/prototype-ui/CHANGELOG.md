@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 2.6.2 · 27/11/2026
+
+- **daisyUI** : `scripts/daisyui.mjs`, copie du module de `specs-ui` (3.10.0), applique les écarts du thème d'un produit existant déclarés par les specs (`site.json` → `daisyui.theme`) et charge les feuilles `join`, `glass` et les arrondis du thème depuis le dossier `utilities/` du paquet. Le prototype rend ainsi les mêmes classes que les maquettes et que l'application.
+
 ## 2.6.1 · 08/11/2026
 
 - **daisyUI dans un artifact** : `scripts/daisyui.mjs`, copie du module de `specs-ui` (3.8.1), intègre les feuilles des composants aux pages au lieu de les lier au CDN. Un artifact n'accepte une feuille externe que de Google Fonts : les fenêtres, interrupteurs et boutons s'y affichaient sans style. Chaque feuille est lue une fois sur le CDN, puis gardée dans `~/.cache/specs-ui/daisyui/<version>/`.

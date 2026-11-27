@@ -18,7 +18,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, unlink
 import { execFileSync } from 'node:child_process';
 import { join, dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiVersion } from './daisyui.mjs';
+import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiThemeOverrides, daisyuiVersion } from './daisyui.mjs';
 
 const args = process.argv.slice(2);
 const root = args[0] && !args[0].startsWith('--') && resolve(args[0]);
@@ -44,15 +44,17 @@ const tokenValue = (name, fallback) => theme.match(new RegExp(`${name}\\s*:\\s*(
 const site = JSON.parse(read(join(specsDir, 'sources', 'site.json'), '{}'));
 const firstLot = (site.lots ?? []).find((l) => existsSync(join(specsDir, 'sources', l, 'lot.json')));
 const fonts = config.fonts ?? (firstLot ? JSON.parse(read(join(specsDir, 'sources', firstLot, 'lot.json'))).fonts : '');
-// daisyUI déclaré par les specs (site.json → daisyui) : mêmes feuilles et même thème pointé sur les tokens que les specs
+// daisyUI déclaré par les specs (site.json → daisyui) : mêmes feuilles, même thème pointé sur les tokens et mêmes
+// écarts propres au produit (daisyui.theme) que les specs
 let daisyui;
+let pageTheme = theme;
 try {
   daisyui = daisyuiVersion(site);
+  if (daisyui) pageTheme = daisyuiTheme(theme, daisyuiThemeOverrides(site));
 } catch (e) {
   console.error(e.message);
   process.exit(1);
 }
-const pageTheme = daisyui ? daisyuiTheme(theme) : theme;
 
 // Tailwind compilé au build (affichage immédiat, pas de compilation dans le navigateur) si la CLI est
 // disponible : <projet>/prototype/node_modules (npm install), variable TAILWIND_CLI, ou tailwindcss dans le PATH.

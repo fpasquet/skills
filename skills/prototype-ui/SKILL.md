@@ -10,7 +10,7 @@ description: >
   sans prononcer le mot « prototype ».
 metadata:
   author: fpasquet
-  version: "2.6.1"
+  version: "2.6.2"
 ---
 
 # Prototype UI à partir des specs
