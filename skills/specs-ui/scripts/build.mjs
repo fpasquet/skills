@@ -11,7 +11,8 @@
  *   ui/sources/site.json            { "title", "heading", "intro" (texte ou liste de paragraphes), "artifact",
  *                                   "lots": ["connexion", …], "implementation": true (statut d'implémentation affiché),
  *                                   "assets": "../../apps/web/public/assets" (facultatif : dossier des images, voir plus bas),
- *                                   "daisyui": "5.7.50" (facultatif : le produit emploie daisyUI, voir plus bas) }
+ *                                   "daisyui": "5.7.50" ou { "version", "theme" } (facultatif : le produit emploie daisyUI),
+ *                                   "grouping": "features" (facultatif : découpage affiché, voir plus bas) }
  *   ui/sources/shared/*.html        <template> partagés par tous les lots : shells.html (coquilles),
  *                                   components.html (composants communs : en-tête de projet…)
  *   ui/sources/<lot>/lot.json       { "label", "title", "fonts", "screens": { "e13": "titre court" },
@@ -33,8 +34,13 @@
  * Statut d'implémentation (site.json → implementation) : todo (défaut), doing, done, gap. Le badge remplace
  * le badge « Nouveau » de chaque état, et l'avancement apparaît dans la navigation, l'index du lot et l'accueil.
  *
+ * Découpage (site.json → grouping) : « lots » par défaut (produit à construire, un lot par étape de livraison),
+ * « features » pour un produit existant ou livré (un groupe par fonctionnalité, sans ordre de livraison). Il change
+ * seulement les libellés affichés (« Lots », « Écrans du lot ») ; les dossiers et lot.json gardent leur nom.
+ *
  * daisyUI (site.json → daisyui, version exacte) : chaque page intègre les feuilles des composants de
- * daisyUI qu'elle emploie, et un thème daisyUI pointé sur les tokens (scripts/daisyui.mjs).
+ * daisyUI qu'elle emploie, et un thème daisyUI pointé sur les tokens (scripts/daisyui.mjs). Un produit dont le
+ * thème s'en écarte déclare ses écarts dans daisyui.theme ({ "--color-success": "var(--color-success-soft)" }).
  *
  * Sortie : ui/site/index.html, site/<lot>/index.html, site/<lot>/eN.html, site/propositions.html.
  * Le build est déterministe (aucune date) : le site construit peut être commité avec ses sources.
@@ -46,7 +52,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, copyFi
 import { join, dirname, resolve, relative, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyTypography } from './typography.mjs';
-import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiVersion } from './daisyui.mjs';
+import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiThemeOverrides, daisyuiVersion } from './daisyui.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !existsSync(join(root, 'sources', 'site.json'))) {
@@ -56,9 +62,21 @@ if (!root || !existsSync(join(root, 'sources', 'site.json'))) {
 const read = (path, fallback = '') => (existsSync(path) ? readFileSync(path, 'utf8') : fallback);
 const site = JSON.parse(read(join(root, 'sources', 'site.json')));
 const outDir = join(root, 'site');
+// Libellés du découpage : par lots (produit à construire) ou par fonctionnalités (produit existant)
+const GROUPINGS = {
+  lots: { plural: 'Lots', screens: 'Écrans du lot' },
+  features: { plural: 'Fonctionnalités', screens: 'Écrans de la fonctionnalité' },
+};
+const grouping = GROUPINGS[site.grouping ?? 'lots'];
+if (!grouping) {
+  console.error(`Unknown grouping "${site.grouping}" in sources/site.json (expected: ${Object.keys(GROUPINGS).join(', ')}).`);
+  process.exit(1);
+}
 let daisyui;
+let daisyuiOverrides;
 try {
   daisyui = daisyuiVersion(site);
+  daisyuiOverrides = daisyuiThemeOverrides(site);
 } catch (e) {
   console.error(e.message);
   process.exit(1);
@@ -74,6 +92,15 @@ const theme = read(join(root, 'tokens.css')).match(/@theme\s*\{[\s\S]*?\n\}/)?.[
 if (!theme) {
   console.error(`@theme block not found in ${join(root, 'tokens.css')}`);
   process.exit(1);
+}
+// Écarts du thème daisyUI : vérifiés une fois, avant de construire (un écart ne doit pas redéfinir un token)
+if (daisyui) {
+  try {
+    daisyuiTheme(theme, daisyuiOverrides);
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
 }
 const extractTemplates = (html) => [...html.matchAll(/(?:<!--(?:(?!-->)[\s\S])*-->\s*)?<template id="([^"]+)">[\s\S]*?<\/template>/g)].map((m) => ({ id: m[1], html: m[0] }));
 const sharedDir = join(root, 'sources', 'shared');
@@ -195,12 +222,19 @@ const checkStructure = (path, html) => {
     if (opened !== closed) unbalanced.add(`${path} (<${tag}> ${opened} opened, ${closed} closed)`);
   }
 };
+// Ancres hors écran (ouverts, journal, regles…) de chaque lot : elles se répètent d'un lot à l'autre
+const lotAnchors = new Map(lots.map((lot) => [lot.indexPath, new Set(lot.sections.filter((s) => !s.screen).map((s) => s.id))]));
 function rewriteLinks(html, pagePath) {
+  const ownIndex = `${pagePath.split('/')[0]}/index.html`;
   return html.replace(/href="([\w.-]+\.html)?(#[\w-]+)?"/g, (link, file, anchor) => {
     if (!file && !anchor) return link;
     if (file === 'propositions.html' && hasPropositions) return `href="${relativeTo(pagePath, 'propositions.html')}${anchor ?? ''}"`;
     let target;
-    if (anchor && anchorPage.has(anchor.slice(1)) && (!file || lotPage.has(file))) target = anchorPage.get(anchor.slice(1));
+    const id = anchor?.slice(1);
+    // « chat.html#ouverts » vise l'index de ce lot-là, « #ouverts » celui du lot de la page : jamais le premier lot qui porte l'ancre
+    const lotIndex = file ? lotPage.get(file) : ownIndex;
+    if (anchor && lotIndex && lotAnchors.get(lotIndex)?.has(id)) target = lotIndex;
+    else if (anchor && anchorPage.has(id) && (!file || lotPage.has(file))) target = anchorPage.get(id);
     else if (screenAnchor(anchor)) {
       unresolved.add(`${file ?? ''}${anchor} (in ${pagePath}, unknown screen)`);
       return link;
@@ -230,7 +264,7 @@ function usedTemplates(html, available) {
 function renderPage({ title, fonts, lotStyle = '', templates = [], body }) {
   // daisyUI : seulement les feuilles des composants que la page emploie (maquettes et calques réutilisés)
   const daisyuiFiles = daisyui ? daisyuiComponents(`${body}\n${templates.map((t) => t.html).join('\n')}`) : [];
-  const pageTheme = daisyui ? daisyuiTheme(theme) : theme;
+  const pageTheme = daisyui ? daisyuiTheme(theme, daisyuiOverrides) : theme;
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -267,7 +301,7 @@ const chip = (href, label, current = false) =>
   `<a href="${href}"${current ? ' aria-current="page"' : ''} class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent aria-[current=page]:border-doc-accent aria-[current=page]:font-semibold aria-[current=page]:text-doc-accent">${label}</a>`;
 function lotNav(lot, pagePath) {
   const rel = (to) => relativeTo(pagePath, to);
-  return `<nav aria-label="Écrans du lot" class="sticky top-[env(safe-area-inset-top,0px)] z-40 -mx-4 mb-6 flex flex-wrap items-center gap-2 bg-doc-bg/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6">
+  return `<nav aria-label="${grouping.screens}" class="sticky top-[env(safe-area-inset-top,0px)] z-40 -mx-4 mb-6 flex flex-wrap items-center gap-2 bg-doc-bg/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6">
   <a href="${rel('index.html')}" class="text-sm text-doc-muted hover:text-doc-accent">${site.title}</a><span class="text-doc-muted">/</span>
   ${chip(rel(lot.indexPath), lot.label ?? lot.name, pagePath === lot.indexPath)}
   ${lot.pages.map((p) => chip(rel(p.path), `${p.status ? `${statusDot(p.status)} ` : ''}${p.screen.toUpperCase()} · ${p.title}`, pagePath === p.path)).join('\n  ')}
@@ -281,7 +315,7 @@ for (const lot of lots) {
   // Index du lot : en-tête, liste des écrans, sections hors écran
   // Un lot sans écran (revue, décisions à prendre) ne montre que ses sections
   const screenList = !lot.pages.length ? '' : `<section id="ecrans" class="mt-10 scroll-mt-16">
-  <h2 class="text-xl font-semibold">Écrans du lot</h2>
+  <h2 class="text-xl font-semibold">${grouping.screens}</h2>
   ${tracking ? `<p class="mt-1 text-sm text-doc-muted">Implémentation : ${progress(lot.pages)}</p>` : ''}
   <ol class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     ${lot.pages.map((p) => `<li class="rounded-xl border border-doc-line bg-doc-card px-4 py-3"><a href="${relativeTo(lot.indexPath, p.path)}" class="font-semibold hover:text-doc-accent"><span class="font-mono text-sm text-doc-accent">${p.screen.toUpperCase()}</span> ${p.title}</a>${p.status ? ` ${statusBadge(p.status)}` : ''}${p.status?.note ? `<p class="mt-1 text-sm text-doc-gap">${p.status.note}</p>` : ''}<ul class="mt-1 text-sm text-doc-muted">${p.states.map((s) => `<li><a href="${relativeTo(lot.indexPath, p.path)}#${s.id}" class="hover:text-doc-accent"><span class="font-mono">${s.id.toUpperCase()}</span> ${s.title}</a></li>`).join('')}</ul></li>`).join('\n    ')}
@@ -311,7 +345,7 @@ const homeBody = `<header>
 ${tracking ? `<p class="mt-6 text-sm text-doc-muted"><b class="font-semibold text-doc-fg">Implémentation</b> : ${progress(lots.flatMap((l) => l.pages))}</p>` : ''}
 ${hasPropositions ? `<p class="mt-6"><a href="propositions.html" class="rounded-full border border-doc-line bg-doc-card px-3 py-1 text-sm hover:border-doc-accent">Propositions d'interface et décision →</a></p>` : ''}
 <section id="lots" class="mt-8">
-  <h2 class="text-xl font-semibold">Lots</h2>
+  <h2 class="text-xl font-semibold">${grouping.plural}</h2>
   <ol class="mt-3 grid gap-4 md:grid-cols-2">
     ${lots.map((lot) => `<li class="rounded-xl border border-doc-line bg-doc-card px-5 py-4"><a href="${lot.indexPath}" class="text-lg font-semibold hover:text-doc-accent">${lot.label ?? lot.name}</a>${lot.pages.length ? `<p class="mt-1 text-sm text-doc-muted">${lot.pages.map((p) => `<a href="${p.path}" class="hover:text-doc-accent">${p.status ? `${statusDot(p.status)} ` : ''}${p.screen.toUpperCase()} ${p.title}</a>`).join(' · ')}</p>${tracking ? `<p class="mt-2 text-sm text-doc-muted">Implémentation : ${progress(lot.pages)}</p>` : ''}` : lot.summary ? `<p class="mt-1 text-sm text-doc-muted">${lot.summary}</p>` : ''}</li>`).join('\n    ')}
   </ol>

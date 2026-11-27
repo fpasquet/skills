@@ -14,7 +14,7 @@ description: >
   avec l'implémentation (statut des écrans, écarts).
 metadata:
   author: fpasquet
-  version: "3.9.1"
+  version: "3.10.0"
 ---
 
 # Specs UI maquettées en Tailwind
@@ -124,6 +124,7 @@ Les captures de vérification vont dans un dossier temporaire (le scratchpad de 
 | `scripts/pack.mjs` | Archive le dossier du projet en `.zip` et la restaure (`--extract`), pour reprendre un projet d'une conversation à l'autre |
 | `scripts/migrate-layout.mjs` | Range un projet à l'ancienne disposition (`specs-ui/`, `prototype-ui/`, `cdc/` côte à côte) dans un dossier `specs/` |
 | `scripts/extract-identity.mjs` | Identité d'un site (URL) ou d'un code (dossier), captures |
+| `scripts/recover.mjs` | Reconstitue les sources (`sources/`, `tokens.css`, `lot.json`) d'un projet dont seul le site publié subsiste |
 | `scripts/upgrade.mjs` | Met un document ancien (sans sources) au niveau des templates, sans toucher aux maquettes |
 | `scripts/typography.mjs` | Typographie française (appliquée automatiquement par `build.mjs`) |
 | `scripts/export-design-system.mjs` | (Facultatif) Prépare un dossier Design System Claude Design : tokens, fondations, composants, README |
@@ -144,6 +145,8 @@ Les templates contiennent un produit fictif (« Orbe », demandes clients) qui n
    - `build.mjs <projet>/ui`, puis contrôle avec `capture.mjs <projet>/ui/site <tmp>` ;
    - rédiger `CONTEXTE.md` en extrayant le texte des points ouverts et des journaux, plutôt qu'en lisant les pages ;
    - publier le site comme un nouvel artifact, et noter les anciens artifacts comme remplacés.
+
+   Un projet dont **seul l'artifact publié subsiste** (sources perdues, commencées sur une autre machine ou dans une autre conversation) se reconstitue depuis le site : lister ses fichiers (outil Artifact, `scope: "files"`), les lire tous avec `read` et `paths` vers un dossier temporaire, puis `node <skill>/scripts/recover.mjs <dossier> <projet>/ui --artifact <url>`. Reconstruire et comparer avec les pages lues avant toute modification : le contenu doit être identique. Le script écrit aussi `site/.published.json` (pages en ligne) : la publication suivante, sans `--all`, retire de l'artifact les pages qui n'ont plus de source. Rédiger ensuite `CONTEXTE.md` à partir des sources reconstituées, et garder l'URL de l'artifact.
 3. **Origine de l'identité**, déduite de la conversation : **à définir** → étape 1A ; **site ou code existant** → étape 1B ; **fournie** (charte, design system, tokens) → `tokens.css` directement, puis étape 2. Un produit sous daisyUI se déclare dans `sources/site.json` (`"daisyui": "<version>"`) : les maquettes emploient ses classes (`tailwind.md` §9). Si la personne dispose d'un **Design System Claude Design** et souhaite partir de celui-ci (c'est facultatif, le proposer seulement s'il existe), le lire (outil Artifact : `list` avec le type « Design System », puis `read` du README et des tokens) et le traduire en `tokens.css` et en coquilles : l'étape 1A devient inutile.
 4. **Besoin fonctionnel** : objectif, utilisateurs, règles, documents fournis. Un brief qui s'appuie sur une bibliothèque ou une documentation se lit avant de concevoir, puis se traduit en vocabulaire fonctionnel (`redaction-specs.md` §1). La bibliothèque n'apparaît jamais dans les specs.
 
@@ -168,7 +171,12 @@ Suivre `references/site-existant.md` : `extract-identity.mjs <url> --screenshots
 
 ## Étape 2 · Inventaire des écrans
 
-Suivre `references/redaction-specs.md` §1. Avant toute maquette, présenter le tableau des écrans (ID, objectif, états), les parcours, les règles comprises, les hypothèses et deux ou trois questions au plus. L'écrire aussi dans le document publié et dans `CONTEXTE.md`, avec l'ancre de chaque écran. Attendre la validation. Un brief large se découpe en **lots** (un document par lot, numérotation globale) ; commencer par celui qui fixe la coquille. Le mobile est maquetté pour chaque écran, sauf portée réduite acceptée par la personne.
+Suivre `references/redaction-specs.md` §1. Avant toute maquette, présenter le tableau des écrans (ID, objectif, états), les parcours, les règles comprises, les hypothèses et deux ou trois questions au plus. L'écrire aussi dans le document publié et dans `CONTEXTE.md`, avec l'ancre de chaque écran. Attendre la validation. Un brief large se découpe en groupes d'écrans (un dossier `sources/<groupe>/` et une page d'index par groupe, numérotation des écrans globale). **Demander le découpage** au cadrage, par une question fermée, et le noter dans `CONTEXTE.md` :
+
+- **par lots** (défaut, recommandé pour un produit à construire) : un lot par étape de livraison, numéroté (« Lot 2 · Projets ») ; commencer par celui qui fixe la coquille ;
+- **par fonctionnalités** (recommandé pour un produit existant ou livré, où des lots n'ont plus de sens) : un groupe par espace ou fonctionnalité du produit (« Conversation », « Atelier de prompts »), sans numéro ni ordre de livraison ; déclarer `"grouping": "features"` dans `sources/site.json`, qui fait afficher « Fonctionnalités » et « Écrans de la fonctionnalité » au lieu de « Lots » et « Écrans du lot ».
+
+Les dossiers et `lot.json` gardent leur nom technique dans les deux cas. Changer de découpage en cours de route (lots d'un produit désormais livré) : regrouper les écrans dans les nouveaux dossiers en gardant leurs identifiants, les ancres et les numéros de règles, puis corriger les liens entre groupes (`ancien.html#…`) signalés par `build.mjs`. Le mobile est maquetté pour chaque écran, sauf portée réduite acceptée par la personne.
 
 ## Étape 3 · Écrire les specs (sources par écran)
 

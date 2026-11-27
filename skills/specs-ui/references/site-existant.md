@@ -65,6 +65,7 @@ Faire correspondre l'existant au vocabulaire commun (voir `tailwind.md`) dans `t
 - `canvas`, `muted`, `line-strong` et la navigation n'existent pas chez daisyUI : les mesurer sur les captures.
 - `secondary`, `accent` et `neutral` n'ont pas de token : les garder seulement s'ils jouent un rôle visible, comme tokens propres au produit.
 - Déclarer daisyUI dans `sources/site.json` (`"daisyui"`, avec la version du site) : les maquettes emploient alors ses classes (`tailwind.md` §9).
+- **Reproduire le thème du site, pas la correspondance par défaut.** Comparer chaque variable du thème du site à la table ci-dessus et déclarer les écarts dans `site.json` → `daisyui.theme`, en pointant sur les tokens. Cas courant : `base-100` sur le fond de l'application (`var(--color-canvas)`), `error` et `error-content` sur `danger-soft` et `danger`, `radius-selector` en valeur. Les couleurs que daisyUI lit sous le nom d'un token (`success`, `info`, `warning`, `secondary`, `accent`) ne se déclarent pas là : les tokens prennent le sens de daisyUI (`--color-success` fond clair, `--color-success-content` texte), comme dans le thème du site. Les maquettes emploient alors les mêmes classes que l'application (`badge badge-success`, et non `badge-soft`).
 
 ## 4. Caler la reproduction (écran E0)
 

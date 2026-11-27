@@ -32,12 +32,12 @@ Pour les règles et les cas limites, demander ce qui manque vraiment (volumes, d
 
 **L'inventaire validé fait référence** pour la numérotation et le découpage : le relire (section « À valider » des propositions, ou tête du premier document) avant chaque nouveau lot, et ne jamais le reconstituer de mémoire. Un écran ajouté en cours de route prend une lettre (`E5c`) ou le numéro libre suivant, et l'inventaire est mis à jour.
 
-**Brief en plusieurs lots.** Quand le brief couvre plusieurs fonctionnalités (connexion, projets, sessions…), regrouper les écrans en lots cohérents :
+**Brief en plusieurs groupes.** Quand le brief couvre plusieurs fonctionnalités (connexion, projets, sessions…), regrouper les écrans en groupes cohérents : des **lots** (étapes de livraison d'un produit à construire) ou des **fonctionnalités** (espaces d'un produit existant ou livré, `site.json` → `"grouping": "features"`), selon le découpage choisi au cadrage (SKILL.md, étape 2) :
 
-- un dossier de sources par lot (`<projet>/ui/sources/connexion/`, `<projet>/ui/sources/sessions/`…), tous avec le même `tokens.css` et les mêmes coquilles ;
-- une numérotation **unique pour tout le projet** (E1 à E16 répartis entre les lots), pour qu'un « E12 » cité dans un ticket ou une conversation ne soit jamais ambigu ;
-- un lien « Depuis / Ensuite » vers un écran d'un autre lot s'écrit comme les autres (`#e12`) : `build.mjs` le fait pointer vers la bonne page, et l'accueil du site relie les lots ;
-- l'inventaire présente les lots comme des intertitres du tableau, et propose un ordre de réalisation.
+- un dossier de sources par groupe (`<projet>/ui/sources/connexion/`, `<projet>/ui/sources/sessions/`…), tous avec le même `tokens.css` et les mêmes coquilles ;
+- une numérotation **unique pour tout le projet** (E1 à E16 répartis entre les groupes), pour qu'un « E12 » cité dans un ticket ou une conversation ne soit jamais ambigu ;
+- un lien « Depuis / Ensuite » vers un écran d'un autre groupe s'écrit comme les autres (`#e12`) : `build.mjs` le fait pointer vers la bonne page, et l'accueil du site relie les groupes ;
+- l'inventaire présente les groupes comme des intertitres du tableau ; des lots s'accompagnent d'un ordre de réalisation, des fonctionnalités n'en ont pas.
 
 ## 2. Structure du document
 

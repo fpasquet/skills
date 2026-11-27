@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="specs-ui-template" content="3.1.1">
+<meta name="specs-ui-template" content="3.1.4">
 <!-- artifact : (URL claude.ai à reporter ici après la première publication) -->
 <title>Orbe · Specs UI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,11 +79,12 @@
   @layer components {
     /* Écran réutilisé en fond d'un panneau ou d'une modale (data-backdrop) : sans pastilles, cibles ni menus ouverts */
     [data-backdrop] .anno, [data-backdrop] [data-menu] { display: none; }
-    [data-backdrop] .next-step { --tw-ring-shadow: 0 0 #0000; --tw-ring-offset-shadow: 0 0 #0000; }
+    [data-backdrop] .next-step { --tw-ring-shadow: 0 0 #0000 !important; --tw-ring-offset-shadow: 0 0 #0000 !important; }
     /* Pastille numérotée posée sur un élément de maquette (le parent doit être relative) */
     .anno { @apply pointer-events-none absolute z-30 grid size-6 place-items-center rounded-full bg-anno font-doc text-xs font-semibold text-anno-ink shadow-[0_0_0_3px_rgb(252_211_77_/_0.35)]; }
-    /* Met en évidence l'action suivante du parcours */
-    .next-step { @apply ring-4 ring-anno ring-offset-1; }
+    /* Met en évidence l'action suivante du parcours. Important : les composants de daisyUI (.btn) sont rangés dans la
+       couche utilities et posent leur propre box-shadow, qui l'emporterait sur cette couche */
+    .next-step { @apply ring-4! ring-anno ring-offset-1!; }
 
     /* Retours de relecture (bouton « Retours », panneau, fenêtre de saisie, repères R1, R2…) : habillage, hors produit */
     .retours-ui { @apply font-doc text-sm text-doc-fg; }
@@ -480,8 +481,14 @@ function renderValues(attempt = 0) {
 // Contrôles lus par capture.mjs : contenu coupé (data-clipped), pastilles sur du texte (data-overlap) ou coupées par un bord (data-anno-cut).
 function checkFrames() {
   document.querySelectorAll('[data-frame]').forEach((frame) => {
-    // data-clip-ok marque une coupe voulue (aperçu tronqué, liste qui continue) : elle n'est pas signalée
-    const clipped = [frame, ...frame.querySelectorAll('*')].filter((el) => !el.closest('[data-clip-ok]') && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 4 && getComputedStyle(el).overflowY === 'hidden');
+    // data-clip-ok marque une coupe voulue (aperçu tronqué, liste qui continue) : elle n'est pas signalée, même quand
+    // c'est un conteneur parent (zone de contenu d'une coquille) qui coupe : tout ce qui dépasse de lui est alors marqué.
+    const cutOk = (el) => {
+      const bottom = el.getBoundingClientRect().bottom;
+      const over = [...el.querySelectorAll('*')].filter((d) => d.getBoundingClientRect().bottom > bottom + 4);
+      return over.length > 0 && over.every((d) => el.contains(d.closest('[data-clip-ok]')));
+    };
+    const clipped = [frame, ...frame.querySelectorAll('*')].filter((el) => !el.closest('[data-clip-ok]') && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 4 && getComputedStyle(el).overflowY === 'hidden' && !cutOk(el));
     if (clipped.length) frame.dataset.clipped = String(clipped.length); else delete frame.dataset.clipped;
     const texts = [];
     // Le texte d'un écran de fond (data-backdrop) est sous un calque : ignoré.
@@ -489,7 +496,16 @@ function checkFrames() {
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const range = document.createRange();
       range.selectNodeContents(n);
-      for (const rect of range.getClientRects()) texts.push({ rect, text: n.textContent.trim().slice(0, 40) });
+      // Seule la partie visible compte : un texte qui défile sous un pied de fenêtre est coupé par sa zone de défilement
+      const clips = [];
+      for (let el = n.parentElement; el && el !== frame.parentElement; el = el.parentElement) {
+        const style = getComputedStyle(el);
+        if (style.overflowX !== 'visible' || style.overflowY !== 'visible') clips.push(el.getBoundingClientRect());
+      }
+      for (const r of range.getClientRects()) {
+        const rect = clips.reduce((v, c) => ({ left: Math.max(v.left, c.left), right: Math.min(v.right, c.right), top: Math.max(v.top, c.top), bottom: Math.min(v.bottom, c.bottom) }), { left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+        if (rect.right > rect.left && rect.bottom > rect.top) texts.push({ rect, text: n.textContent.trim().slice(0, 40) });
+      }
     }
     let issues = 0;
     frame.querySelectorAll('.anno').forEach((anno) => {

@@ -12,6 +12,7 @@ Site construit dans `site/`, publié comme un seul artifact : {{URL}} (aussi dan
 | Propositions et décision | `propositions.html` | écran représentatif | — | Décision du {{date}} |
 | 1 · {{nom}} | `sources/{{lot}}/` | E1–E3 | 1 | En relecture |
 
+- **Découpage** : {{par lots (étapes de livraison) | par fonctionnalités (`site.json` → grouping : produit existant)}}
 - **Implémentation** : {{pas commencée | statut suivi dans `lot.json` → status (`site.json` → implementation), dépôt de l'application : …}}
 
 **Prochaine étape** : {{ce qui doit être fait ensuite, et par qui}}

@@ -7,6 +7,9 @@
  * Lit les tokens --color-<nom> (bloc @theme de tokens.css ou des specs) et --t-<nom>
  * (blocs [data-product-theme] de propositions.html), groupés par bloc CSS. Seules les valeurs
  * hexadécimales sont contrôlées. Code de sortie 1 si une paire obligatoire échoue.
+ *
+ * Couleur d'état au sens de daisyUI (produit sous daisyUI : `--color-success` fond, `--color-success-content`
+ * texte) : quand `<état>-content` existe, c'est lui qui est contrôlé comme texte, sur `<état>` et sur les fonds.
  */
 import { readFileSync } from 'node:fs';
 
@@ -44,6 +47,15 @@ const PAIRS = [
   // WCAG 1.4.11 : bordure qui délimite un champ. Souvent assoupli dans les outils internes.
   ['line-strong', 'surface', 3, false],
 ];
+
+// Tokens au sens de daisyUI : le texte d'un état est <état>-content, posé sur <état> (au lieu de <état> sur <état>-soft)
+function pairsFor(tokens) {
+  const daisy = (name) => ['success', 'warning', 'info', 'danger'].includes(name) && tokens[`${name}-content`];
+  return PAIRS.map(([text, background, min, required]) => {
+    if (daisy(text)) return [`${text}-content`, background.endsWith('-soft') && background.startsWith(text) ? text : background, min, required];
+    return [text, background, min, required];
+  });
+}
 
 function hexToRgb(hex) {
   let h = hex.replace('#', '').toLowerCase();
@@ -88,7 +100,7 @@ for (const file of files) {
   if (!groups.length) console.log(`\n${file}: no token group found (--color-ink / --t-ink in hexadecimal).`);
   for (const { selector, tokens } of groups) {
     console.log(`\n${file} · ${selector}`);
-    for (const [text, background, min, required] of PAIRS) {
+    for (const [text, background, min, required] of pairsFor(tokens)) {
       const fg = tokens[text];
       const bg = tokens[background];
       if (!fg || !bg) continue;
