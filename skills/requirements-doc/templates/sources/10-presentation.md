@@ -14,7 +14,7 @@
 
 ### 1.4 Périmètre
 
-- **Inclus** : {{les lots et fonctions couverts}}
+- **Inclus** : {{les lots, ou les fonctionnalités et évolutions, couverts}}
 - **Exclus** : {{ce qui est explicitement hors périmètre de cette version}}
 
 ### 1.5 Documents de référence

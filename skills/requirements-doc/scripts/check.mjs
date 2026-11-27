@@ -8,7 +8,9 @@
  *   - les parties attendues absentes (architecture, stack, infrastructure, lots, estimations…) ;
  *   - les gabarits non remplis ({{…}}, TODO, « à compléter ») et les inclusions manquantes ;
  *   - les liens internes vers une ancre inexistante ;
- *   - les lots des specs absents du découpage, ou sans estimation ;
+ *   - par lots : les lots des specs absents du découpage, ou sans estimation ;
+ *   - par fonctionnalités (specs : site.json → grouping) : les écrans à livrer absents des évolutions, une partie 9
+ *     encore découpée en lots, ou sans estimation ; sans rien à livrer, la partie 9 n'est pas attendue ;
  *   - les états d'écran de l'inventaire absents du document ;
  *   - les blocs de code non refermés (diagrammes) ;
  *   - les identifiants d'exigences ou de décisions en double (RF-, NF-, DT-, CA-).
@@ -18,6 +20,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { CODE_BLOCKS } from './assemble.mjs';
 import { loadConfig, specsDirOf } from './config.mjs';
+import { deliverableScreens, readSpecs } from './specs.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 const config = root ? loadConfig(root) : {};
@@ -40,6 +43,13 @@ const inline = doc.split('\n').filter((line) => !/^ {0,3}```/.test(line) && /(^|
 if (inline.length) problems.push(`triple backticks inside a line (${inline.length}), escape them: ${inline[0].trim().slice(0, 80)}`);
 const prose = doc.replace(CODE_BLOCKS, '');
 
+// Découpage des specs : par lots (partie 9 « Découpage en lots »), ou par fonctionnalités (partie 9 « Évolutions »,
+// seulement s'il reste des écrans à livrer)
+const specsDir = specsDirOf(root, config);
+const specs = readSpecs(specsDir);
+const byFeature = specs.grouping === 'features';
+const deliverable = byFeature ? deliverableScreens(specs) : [];
+
 // Parties attendues (titres de niveau 2, par mots-clés)
 const h2 = [...prose.matchAll(/^## (.+)$/gm)].map((m) => m[1].toLowerCase());
 const expected = [
@@ -51,8 +61,9 @@ const expected = [
   ['architecture', /architecture/],
   ['stack technique', /stack|socle/],
   ['infrastructure', /infra/],
-  ['découpage en lots', /lot|découpage/],
-  ['estimations', /estimation|charge/],
+  ...(byFeature
+    ? deliverable.length ? [['évolutions et estimations', /évolution|estimation/]] : []
+    : [['découpage en lots', /lot|découpage/], ['estimations', /estimation|charge/]]),
   ['risques et points ouverts', /risque|ouvert/],
 ];
 for (const [label, rx] of expected) if (!h2.some((h) => rx.test(h))) problems.push(`missing part: ${label} (no level-2 heading matches)`);
@@ -75,18 +86,23 @@ const cited = [...new Set([...prose.matchAll(/(?<![\w-])((?:RF|CA|NF|DT|RQ)-[A-Z
 const undefinedIds = cited.filter((id) => !defined.has(id));
 if (undefinedIds.length) problems.push(`identifiers cited but never defined (${undefinedIds.length}): ${undefinedIds.slice(0, 12).join(', ')}`);
 
-// Lots et estimations, couverture de l'inventaire
-const specsDir = specsDirOf(root, config);
-const site = existsSync(join(specsDir, 'sources', 'site.json')) ? JSON.parse(readFileSync(join(specsDir, 'sources', 'site.json'), 'utf8')) : { lots: [] };
-const lotSection = prose.split(/^## /m).find((part) => /^[^\n]*(découpage|lots)/i.test(part)) ?? '';
-for (const name of site.lots ?? []) {
-  const lotFile = join(specsDir, 'sources', name, 'lot.json');
-  if (!existsSync(lotFile)) continue;
-  const label = JSON.parse(readFileSync(lotFile, 'utf8')).label ?? name;
-  const short = label.replace(/^Lot \d+\s*·\s*/, '');
-  if (!lotSection.toLowerCase().includes(short.toLowerCase())) problems.push(`lot "${label}" not found in the lots section`);
+// Lots et estimations (ou évolutions), couverture de l'inventaire
+const effortRange = /\d+\s*(?:à|-|–)\s*\d+\s*(?:j|jours|jh|j\/h)/i;
+const lotSection = prose.split(/^## /m).find((part) => /^[^\n]*(découpage|lots|évolution)/i.test(part)) ?? '';
+if (!byFeature) {
+  for (const group of specs.groups) {
+    const short = group.label.replace(/^Lot \d+\s*·\s*/, '');
+    if (!lotSection.toLowerCase().includes(short.toLowerCase())) problems.push(`lot "${group.label}" not found in the lots section`);
+  }
+  if (lotSection && !effortRange.test(lotSection)) problems.push('no effort range found in the lots section (e.g. "12 à 18 j")');
+} else if (lotSection) {
+  const title = lotSection.split('\n')[0].replace(/<[^>]+>/g, '');
+  if (/lots/i.test(title) && !/évolution/i.test(title)) problems.push(`part "${title.trim()}" still splits the product in lots, but the specs are grouped by features: rewrite it as evolutions (references/estimations.md)${deliverable.length ? '' : ', or remove it: every screen is delivered'}`);
+  else if (!deliverable.length) console.log('NOTE: nothing left to deliver in the specs: the evolutions part can be removed.');
+  const missingScreens = deliverable.filter(({ screen }) => !new RegExp(`(?:#${screen}[a-z-]*\\)|\\b${screen}[a-z]?\\b)`, 'i').test(lotSection)).map(({ screen }) => screen.toUpperCase());
+  if (deliverable.length && missingScreens.length) problems.push(`screens to deliver absent from the evolutions part (${missingScreens.length}): ${missingScreens.slice(0, 12).join(', ')}`);
+  if (deliverable.length && !effortRange.test(lotSection)) problems.push('no effort range found in the evolutions part (e.g. "4 à 6 j")');
 }
-if (lotSection && !/\d+\s*(?:à|-|–)\s*\d+\s*(?:j|jours|jh|j\/h)/i.test(lotSection)) problems.push('no effort range found in the lots section (e.g. "12 à 18 j")');
 const inventory = existsSync(join(root, 'sources', 'generated', 'inventaire.md')) ? readFileSync(join(root, 'sources', 'generated', 'inventaire.md'), 'utf8') : '';
 const states = [...new Set([...inventory.matchAll(/\]\(#(e\d+[a-z-]*)\)/g)].map((m) => m[1]))];
 const uncovered = states.filter((id) => !anchors.has(id));

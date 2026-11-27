@@ -6,16 +6,20 @@
  * Usage : node extract.mjs <projet>/requirements            (lit <projet>/requirements/requirements.json → specs, artifacts.specs)
  *
  * Écrit dans <projet>/requirements/sources/generated/ (régénéré à chaque fois, ne pas modifier à la main) :
- *   inventaire.md        tous les écrans et états, par lot, avec le lien vers les specs
- *   lot-<nom>.md         par lot : règles fonctionnelles, puis chaque écran (états, contexte, parcours,
+ *   inventaire.md        tous les écrans et états, par groupe (lot ou fonctionnalité), avec le lien vers les specs
+ *   lot-<nom>.md         par groupe : règles fonctionnelles, puis chaque écran (états, contexte, parcours,
  *                        règles annotées, portée mobile)
- *   points-ouverts.md    points ouverts de tous les lots (question, recommandé, à trancher par, écrans)
+ *   a-livrer.md          états qui restent à livrer (statut d'implémentation autre que « Livré »), par groupe
+ *   points-ouverts.md    points ouverts de tous les groupes (question, recommandé, à trancher par, écrans)
  *   identite.md          tokens de l'identité visuelle (couleurs, polices, formes) depuis tokens.css
  * Affiche la taille de chaque fichier : c'est ce que liront le modèle et les rédacteurs, à la place du HTML.
+ *
+ * Une règle marquée data-rf="CONN-03" dans les specs (regroupement d'écrans) garde cet identifiant (RF-CONN-03).
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { configPath, loadConfig, specsDirOf } from './config.mjs';
+import { readSpecs, ruleIds, stateCode, STATUS_LABELS } from './specs.mjs';
 
 const root = process.argv[2] && resolve(process.argv[2]);
 if (!root || !configPath(root)) {
@@ -29,7 +33,8 @@ if (!existsSync(join(sourcesDir, 'site.json'))) {
   console.error(`specs sources not found: ${join(sourcesDir, 'site.json')} (set "specs" in requirements.json)`);
   process.exit(1);
 }
-const site = JSON.parse(readFileSync(join(sourcesDir, 'site.json'), 'utf8'));
+const specs = readSpecs(specsDir);
+const { site, words } = specs;
 const specsUrl = config.artifacts?.specs || site.artifact || '';
 const outDir = join(root, 'sources', 'generated');
 mkdirSync(outDir, { recursive: true });
@@ -57,6 +62,8 @@ function md(html) {
 // e13a → E13a (écran en capitales, état en minuscule, comme dans les specs)
 const label = (id) => id.replace(/^e/i, 'E');
 const items = (html) => [...html.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)].map((m) => md(m[1].replace(/^\s*<b\b[^>]*>\d+<\/b>/, '')));
+// Règles : texte et identifiant posé dans les specs (data-rf), s'il y en a un
+const ruleItems = (html) => [...html.matchAll(/<li\b([^>]*)>([\s\S]*?)<\/li>/gi)].map((m) => ({ mark: m[1].match(/\bdata-rf="([^"]+)"/)?.[1] ?? null, text: md(m[2].replace(/^\s*<b\b[^>]*>\d+<\/b>/, '')) }));
 
 // ---------- Lots ----------
 const lots = [];
@@ -71,7 +78,7 @@ for (const name of site.lots ?? []) {
   for (const f of files) {
     const html = readFileSync(join(lotDir, f), 'utf8');
     if (/^\d+-regles/.test(f)) {
-      rules.push(...items(html));
+      rules.push(...ruleItems(html));
       continue;
     }
     if (/^\d+-ouverts/.test(f)) {
@@ -125,8 +132,7 @@ const specsLink = (lot, screen) => (specsUrl ? `[specs](${specsUrl}) · \`${lot}
 
 // Inventaire
 // Statut d'implémentation des écrans (specs : site.json → implementation, lot.json → status)
-const STATUS_LABELS = { todo: 'À développer', doing: 'En cours', done: 'Livré', change: 'À faire évoluer', gap: 'Écart' };
-const tracking = site.implementation === true;
+const { tracking } = specs;
 const statusOf = (lot, screen) => {
   const raw = lot.status[screen] ?? 'todo';
   const code = typeof raw === 'string' ? raw : raw.status;
@@ -134,7 +140,7 @@ const statusOf = (lot, screen) => {
   return `${STATUS_LABELS[code] ?? code}${note}`;
 };
 let inv = header('inventaire');
-inv += tracking ? `| Lot | Écran | Titre | États | Implémentation | Specs |\n|---|---|---|---|---|---|\n` : `| Lot | Écran | Titre | États | Specs |\n|---|---|---|---|---|\n`;
+inv += tracking ? `| ${words.column} | Écran | Titre | États | Implémentation | Specs |\n|---|---|---|---|---|---|\n` : `| ${words.column} | Écran | Titre | États | Specs |\n|---|---|---|---|---|\n`;
 for (const lot of lots) {
   const byScreen = new Map();
   for (const s of lot.states) {
@@ -153,7 +159,8 @@ write('inventaire.md', inv);
 for (const lot of lots) {
   let out = header(lot.name);
   if (lot.rules.length) {
-    out += `#### Règles fonctionnelles du lot\n\n${lot.rules.map((r, i) => `- **RF-${lot.name.toUpperCase().slice(0, 4)}-${String(i + 1).padStart(2, '0')}** · ${r}`).join('\n')}\n\n`;
+    const ids = ruleIds(lot.rules.map((r) => r.mark), lot.name);
+    out += `#### Règles fonctionnelles ${words.of}\n\n${lot.rules.map((r, i) => `- **${ids[i]}** · ${r.text}`).join('\n')}\n\n`;
   }
   let currentScreen = null;
   for (const s of lot.states) {
@@ -172,10 +179,22 @@ for (const lot of lots) {
   write(`lot-${lot.name}.md`, out);
 }
 
+// États à livrer : statut d'implémentation autre que « Livré » (partie 9 d'un produit découpé par fonctionnalités)
+let todo = header('états à livrer');
+const pending = lots.flatMap((lot) => {
+  const group = specs.groups.find((g) => g.name === lot.name) ?? { status: lot.status };
+  return lot.states.map((s) => ({ lot, s, code: tracking ? stateCode(group, s.id, s.screen) : 'todo' })).filter((x) => x.code !== 'done');
+});
+if (!tracking) todo += `_Implémentation non suivie dans les specs (site.json → implementation) : tous les états comptent comme à livrer._\n\n`;
+todo += pending.length
+  ? `| ${words.column} | État | Titre | Statut |\n|---|---|---|---|\n${pending.map(({ lot, s, code }) => `| ${lot.label} | [${label(s.id)}](#${s.id}) | ${s.title} | ${STATUS_LABELS[code] ?? code} |`).join('\n')}\n`
+  : 'Aucun état à livrer : tous les écrans des specs sont livrés.\n';
+write('a-livrer.md', todo);
+
 // Points ouverts
 let open = header('points ouverts');
 const cell = (text) => (text || '—').replace(/\|/g, '\\|');
-open += `| Lot | Question | Recommandé | À trancher par | Écrans |\n|---|---|---|---|---|\n`;
+open += `| ${words.column} | Question | Recommandé | À trancher par | Écrans |\n|---|---|---|---|---|\n`;
 open += openPoints.map((p) => `| ${p.lot} | ${cell(p.question)} | ${cell(p.recommended)} | ${cell(p.owner)} | ${cell(p.screens)} |`).join('\n') + '\n';
 write('points-ouverts.md', open);
 
@@ -189,5 +208,5 @@ const rows = [...theme.matchAll(/--([\w-]+)\s*:\s*([^;]+);[ \t]*(?:\/\*([\s\S]*?
 );
 write('identite.md', header('tokens.css') + (rows.length ? `| Token | Valeur | Usage |\n|---|---|---|\n${rows.join('\n')}\n` : '_Aucun tokens.css trouvé._\n'));
 
-console.log(`Extracted ${lots.length} lot(s), ${lots.reduce((n, l) => n + l.states.length, 0)} screen state(s), ${openPoints.length} open point(s) into ${outDir}:`);
+console.log(`Extracted ${lots.length} ${specs.grouping === 'features' ? 'feature' : 'lot'}(s), ${lots.reduce((n, l) => n + l.states.length, 0)} screen state(s) (${pending.length} to deliver), ${openPoints.length} open point(s) into ${outDir}:`);
 written.forEach((w) => console.log(`  - ${w}`));

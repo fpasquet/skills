@@ -9,13 +9,13 @@ Ce que contient chaque partie, d'où vient sa matière et comment l'écrire. Lec
 | `00-titre.md` | Titre, version, liens, sommaire | rempli par `init.mjs` ; version et statut à tenir à jour | modèle principal | non (remplacé par `README.md`) |
 | `10-presentation.md` | 1. Présentation | introduction des specs (`site.json`), CONTEXTE.md (décisions, périmètre) | modèle principal | oui |
 | `20-utilisateurs.md` | 2. Utilisateurs et rôles | personas et rôles de CONTEXTE.md ; matrice des permissions tirée des règles RF | modèle principal | oui |
-| `30-specs.md` | 3. Spécifications fonctionnelles et UI | **généré** (`generated/lot-*.md`) + critères d'acceptation (`lots/*-criteres.md`) | extraction + rédacteurs | oui, un fichier par lot |
+| `30-specs.md` | 3. Spécifications fonctionnelles et UI | **généré** (`generated/lot-*.md`) + critères d'acceptation (`lots/*-criteres.md`) | extraction + rédacteurs | oui, un fichier par groupe |
 | `40-interface.md` | 4. Interface et identité visuelle | décision d'identité (CONTEXTE.md), tokens (**généré**), composants partagés | modèle principal | oui |
 | `50-exigences-non-fonctionnelles.md` | 5. Exigences non fonctionnelles | règles des specs (délais, conservation, sécurité) + standards | modèle principal | oui |
 | `60-architecture.md` | 6. Architecture | `references/architecture.md` | modèle principal | oui |
 | `70-stack.md` | 7. Stack technique | décisions DT validées | modèle principal | oui |
 | `80-infrastructure.md` | 8. Infrastructure et exploitation | décisions DT validées | modèle principal | oui, sauf les coûts (`export:skip`) |
-| `90-lots.md` | 9. Découpage et estimations | inventaire, `references/estimations.md` | modèle principal | non |
+| `90-lots.md` ou `90-evolutions.md` | 9. Découpage en lots, ou évolutions (produit découpé par fonctionnalités, absente sans rien à livrer), et estimations | inventaire, `generated/a-livrer.md`, `references/estimations.md` | modèle principal | non |
 | `95-risques.md` | 10. Risques et points ouverts | risques (rédigés) + points ouverts (**généré**) | modèle principal | non |
 | `99-annexes.md` | 11. Annexes | inventaire (**généré**), décisions datées de CONTEXTE.md | modèle principal | non |
 
@@ -25,8 +25,8 @@ Les fichiers de `sources/generated/` se régénèrent par `extract.mjs` : ne jam
 
 ## Identifiants
 
-- **RF-LOT-nn** : règles fonctionnelles d'un lot (générées depuis les specs).
-- **CA-LOT-nn** : critères d'acceptation (rédigés par lot).
+- **RF-GRP-nn** : règles fonctionnelles d'un groupe, lot ou fonctionnalité (générées depuis les specs) ; une règle qui a changé de groupe garde son identifiant (`data-rf` dans les specs).
+- **CA-GRP-nn** : critères d'acceptation (rédigés par groupe), qui gardent le leur quand leur écran change de groupe.
 - **NF-nn** : exigences non fonctionnelles.
 - **DT-nn** : décisions techniques (architecture, stack, infrastructure).
 - **RQ-nn** : risques.
@@ -52,8 +52,8 @@ En gras à leur définition (`**NF-03**`), en texte simple quand on y renvoie. `
 
 ## Critères d'acceptation (partie 3)
 
-Rédigés par lot, depuis `generated/lot-<lot>.md` seulement, par un rédacteur `sonnet` (consigne : `references/redacteur.md`). 2 à 5 par état d'écran, au format « Étant donné … quand … alors … », chacun rattaché à son état (`[E13a](#e13a)`) et, si possible, à une règle RF.
+Rédigés par groupe, depuis `generated/lot-<groupe>.md` seulement, par un rédacteur `sonnet` (consigne : `references/redacteur.md`). 2 à 5 par état d'écran, au format « Étant donné … quand … alors … », chacun rattaché à son état (`[E13a](#e13a)`) et, si possible, à une règle RF.
 
 ## Version et suivi
 
-`00-titre.md` porte la version (0.1, 0.2… puis 1.0 à la validation) et le statut (Brouillon, En relecture, Validé). Une nouvelle version après une évolution des specs : réextraire, relancer `check.mjs`, mettre à jour les parties touchées (lots, estimations, risques), puis noter le changement dans `REQUIREMENTS.md`.
+`00-titre.md` porte la version (0.1, 0.2… puis 1.0 à la validation) et le statut (Brouillon, En relecture, Validé). Une nouvelle version après une évolution des specs : réextraire, relancer `check.mjs`, mettre à jour les parties touchées (partie 9, risques), puis noter le changement dans `REQUIREMENTS.md`.

@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 2.5.0 · 27/11/2026
+
+- **Specs découpées par fonctionnalités** (`site.json` → `"grouping": "features"`, `specs-ui` 3.10.0) : les libellés suivent (« fonctionnalité par fonctionnalité » en partie 3, colonne « Fonctionnalité » de l'inventaire, des points ouverts, de la couverture et du README de l'export), et `export.json` note le découpage pour `trace.mjs`.
+- **Partie 9 « Évolutions et estimations »** pour un produit existant découpé par fonctionnalités (`90-evolutions.md`) : seulement ce qui reste à livrer, regroupé en évolutions chiffrées, sans lot « Socle ». Rien à livrer : pas de partie 9, ni à la création ni au contrôle. `extract.mjs` écrit `generated/a-livrer.md` (états « À développer », « En cours », « À faire évoluer », « Écart »). `check.mjs` signale les écrans à livrer absents des évolutions et une partie 9 encore découpée en lots. Méthode : `references/estimations.md`.
+- **`regroup.mjs`** : range le cahier des charges sur les nouveaux groupes des specs après `regroup.mjs` de `specs-ui`. Les critères suivent leur écran, sans renumérotation, et leur nombre est vérifié avant d'écrire. `30-specs.md` et le titre suivent les groupes. Par fonctionnalités, `90-lots.md` va dans `archive/` et `90-evolutions.md` le remplace s'il reste des écrans à livrer. Éprouvé sur un cahier des charges réel de 531 critères : identifiants RF et CA identiques avant et après, contrôle sans problème, export qui remplace les fichiers des anciens lots.
+- **Identifiants des règles stables** : une règle marquée `data-rf="CONN-03"` dans les specs garde `RF-CONN-03` quel que soit son groupe ; les autres sont numérotées comme avant, en sautant les numéros pris.
+- Nouveau critère d'un groupe regroupé : préfixe du groupe, numéro suivant pour ce préfixe (`references/redacteur.md`).
+
 ## 2.4.3 · 20/11/2026
 
 - **La construction de la page HTML ne boucle plus** sur une ligne qui commence par `|` sans ouvrir de tableau (pas de ligne de séparation à la suite) : le rendu n'avançait plus et ajoutait des paragraphes vides jusqu'à saturer la mémoire de Node. La ligne s'affiche désormais en paragraphe.

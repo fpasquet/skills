@@ -7,6 +7,6 @@
 | Lecteurs | Équipe de développement |
 | Specs UI | {{SPECS_LINK}} |
 | Prototype | {{PROTOTYPE_LINK}} |
-| Rédigé à partir de | specs du {{DATE}} : {{LOTS}} lots, {{SCREENS}} écrans, {{STATES}} états |
+| Rédigé à partir de | specs du {{DATE}} : {{GROUPS}}, {{SCREENS}} écrans, {{STATES}} états |
 
 <!-- toc -->
