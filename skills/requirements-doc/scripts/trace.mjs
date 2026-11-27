@@ -21,7 +21,7 @@
  * ainsi que node_modules, dist, build… sont ignorés.
  *
  * Signale :
- *   - par lot : critères testés, seulement référencés, non couverts ;
+ *   - par groupe (lot ou fonctionnalité) : critères testés, seulement référencés, non couverts ;
  *   - les identifiants cités dans le code mais définis nulle part (faute de frappe, critère renuméroté), ou retirés ;
  *   - les écrans « Livré » dans les specs dont des critères ne sont pas testés.
  *   - sur un export : les fichiers modifiés à la main depuis l'export (empreintes de export.json).
@@ -33,6 +33,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSy
 import { join, resolve, relative, extname, sep, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { loadConfig, specsDirOf } from './config.mjs';
+import { wordsOf } from './specs.mjs';
 
 const args = process.argv.slice(2);
 const root = args[0] && !args[0].startsWith('--') && resolve(args[0]);
@@ -144,6 +145,8 @@ for (const codeRoot of codeRoots) {
 // ---------- Statut des écrans dans les specs ----------
 const screenStatus = new Map(exported ? Object.entries(manifest.screens ?? {}) : []); // e13 → done…
 const site = !exported && existsSync(join(specsDir, 'sources', 'site.json')) ? JSON.parse(readFileSync(join(specsDir, 'sources', 'site.json'), 'utf8')) : {};
+// Libellé des groupes : découpage des specs, ou celui noté dans l'export
+const groupColumn = wordsOf(exported ? manifest.grouping : site.grouping).column;
 for (const name of site.lots ?? []) {
   const file = join(specsDir, 'sources', name, 'lot.json');
   if (!existsSync(file)) continue;
@@ -183,7 +186,7 @@ if (args.includes('--json')) {
   const pct = (n, total) => (total ? `${Math.round((100 * n) / total)} %` : '–');
   const retiredCount = [...definitions.values()].filter((d) => d.kind === 'CA' && d.retired).length;
   console.log(`Traced ${criteria.length} acceptance criteria${retiredCount ? ` (${retiredCount} retired, not counted)` : ''} against ${scanned} code file(s) in ${codeRoots.map((r) => relative(process.cwd(), r) || '.').join(', ') || 'no folder'}.`);
-  console.log('\nLot              tested  referenced  uncovered  total  tested %');
+  console.log(`\n${groupColumn.padEnd(16)} tested  referenced  uncovered  total  tested %`);
   for (const [lot, n] of byLot) console.log(`${lot.padEnd(16)} ${String(n.tested).padStart(6)}  ${String(n.referenced).padStart(10)}  ${String(n.uncovered).padStart(9)}  ${String(n.total).padStart(5)}  ${pct(n.tested, n.total).padStart(8)}`);
   if (otherCited.length) console.log(`\nRules and requirements cited in the code (${otherCited.length}): ${otherCited.join(', ')}`);
   if (unknown.length) console.log(`\nWARNING: identifiers cited in the code but defined nowhere (${unknown.length}): ${unknown.map((u) => `${u.id} (${u.where.join(', ')})`).join('; ')}`);
@@ -196,7 +199,7 @@ if (args.includes('--json')) {
 if (args.includes('--write')) {
   const label = { tested: 'testés', referenced: 'référencés seulement', uncovered: 'non couverts' };
   let md = `<!-- Généré par trace.mjs (couverture des critères d'acceptation par le code) : ne pas modifier, relancer trace.mjs --write. -->\n\n`;
-  md += `| Lot | CA ${label.tested} | CA ${label.referenced} | CA ${label.uncovered} | Total |\n|---|---|---|---|---|\n`;
+  md += `| ${groupColumn} | CA ${label.tested} | CA ${label.referenced} | CA ${label.uncovered} | Total |\n|---|---|---|---|---|\n`;
   for (const [lot, n] of byLot) md += `| ${lot} | ${n.tested} | ${n.referenced} | ${n.uncovered} | ${n.total} |\n`;
   if (untestedDelivered.length) md += `\nÉcrans livrés dont des critères ne sont pas encore testés :\n\n${untestedDelivered.map((u) => `- **${u.id}** · ${u.screen.toUpperCase()} · ${u.text}`).join('\n')}\n`;
   const out = join(root, 'sources', 'generated');

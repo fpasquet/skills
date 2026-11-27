@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.10.0 · 27 nov. 2026
+
+- **Découpage par fonctionnalités** : `sources/site.json` → `"grouping": "features"` regroupe les écrans par espace ou fonctionnalité du produit, sans numéro ni ordre de livraison, et le site affiche « Fonctionnalités » et « Écrans de la fonctionnalité » au lieu de « Lots » et « Écrans du lot ». Le découpage se demande au cadrage : par lots (défaut) pour un produit à construire, par fonctionnalités pour un produit existant ou livré. Les dossiers et `lot.json` gardent leur nom technique. `split.mjs --new` crée alors un groupe sans le mot « Lot », et `CONTEXTE.md` note le découpage.
+- **`regroup.mjs`** : passe un projet existant des lots aux fonctionnalités, ou réorganise ses groupes, d'après un plan (`regroup.json`, amorcé par `--plan`). Les fichiers des écrans suivent leur écran et se renumérotent. Les règles, les points ouverts (par écran cité), les journaux (avec une entrée « Maintenance »), l'identité, les `<template>`, `style.css` et les statuts de `lot.json` sont repris. Les liens entre lots et ceux de `site.json` sont réécrits. Chaque règle garde son identifiant RF dans `data-rf`, lu par `requirements-doc`. Éprouvé sur deux projets réels : contenu des écrans identique avant et après, build sans lien cassé.
+- **`recover.mjs`** : reconstitue les sources (`sources/`, `lot.json` avec libellés, écrans et statuts, `<template>`, `tokens.css`, `site.json`) d'un projet dont seul l'artifact publié subsiste, et écrit `site/.published.json` pour que la publication suivante retire les pages sans source. Vérifié par un aller-retour : les pages reconstruites sont identiques aux pages publiées.
+- **Thème daisyUI d'un produit existant** : `"daisyui": { "version", "theme" }` déclare les variables de daisyUI qui s'écartent de la correspondance par défaut (`--color-base-100` sur `var(--color-canvas)`…), appliquées aux maquettes et à l'export Claude Design. Un écart qui vise un token de `tokens.css` est refusé : un token nommé comme une couleur de daisyUI (`success`, `info`…) en prend le sens (`success` fond, `success-content` texte), et `check-contrast.mjs` contrôle alors `<état>-content` comme couleur de texte.
+- `build.mjs` résout une ancre hors écran (`chat.html#ouverts`, ou `#ouverts` sur une page d'écran) vers le lot visé, et non vers le premier lot qui porte cette ancre.
+- daisyUI : les feuilles `join`, `glass` et les arrondis du thème (`rounded-box`, `rounded-field`, `rounded-selector`) se chargent depuis le dossier `utilities/` du paquet, où le build ne les trouvait pas. La version de daisyUI est écrite dans le commentaire d'en-tête des pages.
+- Template 3.1.4 : l'anneau `.next-step` reste visible sur un bouton daisyUI (`.btn` est rangé dans la couche `utilities`) ; `data-clip-ok` est respecté quand c'est un conteneur parent qui coupe, et peut se poser sur le cadre d'un extrait volontairement court ; le texte masqué par une zone de défilement n'est plus signalé sous une pastille.
+- `capture.mjs --ids e1` ne retient plus E10 à E19.
+
 ## 3.9.1 · 9 nov. 2026
 
 - `build.mjs` signale un écran « À faire évoluer » (`change`) dont aucun état n'a son propre statut : chacun de ses états s'affichait « Livré » sur sa page, et seul l'index du lot disait que l'écran évoluait. L'avertissement nomme les écrans et rappelle de marquer les états ajoutés `todo` et les états retouchés `change`.

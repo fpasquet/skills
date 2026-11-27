@@ -30,6 +30,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { loadConfig, configPath, specsDirOf } from './config.mjs';
 import { anchorHeadings, CODE_BLOCKS, include, slug, sourceFiles } from './assemble.mjs';
+import { wordsOf } from './specs.mjs';
 
 const args = process.argv.slice(2);
 const valueOf = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : null);
@@ -160,7 +161,8 @@ const artifacts = Object.fromEntries(
 const link = (key, label) => (artifacts[key] ? `| ${label} | [artifact](${artifacts[key]}) |\n` : '');
 let readme = `<!-- Généré par export.mjs (skill requirements-doc) depuis le cahier des charges : ne pas modifier ici. -->\n\n`;
 readme += `# ${product} · exigences de développement\n\n`;
-readme += `Extrait du cahier des charges pour l'équipe de développement et ses agents : règles et critères d'acceptation par lot, exigences non fonctionnelles, architecture et décisions techniques. Le document complet (lots chiffrés, planning, risques) se lit dans l'artifact du cahier des charges.\n\n`;
+const byFeature = site.grouping === 'features';
+readme += `Extrait du cahier des charges pour l'équipe de développement et ses agents : règles et critères d'acceptation par ${wordsOf(site.grouping).one}, exigences non fonctionnelles, architecture et décisions techniques. Le document complet (${byFeature ? 'évolutions chiffrées' : 'lots chiffrés, planning'}, risques) se lit dans l'artifact du cahier des charges.\n\n`;
 readme += `| | |\n|---|---|\n`;
 if (version) readme += `| Version | ${version}${status ? ` (${status})` : ''} |\n`;
 readme += link('requirements', 'Cahier des charges') + link('specs', 'Specs UI') + link('prototype', 'Prototype');
@@ -218,6 +220,7 @@ const manifest = {
   version,
   source: { ...source, commit: null },
   artifacts,
+  ...(byFeature ? { grouping: 'features' } : {}),
   screens,
   files,
 };

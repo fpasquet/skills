@@ -9,7 +9,7 @@
  *   --frames           capture chaque cadre de maquette seul, à sa taille réelle (en cas de doute)
  *   --thumbnails       test de la vignette : cadres desktop à 320 px sur une ligne
  *   --sections         une capture par section[id] (via ?only=<id>) ; la plus coûteuse à relire
- *   --ids e13,e15c     limite aux cadres, sections et pages dont le nom commence par ces identifiants
+ *   --ids e13,e15c     limite aux cadres, sections et pages de ces identifiants (e1 : E1 et ses états, pas E10)
  *   --lot projets      (site) limite aux pages de ce lot
  *   --themes c,a,b     applique ces thèmes aux propositions, dans l'ordre (via ?themes=)
  *   --height 1500      hauteur de fenêtre des captures de section · --width 1440 largeur
@@ -49,7 +49,8 @@ const frames = sheet || thumbnails || args.includes('--frames');
 const sectionsWanted = args.includes('--sections');
 const themes = option('themes', null);
 const onlyIds = option('ids', null)?.split(',').map((s) => s.toLowerCase());
-const matchesIds = (name) => !onlyIds || onlyIds.some((id) => name.toLowerCase().startsWith(id));
+// « e1 » désigne E1 et ses états (e1a, « E1b · … »), pas E10 à E19 : le préfixe ne doit pas être suivi d'un chiffre
+const matchesIds = (name) => !onlyIds || onlyIds.some((id) => name.toLowerCase().startsWith(id) && !/\d/.test(name.charAt(id.length)));
 
 const chrome = [
   process.env.CHROME_PATH,

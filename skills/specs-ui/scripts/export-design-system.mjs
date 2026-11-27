@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiVersion } from './daisyui.mjs';
+import { daisyuiComponents, daisyuiHead, daisyuiTheme, daisyuiThemeOverrides, daisyuiVersion } from './daisyui.mjs';
 
 const args = process.argv.slice(2);
 const root = args[0] && resolve(args[0]);
@@ -61,7 +61,7 @@ function previewPage({ group, title, body, templates = '' }) {
 ${fonts ? `<link rel="stylesheet" href="${fonts}">\n` : ''}${daisyuiFiles.length ? `${daisyuiHead(daisyui, daisyuiFiles)}\n` : ''}<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.13"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <style type="text/tailwindcss">
-  ${(daisyui ? daisyuiTheme(theme) : theme).replace(/\n/g, '\n  ')}
+  ${(daisyui ? daisyuiTheme(theme, daisyuiThemeOverrides(site)) : theme).replace(/\n/g, '\n  ')}
   html body { margin: 0; padding: 24px; background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
   /* Le script du template pose le bouton « Retours » de relecture des specs : sans objet dans une carte */
   [data-retours-ui] { display: none !important; }

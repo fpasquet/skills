@@ -51,10 +51,12 @@ if (newLot && existsSync(join(sharedDir, 'shells.html'))) {
   const firstLot = config.lots.find((l) => existsSync(join(root, 'sources', l, 'lot.json')));
   const firstLotJson = firstLot ? JSON.parse(readFileSync(join(root, 'sources', firstLot, 'lot.json'), 'utf8')) : {};
   const product = config.title ?? 'Produit';
-  writeFileSync(join(lotDir, 'lot.json'), JSON.stringify({ label: `Lot · ${name}`, title: `${product} · ${name}`, fonts: firstLotJson.fonts ?? '', screens: {} }, null, 2) + '\n');
+  // Produit existant découpé par fonctionnalités : ni numéro ni mot « Lot » dans le libellé
+  const byFeature = config.grouping === 'features';
+  writeFileSync(join(lotDir, 'lot.json'), JSON.stringify({ label: byFeature ? name : `Lot · ${name}`, title: `${product} · ${name}`, fonts: firstLotJson.fonts ?? '', screens: {} }, null, 2) + '\n');
   writeFileSync(join(lotDir, '000-header.html'), `<header>
-  <p class="font-mono text-xs font-medium tracking-wider text-doc-accent uppercase">${product} · Lot ${name}</p>
-  <h1 class="mt-1 text-3xl font-semibold tracking-tight text-balance">TITRE DU LOT</h1>
+  <p class="font-mono text-xs font-medium tracking-wider text-doc-accent uppercase">${product} · ${byFeature ? name : `Lot ${name}`}</p>
+  <h1 class="mt-1 text-3xl font-semibold tracking-tight text-balance">${byFeature ? 'TITRE DE LA FONCTIONNALITÉ' : 'TITRE DU LOT'}</h1>
   <div class="mt-3 flex flex-wrap gap-2 text-sm text-doc-muted"><span class="rounded-full border border-doc-line bg-doc-card px-2.5 py-0.5">Itération 1 · DATE</span></div>
   <p class="mt-4 max-w-[75ch] text-doc-muted">CONTEXTE EN DEUX OU TROIS PHRASES, AVEC L'EXEMPLE FIL ROUGE.</p>
 </header>

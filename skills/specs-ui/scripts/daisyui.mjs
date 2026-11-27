@@ -34,11 +34,21 @@ const ROOTS = {
 // Les autres feuilles portent le nom de leur classe racine
 const SAME_NAME = [
   'alert', 'aura', 'avatar', 'badge', 'breadcrumbs', 'card', 'carousel', 'chat', 'checkbox', 'collapse', 'countdown', 'diff',
-  'divider', 'dock', 'drawer', 'dropdown', 'fab', 'fieldset', 'filter', 'footer', 'hero', 'indicator', 'input', 'join', 'kbd',
+  'divider', 'dock', 'drawer', 'dropdown', 'fab', 'fieldset', 'filter', 'footer', 'hero', 'indicator', 'input', 'kbd',
   'link', 'list', 'loading', 'mask', 'megamenu', 'menu', 'modal', 'navbar', 'otp', 'progress', 'radio', 'range', 'rating',
   'select', 'skeleton', 'stack', 'status', 'swap', 'table', 'textarea', 'timeline', 'toast', 'toggle', 'tooltip', 'validator',
 ];
-const FILES = [...Object.entries(ROOTS), ...SAME_NAME.map((name) => [name, [name]])];
+// Feuilles du dossier utilities/ du paquet : groupe (join), verre, arrondis du thème (rounded-box, rounded-t-field…)
+const UTILITIES = {
+  glass: (classes) => classes.has('glass'),
+  join: (classes) => classes.has('join'),
+  radius: (classes) => [...classes].some((c) => /^rounded(-[trbl]{1,2})?-(box|field|selector)$/.test(c)),
+};
+// Chemin de chaque feuille dans le paquet, et le test qui dit si la page l'emploie
+const FILES = [
+  ...[...Object.entries(ROOTS), ...SAME_NAME.map((name) => [name, [name]])].map(([name, roots]) => [`components/${name}`, (classes) => roots.some((r) => classes.has(r))]),
+  ...Object.entries(UTILITIES).map(([name, test]) => [`utilities/${name}`, test]),
+];
 // Propriétés de base (@property des barres circulaires, grain) ; le reste de base/ (fond de page, verrou du
 // défilement des fenêtres, barre de défilement) toucherait l'habillage du document, et Tailwind a déjà son reset
 const BASE = ['properties', 'svg'];
@@ -64,8 +74,7 @@ export function daisyuiComponents(html) {
   for (const m of html.matchAll(/\bclass=(["'])(.*?)\1/gs)) {
     for (const token of m[2].split(/\s+/)) if (token) classes.add(token.split(':').pop().replace(/^!/, ''));
   }
-  const used = FILES.filter(([, roots]) => roots.some((r) => classes.has(r)));
-  return used.map(([file]) => file).sort();
+  return FILES.filter(([, test]) => test(classes)).map(([path]) => path).sort();
 }
 
 /**
@@ -77,9 +86,9 @@ export function daisyuiComponents(html) {
  */
 export function daisyuiHead(version, files) {
   return [
-    '<!-- daisyUI : feuilles des composants de la page ; thème pointé sur les tokens (bloc tailwindcss) -->',
+    `<!-- daisyUI ${version} : feuilles des composants de la page ; thème pointé sur les tokens (bloc tailwindcss) -->`,
     '<style>@layer theme, base, components, utilities;</style>',
-    `<style>\n${[...BASE.map((name) => `base/${name}`), ...files.map((name) => `components/${name}`)]
+    `<style>\n${[...BASE.map((name) => `base/${name}`), ...files]
       .map((path) => daisyuiCss(version, `${path}.css`).trim())
       .join('\n')}\n</style>`,
   ].join('\n');
@@ -105,35 +114,62 @@ function daisyuiCss(version, path) {
  * Tokens et thème daisyUI pour le bloc `<style type="text/tailwindcss">` : `@theme static` émet chaque token, même ceux
  * qu'aucune classe de la page n'emploie (`btn-primary` lit `--color-primary` sans que Tailwind le voie).
  */
-export function daisyuiTheme(theme) {
+// Correspondance par défaut entre le thème daisyUI et les tokens (même correspondance que le skill design-system) :
+// primary, success, warning et info sont les tokens eux-mêmes ; le texte posé sur une couleur d'état reprend la surface.
+const DEFAULT_THEME = [
+  ['--color-base-100', 'var(--color-surface)'],
+  ['--color-base-200', 'var(--color-surface-alt)'],
+  ['--color-base-300', 'var(--color-line)'],
+  ['--color-base-content', 'var(--color-ink)'],
+  ['--color-primary-content', 'var(--color-on-primary)'],
+  ['--color-secondary', 'var(--color-surface-alt)'],
+  ['--color-secondary-content', 'var(--color-ink)'],
+  ['--color-accent', 'var(--color-surface-alt)'],
+  ['--color-accent-content', 'var(--color-ink)'],
+  ['--color-neutral', 'var(--color-ink)'],
+  ['--color-neutral-content', 'var(--color-surface)'],
+  ['--color-info-content', 'var(--color-surface)'],
+  ['--color-success-content', 'var(--color-surface)'],
+  ['--color-warning-content', 'var(--color-surface)'],
+  ['--color-error', 'var(--color-danger)'],
+  ['--color-error-content', 'var(--color-on-danger)'],
+  ['--radius-selector', 'var(--radius-control)'],
+  ['--radius-field', 'var(--radius-control)'],
+  ['--radius-box', 'var(--radius-card)'],
+  ['--size-selector', '0.25rem'],
+  ['--size-field', 'calc(var(--spacing-control) / 10)'],
+  ['--border', '1px'],
+  ['--depth', '0'],
+  ['--noise', '0'],
+];
+
+/**
+ * Écarts du thème daisyUI du produit (`site.json` → `"daisyui": { "version", "theme": { "--color-base-100":
+ * "var(--color-canvas)" } }`), pour un produit existant dont le thème ne suit pas la correspondance par défaut :
+ * son base-100 n'est pas la surface, son radius-selector est propre… Sans eux, une classe de composant reprise des
+ * maquettes ne rendrait pas la même chose dans l'application. Seules les variables qui ne sont pas des tokens se
+ * déclarent ici : une couleur que daisyUI lit sous le nom d'un token (success, secondary…) se règle dans tokens.css.
+ */
+export function daisyuiThemeOverrides(site) {
+  const overrides = typeof site?.daisyui === 'object' ? site.daisyui.theme ?? {} : {};
+  const invalid = Object.keys(overrides).filter((k) => !/^--[a-z0-9-]+$/.test(k) || typeof overrides[k] !== 'string');
+  if (invalid.length) throw new Error(`site.json: daisyui.theme expects CSS variables mapped to values ("--color-success": "var(--color-success-soft)"), not ${invalid.join(', ')}`);
+  return overrides;
+}
+
+export function daisyuiTheme(theme, overrides = {}) {
+  // Une variable définie dans tokens.css est un token : daisyUI la lit telle quelle. La redéfinir ici changerait le
+  // token lui-même (mêmes noms : --color-success, --color-secondary…), voire créerait une référence circulaire.
+  const tokens = new Set([...theme.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((m) => m[1]));
+  const clashes = Object.keys(overrides).filter((name) => tokens.has(name));
+  if (clashes.length) throw new Error(`site.json: daisyui.theme redefines tokens of tokens.css (${clashes.join(', ')}): change them in tokens.css instead, giving them daisyUI's meaning`);
+  const entries = new Map(DEFAULT_THEME.filter(([name]) => !tokens.has(name)));
+  for (const [name, value] of Object.entries(overrides)) entries.set(name, value);
+  const custom = Object.keys(overrides).length ? ' Écarts propres au produit : site.json → daisyui.theme.' : '';
   return `${theme.replace(/^@theme\s*\{/, '@theme static {')}
 
-/* Thème daisyUI pointé sur les tokens (même correspondance que le skill design-system) : primary, success, warning
-   et info sont les tokens eux-mêmes ; le texte posé sur une couleur d'état reprend la surface. */
+/* Thème daisyUI pointé sur les tokens (même correspondance que le skill design-system).${custom} */
 :root {
-  --color-base-100: var(--color-surface);
-  --color-base-200: var(--color-surface-alt);
-  --color-base-300: var(--color-line);
-  --color-base-content: var(--color-ink);
-  --color-primary-content: var(--color-on-primary);
-  --color-secondary: var(--color-surface-alt);
-  --color-secondary-content: var(--color-ink);
-  --color-accent: var(--color-surface-alt);
-  --color-accent-content: var(--color-ink);
-  --color-neutral: var(--color-ink);
-  --color-neutral-content: var(--color-surface);
-  --color-info-content: var(--color-surface);
-  --color-success-content: var(--color-surface);
-  --color-warning-content: var(--color-surface);
-  --color-error: var(--color-danger);
-  --color-error-content: var(--color-on-danger);
-  --radius-selector: var(--radius-control);
-  --radius-field: var(--radius-control);
-  --radius-box: var(--radius-card);
-  --size-selector: 0.25rem;
-  --size-field: calc(var(--spacing-control) / 10);
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
+${[...entries].map(([name, value]) => `  ${name}: ${value};`).join('\n')}
 }`;
 }
